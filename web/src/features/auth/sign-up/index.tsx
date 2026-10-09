@@ -29,6 +29,36 @@ export function SignUp() {
   const { t } = useTranslation()
   const { status } = useStatus()
 
+  // 密码注册关闭时隐藏注册表单（OAuth 登录建号不受影响）
+  if (status?.password_register_enabled === false) {
+    return (
+      <AuthLayout>
+        <div className='w-full space-y-8'>
+          <div className='space-y-2'>
+            <h2 className='text-center text-2xl font-semibold tracking-tight sm:text-left'>
+              {t('Create an account')}
+            </h2>
+            <p className='text-muted-foreground text-left text-sm sm:text-base'>
+              {t(
+                'Registration is disabled. Please sign in with Feishu or contact the administrator.'
+              )}
+            </p>
+            <p className='text-left text-sm sm:text-base'>
+              {t('Already have an account?')}{' '}
+              <Link
+                to='/sign-in'
+                className='hover:text-primary font-medium underline underline-offset-4'
+              >
+                {t('Sign in')}
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+      </AuthLayout>
+    )
+  }
+
   return (
     <AuthLayout>
       <div className='w-full space-y-8'>

@@ -4776,6 +4776,7 @@
     "Registered a passkey": "注册了一个 Passkey",
     "Registration Enabled": "注册已启用",
     "Registration flow expired. Please try again.": "注册流程已过期，请重试。",
+    "Registration is disabled. Please sign in with Feishu or contact the administrator.": "注册已关闭，请使用飞书登录，或联系管理员添加账号。",
     "Registry (optional)": "注册表 (可选)",
     "Registry secret": "注册表密钥",
     "Registry username": "注册表用户名",
