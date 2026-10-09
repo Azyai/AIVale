@@ -27,6 +27,14 @@ func GetUserOAuthBindingsByUserId(userId int) ([]*UserOAuthBinding, error) {
 	return bindings, err
 }
 
+// GetOAuthBindingsByProviderId returns OAuth bindings for a provider, paged by
+// id ascending, used by background reconciliation jobs.
+func GetOAuthBindingsByProviderId(providerId int, limit, offset int) ([]*UserOAuthBinding, error) {
+	var bindings []*UserOAuthBinding
+	err := DB.Where("provider_id = ?", providerId).Order("id asc").Limit(limit).Offset(offset).Find(&bindings).Error
+	return bindings, err
+}
+
 // GetUserOAuthBinding returns a specific binding for a user and provider
 func GetUserOAuthBinding(userId, providerId int) (*UserOAuthBinding, error) {
 	var binding UserOAuthBinding

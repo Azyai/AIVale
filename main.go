@@ -135,6 +135,10 @@ func main() {
 	// Subscription quota reset task (daily/weekly/monthly/custom)
 	service.StartSubscriptionQuotaResetTask()
 
+	// Feishu departed-user reconciliation: disable accounts whose Feishu user
+	// has resigned/frozen/left the org (default every 24h).
+	service.StartFeishuUserReconcileTask()
+
 	// Report this process as a system instance so the System Info page can show
 	// all currently alive nodes in multi-instance deployments.
 	service.StartSystemInstanceReporter()
