@@ -1,0 +1,100 @@
+# 本地开发环境:源码构建 new-api + MySQL + Redis(不用 SQLite)
+#
+# 启动: docker compose -f docker-compose.local.yml up -d --build
+# 停止: docker compose -f docker-compose.local.yml down
+# 查看日志: docker compose -f docker-compose.local.yml logs -f new-api
+#
+# ⚠️ 本地开发默认密码,正式部署前务必全部更换!
+# 首次启动自动创建管理员: root / 123456,登录后请立即改密码。
+
+services:
+  new-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: local/new-api:dev
+    container_name: new-api
+    restart: always
+    command: --log-dir /app/logs
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    environment:
+      # MySQL 连接(应用专用账号,parseTime 由程序自动补全,这里显式声明)
+      - SQL_DSN=newapi:newapi123456@tcp(mysql:3306)/new-api?charset=utf8mb4&parseTime=true&loc=Local
+      # Redis 连接
+      - REDIS_CONN_STRING=redis://:redis123456@redis:6379
+      - TZ=Asia/Shanghai
+      - ERROR_LOG_ENABLED=true
+      - BATCH_UPDATE_ENABLED=true
+      - NODE_NAME=local-dev
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - new-api-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mysql:
+    image: mysql:8.2
+    container_name: new-api-mysql
+    restart: always
+    # new-api 启动时会校验库的默认字符集必须支持中文,显式指定 utf8mb4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: new-api
+      MYSQL_USER: newapi
+      MYSQL_PASSWORD: newapi123456
+      TZ: Asia/Shanghai
+    volumes:
+      - newapi_mysql_data:/var/lib/mysql
+    # 仅绑定本机回环,方便用 Navicat 等工具连接,不对局域网暴露
+    # 宿主机用 3307:本机 3306 已有 mysqld 服务在跑,避开冲突
+    ports:
+      - "127.0.0.1:3307:3306"
+    networks:
+      - new-api-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7.2
+    container_name: new-api-redis
+    restart: always
+    command: ["redis-server", "--requirepass", "redis123456", "--appendonly", "yes"]
+    volumes:
+      - newapi_redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - new-api-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a redis123456 --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  newapi_mysql_data:
+  newapi_redis_data:
+
+networks:
+  new-api-network:
+    driver: bridge
