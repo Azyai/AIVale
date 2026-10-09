@@ -12,6 +12,12 @@ type RankingQuotaTotal struct {
 	TotalTokens int64  `json:"total_tokens"`
 }
 
+type RankingUserTotal struct {
+	UserID      int    `json:"user_id"`
+	Username    string `json:"username"`
+	TotalTokens int64  `json:"total_tokens"`
+}
+
 type RankingQuotaBucket struct {
 	ModelName string `json:"model_name"`
 	Bucket    int64  `json:"bucket"`
@@ -24,6 +30,22 @@ func GetRankingQuotaTotals(startTime int64, endTime int64) ([]RankingQuotaTotal,
 		Select("model_name, sum(token_used) as total_tokens").
 		Where("model_name <> ''").
 		Group("model_name").
+		Having("sum(token_used) > 0").
+		Order("total_tokens DESC")
+	query = applyRankingQuotaTimeRange(query, startTime, endTime)
+	err := query.Find(&rows).Error
+	return rows, err
+}
+
+// GetRankingUserTotals aggregates per-user token usage over the time range.
+// Username is denormalized in quota_data; MAX() collapses historical rows
+// where a rename happened into a single entry per user_id.
+func GetRankingUserTotals(startTime int64, endTime int64) ([]RankingUserTotal, error) {
+	var rows []RankingUserTotal
+	query := DB.Table("quota_data").
+		Select("user_id, MAX(username) as username, sum(token_used) as total_tokens").
+		Where("user_id > 0").
+		Group("user_id").
 		Having("sum(token_used) > 0").
 		Order("total_tokens DESC")
 	query = applyRankingQuotaTimeRange(query, startTime, endTime)

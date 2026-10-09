@@ -54,6 +54,20 @@ export type ModelRanking = {
   growth_pct: number
 }
 
+export type UserRanking = {
+  rank: number
+  /** Previous rank in the same period; undefined means "new". */
+  previous_rank?: number
+  user_id: number
+  username: string
+  /** Total tokens routed for this user in the period. */
+  total_tokens: number
+  /** Share of all tokens served (0..1). */
+  share: number
+  /** Period-over-period change in token volume (%). */
+  growth_pct: number
+}
+
 export type VendorRanking = {
   rank: number
   vendor: string
@@ -126,6 +140,8 @@ export type VendorShareSeries = {
 export type RankingsSnapshot = {
   // Overall (all categories) ------------------------------------------------
   models: ModelRanking[]
+  /** Top users by token usage in the period (capped at 30 rows). */
+  users: UserRanking[]
   vendors: VendorRanking[]
   /** Largest rank gainers in this period. */
   top_movers: RankingMover[]

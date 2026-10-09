@@ -12,22 +12,34 @@ import (
 )
 
 const (
-	rankingCacheTTL         = 5 * time.Minute
-	rankingLeaderboardLimit = 20
-	rankingHistoryLimit     = 10
-	rankingVendorLimit      = 5
-	rankingMoverLimit       = 6
-	rankingOthersLabel      = "Others"
-	rankingUnknownVendor    = "Unknown"
+	rankingCacheTTL          = 5 * time.Minute
+	rankingLeaderboardLimit  = 20
+	rankingUserLeaderboardLimit = 30
+	rankingHistoryLimit      = 10
+	rankingVendorLimit       = 5
+	rankingMoverLimit        = 6
+	rankingOthersLabel       = "Others"
+	rankingUnknownVendor     = "Unknown"
 )
 
 type RankingsResponse struct {
 	Models             []RankedModel      `json:"models"`
+	Users              []RankedUser       `json:"users"`
 	Vendors            []RankedVendor     `json:"vendors"`
 	TopMovers          []RankingMover     `json:"top_movers"`
 	TopDroppers        []RankingMover     `json:"top_droppers"`
 	ModelsHistory      ModelHistorySeries `json:"models_history"`
 	VendorShareHistory VendorShareSeries  `json:"vendor_share_history"`
+}
+
+type RankedUser struct {
+	Rank         int     `json:"rank"`
+	PreviousRank *int    `json:"previous_rank,omitempty"`
+	UserID       int     `json:"user_id"`
+	Username     string  `json:"username"`
+	TotalTokens  int64   `json:"total_tokens"`
+	Share        float64 `json:"share"`
+	GrowthPct    float64 `json:"growth_pct"`
 }
 
 type RankedModel struct {
@@ -191,12 +203,22 @@ func buildRankingsSnapshot(config rankingPeriodConfig, now time.Time) (*Rankings
 	}
 
 	var previousTotals []model.RankingQuotaTotal
+	var previousUserTotals []model.RankingUserTotal
 	if config.hasPrevious {
 		previousStart, previousEnd := previousRankingTimeRange(config, startTime)
 		previousTotals, err = model.GetRankingQuotaTotals(previousStart, previousEnd)
 		if err != nil {
 			return nil, err
 		}
+		previousUserTotals, err = model.GetRankingUserTotals(previousStart, previousEnd)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	currentUserTotals, err := model.GetRankingUserTotals(startTime, endTime)
+	if err != nil {
+		return nil, err
 	}
 
 	meta := buildRankingModelMeta()
@@ -205,6 +227,7 @@ func buildRankingsSnapshot(config rankingPeriodConfig, now time.Time) (*Rankings
 	previousTokensByModel := rankingTokenMap(previousTotals)
 
 	rankedModels := buildRankedModels(currentTotals, totalTokens, previousRankByModel, previousTokensByModel, meta, config.hasPrevious)
+	rankedUsers := buildRankedUsers(currentUserTotals, previousUserTotals, totalTokens, config.hasPrevious)
 	vendors := buildRankedVendors(currentTotals, previousTotals, totalTokens, meta, config.hasPrevious)
 	modelHistory := buildModelHistory(currentBuckets, currentTotals, meta, config)
 	vendorHistory := buildVendorShareHistory(currentBuckets, vendors, totalTokens, meta, config)
@@ -212,6 +235,7 @@ func buildRankingsSnapshot(config rankingPeriodConfig, now time.Time) (*Rankings
 
 	return &RankingsResponse{
 		Models:             limitRankedModels(rankedModels, rankingLeaderboardLimit),
+		Users:              limitRankedUsers(rankedUsers, rankingUserLeaderboardLimit),
 		Vendors:            vendors,
 		TopMovers:          movers,
 		TopDroppers:        droppers,
@@ -287,6 +311,45 @@ func buildRankedModels(totals []model.RankingQuotaTotal, totalTokens int64, prev
 		})
 	}
 	return rows
+}
+
+func buildRankedUsers(currentTotals []model.RankingUserTotal, previousTotals []model.RankingUserTotal, totalTokens int64, showGrowth bool) []RankedUser {
+	previousRanks := make(map[int]int, len(previousTotals))
+	previousTokens := make(map[int]int64, len(previousTotals))
+	for idx, item := range previousTotals {
+		previousRanks[item.UserID] = idx + 1
+		previousTokens[item.UserID] = item.TotalTokens
+	}
+
+	rows := make([]RankedUser, 0, len(currentTotals))
+	for idx, item := range currentTotals {
+		var previousRank *int
+		if rank, ok := previousRanks[item.UserID]; ok {
+			rankCopy := rank
+			previousRank = &rankCopy
+		}
+		growth := 0.0
+		if showGrowth {
+			growth = rankingGrowthPct(item.TotalTokens, previousTokens[item.UserID])
+		}
+		rows = append(rows, RankedUser{
+			Rank:         idx + 1,
+			PreviousRank: previousRank,
+			UserID:       item.UserID,
+			Username:     item.Username,
+			TotalTokens:  item.TotalTokens,
+			Share:        rankingShare(item.TotalTokens, totalTokens),
+			GrowthPct:    growth,
+		})
+	}
+	return rows
+}
+
+func limitRankedUsers(rows []RankedUser, limit int) []RankedUser {
+	if limit <= 0 || len(rows) <= limit {
+		return rows
+	}
+	return rows[:limit]
 }
 
 func buildRankedVendors(currentTotals []model.RankingQuotaTotal, previousTotals []model.RankingQuotaTotal, totalTokens int64, meta map[string]rankingModelMeta, showGrowth bool) []RankedVendor {
