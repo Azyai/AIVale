@@ -88,7 +88,13 @@ func LogTaskConsumption(c *gin.Context, info *relaycommon.RelayInfo, task *model
 		Group:     info.UsingGroup,
 		Other:     other,
 	})
-	model.UpdateUserUsedQuotaAndRequestCount(info.UserId, info.PriceData.Quota)
+	if info.BillingSource == BillingSourceSubscription ||
+		info.BillingSource == BillingSourceTeamWallet {
+		// 订阅/团队钱包计费的用量不累计钱包已用额度，请求数照常统计。
+		model.UpdateUserRequestCount(info.UserId)
+	} else {
+		model.UpdateUserUsedQuotaAndRequestCount(info.UserId, info.PriceData.Quota)
+	}
 	model.UpdateChannelUsedQuota(info.ChannelId, info.PriceData.Quota)
 }
 

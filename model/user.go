@@ -1436,6 +1436,12 @@ func UpdateUserLastLoginAt(id int) {
 	}
 }
 
+// UpdateUserRequestCount 只累计请求数。订阅/团队计费的请求不增加钱包
+// 已用额度（其用量分别计入 user_subscriptions 与团队钱包）。
+func UpdateUserRequestCount(id int) {
+	updateUserUsedQuotaAndRequestCount(id, 0, 1)
+}
+
 func UpdateUserUsedQuotaAndRequestCount(id int, quota int) {
 	if common.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeUsedQuota, id, quota)
