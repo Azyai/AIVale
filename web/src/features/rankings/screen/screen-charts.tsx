@@ -441,11 +441,13 @@ export function ConcentrationGauges(props: {
       title: string
     ) => ({
       type: 'gauge' as const,
-      center: [centerX, '56%'],
+      center: [centerX, '55%'],
       // Explicit radius + inward centers keep the outer rings fully inside
       // the canvas even at near-100% values (the arc spans 210°..-30°, so
-      // its horizontal reach equals the radius).
-      radius: '63%',
+      // its horizontal reach equals the radius). 72% is the width-bound
+      // maximum for three gauges in this panel: centers sit at 25%..
+      // 75% and the arc reaches exactly 5px from the canvas edge.
+      radius: '72%',
       startAngle: 210,
       endAngle: -30,
       min: 0,
@@ -465,7 +467,7 @@ export function ConcentrationGauges(props: {
       pointer: { show: false },
       anchor: { show: false },
       detail: {
-        fontSize: 20,
+        fontSize: 24,
         color,
         fontWeight: 700,
         formatter: (value: number) => `${value.toFixed(1)}%`,
@@ -473,17 +475,17 @@ export function ConcentrationGauges(props: {
       },
       title: {
         show: true,
-        offsetCenter: [0, '48%'],
+        offsetCenter: [0, '46%'],
         color: props.theme.textSub,
-        fontSize: 11,
+        fontSize: 12,
       },
       data: [{ value: Number(value.toFixed(1)), name: title }],
     })
     const option: EChartsOption = {
       series: [
-        gauge('24%', props.theme.up, props.modelTop10, t('Top 10 Model Concentration')),
+        gauge('25%', props.theme.up, props.modelTop10, t('Top 10 Model Concentration')),
         gauge('50%', props.theme.accent, props.userTop10, t('Top 10 User Concentration')),
-        gauge('76%', props.theme.warn, props.topVendor, t('Top Vendor Share')),
+        gauge('75%', props.theme.warn, props.topVendor, t('Top Vendor Share')),
       ],
     }
     setOption(option)
