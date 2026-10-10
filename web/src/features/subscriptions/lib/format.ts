@@ -30,6 +30,7 @@ export function formatDuration(
   const value = plan?.duration_value || 1
   const unitLabels: Record<string, string> = {
     year: t('years'),
+    quarter: t('quarters'),
     month: t('months'),
     day: t('days'),
     hour: t('hours'),

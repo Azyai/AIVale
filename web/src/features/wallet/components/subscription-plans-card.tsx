@@ -16,10 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Crown, RefreshCw, Sparkles, Check } from 'lucide-react'
+import { Crown, RefreshCw, Sparkles, Check, Users, Flame } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import type { TFunction } from 'i18next'
 
 import {
   StatusBadge,
@@ -51,17 +52,37 @@ import {
   updateBillingPreference,
 } from '@/features/subscriptions/api'
 import { SubscriptionPurchaseDialog } from '@/features/subscriptions/components/dialogs/subscription-purchase-dialog'
-import { formatDuration, formatResetPeriod } from '@/features/subscriptions/lib'
+import {
+  formatDuration,
+  formatResetPeriod,
+  availableCycles,
+  groupPlansByTier,
+  type PlanTierGroup,
+  type PricingCycle,
+} from '@/features/subscriptions/lib'
 import type {
   PlanRecord,
+  SubscriptionPlan,
   UserSubscriptionRecord,
 } from '@/features/subscriptions/types'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatQuota } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
 import type { PaymentMethod, TopupInfo } from '../types'
+
+function getCycleLabel(cycle: PricingCycle, t: TFunction) {
+  switch (cycle) {
+    case 'quarter':
+      return t('Quarterly')
+    case 'year':
+      return t('Yearly')
+    default:
+      return t('Monthly')
+  }
+}
 
 interface SubscriptionPlansCardProps {
   topupInfo: TopupInfo | null
@@ -221,6 +242,29 @@ export function SubscriptionPlansCard({
     }
     return map
   }, [plans])
+
+  const planObjs = useMemo(
+    () =>
+      plans
+        .map((p) => p?.plan)
+        .filter((p): p is SubscriptionPlan => !!p && typeof p.id === 'number'),
+    [plans]
+  )
+
+  // Plans without an explicit tier fall back to their title as the tier, so
+  // every plan joins the unified cycle-grouped card layout.
+  const normalizedPlanObjs = useMemo(
+    () =>
+      planObjs.map((p) => ({
+        ...p,
+        tier: (p.tier || '').trim() || (p.title || '').trim(),
+      })),
+    [planObjs]
+  )
+  const { groups: planGroups, standalone: standalonePlans } = useMemo(
+    () => groupPlansByTier(normalizedPlanObjs),
+    [normalizedPlanObjs]
+  )
 
   const getRemainingDays = (sub: UserSubscriptionRecord) => {
     const endTime = sub?.subscription?.end_time || 0
@@ -396,6 +440,9 @@ export function SubscriptionPlansCard({
 
           {hasAny && (
             <>
+              <p className='text-muted-foreground/70 mt-2 text-xs'>
+                {t('套餐额度独立于钱包余额（充值金额），仅抵扣套餐内用量。')}
+              </p>
               <Separator className='my-3' />
               <div className='max-h-64 space-y-3 overflow-y-auto pr-1'>
                 {allSubscriptions.map((sub) => {
@@ -481,14 +528,14 @@ export function SubscriptionPlansCard({
                         </div>
                       )}
                       <div className='text-muted-foreground mt-1'>
-                        {t('Total Quota')}:{' '}
+                        {t('套餐额度')}:{' '}
                         {totalAmount > 0 ? (
                           <Tooltip>
                             <TooltipTrigger
                               render={<span className='cursor-help' />}
                             >
                               {formatQuota(usedAmount)}/
-                              {formatQuota(totalAmount)} · {t('Remaining')}{' '}
+                              {formatQuota(totalAmount)} · {t('套餐剩余')}{' '}
                               {formatQuota(remainAmount)}
                             </TooltipTrigger>
                             <TooltipContent>
@@ -522,110 +569,43 @@ export function SubscriptionPlansCard({
           )}
         </div>
 
-        {/* Available plans grid */}
+        {/* Available plans grid: tier-grouped cards (cycle tabs) + standalone cards */}
         {plans.length > 0 ? (
-          <div className='grid grid-cols-1 gap-3 2xl:grid-cols-2 2xl:gap-4'>
-            {plans.map((p, index) => {
-              const plan = p?.plan
-              if (!plan) return null
-              const totalAmount = Number(plan.total_amount || 0)
-              const price = Number(plan.price_amount || 0).toFixed(2)
-              const isPopular = index === 0 && plans.length > 1
-              const limit = Number(plan.max_purchase_per_user || 0)
-              const count = planPurchaseCountMap.get(plan.id) || 0
-              const reached = limit > 0 && count >= limit
+          <div className='space-y-3 2xl:space-y-4'>
+            {planGroups.map((group) => (
+              <TierGroupCard
+                key={group.key}
+                group={group}
+                t={t}
+                planPurchaseCountMap={planPurchaseCountMap}
+                onSubscribe={(plan) => {
+                  setSelectedPlan({ plan })
+                  setPurchaseOpen(true)
+                }}
+              />
+            ))}
 
-              const benefits = [
-                `${t('Validity Period')}: ${formatDuration(plan, t)}`,
-                formatResetPeriod(plan, t) !== t('No Reset')
-                  ? `${t('Quota Reset')}: ${formatResetPeriod(plan, t)}`
-                  : null,
-                totalAmount > 0
-                  ? `${t('Total Quota')}: ${formatQuota(totalAmount)}`
-                  : `${t('Total Quota')}: ${t('Unlimited')}`,
-                limit > 0 ? `${t('Purchase Limit')}: ${limit}` : null,
-                plan.upgrade_group
-                  ? `${t('Upgrade Group')}: ${plan.upgrade_group}`
-                  : null,
-              ].filter(Boolean) as string[]
-
-              return (
-                <Card
-                  key={plan.id}
-                  data-card-hover='false'
-                  className={cn(isPopular && 'border-primary/70 shadow-sm')}
-                >
-                  <CardContent className='flex h-full flex-col p-3.5 sm:p-4'>
-                    <div className='mb-2 flex items-start justify-between gap-3'>
-                      <div className='min-w-0'>
-                        <h4 className='truncate font-semibold'>
-                          {plan.title || t('Subscription Plans')}
-                        </h4>
-                        {plan.subtitle && (
-                          <p className='text-muted-foreground truncate text-xs'>
-                            {plan.subtitle}
-                          </p>
-                        )}
-                      </div>
-                      {isPopular && (
-                        <StatusBadge
-                          variant='info'
-                          copyable={false}
-                          className='shrink-0'
-                        >
-                          <Sparkles className='h-3 w-3' />
-                          {t('Recommended')}
-                        </StatusBadge>
-                      )}
-                    </div>
-
-                    <div className='py-2'>
-                      <span className='text-primary text-2xl font-bold'>
-                        ${price}
-                      </span>
-                    </div>
-
-                    <div className='flex-1 space-y-1.5 pb-3'>
-                      {benefits.map((label) => (
-                        <div
-                          key={label}
-                          className='text-muted-foreground flex items-center gap-2 text-xs'
-                        >
-                          <Check className='text-primary h-3 w-3 shrink-0' />
-                          <span>{label}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <Separator className='mb-3' />
-
-                    {reached ? (
-                      <Tooltip>
-                        <TooltipTrigger render={<div />}>
-                          <Button variant='outline' className='w-full' disabled>
-                            {t('Limit Reached')}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {t('Purchase limit reached')} ({count}/{limit})
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <Button
-                        variant='outline'
-                        className='w-full'
-                        onClick={() => {
-                          setSelectedPlan(p)
-                          setPurchaseOpen(true)
-                        }}
-                      >
-                        {t('Subscribe Now')}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })}
+            {standalonePlans.length > 0 && (
+              <div className='grid grid-cols-1 gap-3 2xl:grid-cols-2 2xl:gap-4'>
+                {standalonePlans.map((plan, index) => (
+                  <StandalonePlanCard
+                    key={plan.id}
+                    plan={plan}
+                    isPopular={
+                      planGroups.length === 0 &&
+                      index === 0 &&
+                      standalonePlans.length > 1
+                    }
+                    t={t}
+                    planPurchaseCountMap={planPurchaseCountMap}
+                    onSubscribe={(p) => {
+                      setSelectedPlan({ plan: p })
+                      setPurchaseOpen(true)
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <p className='text-muted-foreground py-4 text-center text-sm'>
@@ -662,5 +642,245 @@ export function SubscriptionPlansCard({
         }
       />
     </>
+  )
+}
+
+interface PlanCardSharedProps {
+  t: TFunction
+  planPurchaseCountMap: Map<number, number>
+  onSubscribe: (plan: SubscriptionPlan) => void
+}
+
+function PlanBenefitsList({ plan, t }: { plan: SubscriptionPlan; t: PlanCardSharedProps['t'] }) {
+  const totalAmount = Number(plan.total_amount || 0)
+  const limit = Number(plan.max_purchase_per_user || 0)
+  const benefits = [
+    `${t('Validity Period')}: ${formatDuration(plan, t)}`,
+    formatResetPeriod(plan, t) !== t('No Reset')
+      ? `${t('Quota Reset')}: ${formatResetPeriod(plan, t)}`
+      : null,
+    totalAmount > 0
+      ? `${t('Total Quota')}: ${formatQuota(totalAmount)}`
+      : `${t('Total Quota')}: ${t('Unlimited')}`,
+    limit > 0 ? `${t('Purchase Limit')}: ${limit}` : null,
+    plan.upgrade_group ? `${t('Upgrade Group')}: ${plan.upgrade_group}` : null,
+  ].filter(Boolean) as string[]
+
+  return (
+    <div className='flex-1 space-y-1.5 pb-3'>
+      {benefits.map((label) => (
+        <div
+          key={label}
+          className='text-muted-foreground flex items-center gap-2 text-xs'
+        >
+          <Check className='text-primary h-3 w-3 shrink-0' />
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SubscribeButton({
+  plan,
+  planPurchaseCountMap,
+  t,
+  onSubscribe,
+}: PlanCardSharedProps & { plan: SubscriptionPlan }) {
+  const limit = Number(plan.max_purchase_per_user || 0)
+  const count = planPurchaseCountMap.get(plan.id) || 0
+  const reached = limit > 0 && count >= limit
+
+  if (reached) {
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<div />}>
+          <Button variant='outline' className='w-full' disabled>
+            {t('Limit Reached')}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {t('Purchase limit reached')} ({count}/{limit})
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+  return (
+    <Button
+      variant='outline'
+      className='w-full'
+      onClick={() => onSubscribe(plan)}
+    >
+      {t('Subscribe Now')}
+    </Button>
+  )
+}
+
+/** One pricing card per tier: cycles (monthly/quarterly/yearly) switch in place. */
+function TierGroupCard({
+  group,
+  t,
+  planPurchaseCountMap,
+  onSubscribe,
+}: PlanCardSharedProps & { group: PlanTierGroup<SubscriptionPlan> }) {
+  const cycles = availableCycles(group)
+  const [cycle, setCycle] = useState<PricingCycle>(cycles[0] ?? 'month')
+  const activeCycle = cycles.includes(cycle) ? cycle : (cycles[0] as PricingCycle)
+  const plan = group.byCycle[activeCycle]
+  if (!plan) return null
+
+  const isTeam = group.planType === 'team'
+  const price = formatBillingCurrencyFromUSD(Number(plan.price_amount || 0))
+  const cycleLabel = getCycleLabel(activeCycle, t)
+
+  return (
+    <Card
+      data-card-hover='false'
+      className={cn(plan.is_hot && 'border-primary/70 shadow-sm')}
+    >
+      <CardContent className='flex h-full flex-col p-3.5 sm:p-4'>
+        <div className='mb-2 flex items-start justify-between gap-3'>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2'>
+              <h4 className='truncate font-semibold'>{group.tier}</h4>
+              {isTeam && (
+                <StatusBadge
+                  variant='violet'
+                  copyable={false}
+                  className='shrink-0'
+                >
+                  <Users className='h-3 w-3' />
+                  {t('Team')}
+                </StatusBadge>
+              )}
+            </div>
+            {plan.subtitle && (
+              <p className='text-muted-foreground truncate text-xs'>
+                {plan.subtitle}
+              </p>
+            )}
+          </div>
+          {plan.is_hot && (
+            <StatusBadge
+              variant='info'
+              copyable={false}
+              className='shrink-0'
+            >
+              <Flame className='h-3 w-3' />
+              {t('Hot')}
+            </StatusBadge>
+          )}
+        </div>
+
+        {cycles.length > 1 && (
+          <div className='bg-muted/60 mb-1 inline-flex w-fit items-center gap-1 rounded-lg p-1'>
+            {cycles.map((c) => (
+              <button
+                key={c}
+                type='button'
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  c === activeCycle
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                onClick={() => setCycle(c)}
+              >
+                {getCycleLabel(c, t)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className='py-2'>
+          <span className='text-primary text-2xl font-bold'>{price}</span>
+          <span className='text-muted-foreground ml-1 text-xs'>
+            / {cycleLabel}
+            {isTeam ? ` / ${t('seat')}` : ''}
+          </span>
+        </div>
+
+        <PlanBenefitsList plan={plan} t={t} />
+
+        <Separator className='mb-3' />
+
+        <SubscribeButton
+          plan={plan}
+          t={t}
+          planPurchaseCountMap={planPurchaseCountMap}
+          onSubscribe={onSubscribe}
+        />
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Legacy flat card for plans without a tier (backward compatible). */
+function StandalonePlanCard({
+  plan,
+  isPopular,
+  t,
+  planPurchaseCountMap,
+  onSubscribe,
+}: PlanCardSharedProps & { plan: SubscriptionPlan; isPopular: boolean }) {
+  return (
+    <Card
+      data-card-hover='false'
+      className={cn(isPopular && 'border-primary/70 shadow-sm')}
+    >
+      <CardContent className='flex h-full flex-col p-3.5 sm:p-4'>
+        <div className='mb-2 flex items-start justify-between gap-3'>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2'>
+              <h4 className='truncate font-semibold'>
+                {plan.title || t('Subscription Plans')}
+              </h4>
+              {plan.plan_type === 'team' && (
+                <StatusBadge
+                  variant='violet'
+                  copyable={false}
+                  className='shrink-0'
+                >
+                  <Users className='h-3 w-3' />
+                  {t('Team')}
+                </StatusBadge>
+              )}
+            </div>
+            {plan.subtitle && (
+              <p className='text-muted-foreground truncate text-xs'>
+                {plan.subtitle}
+              </p>
+            )}
+          </div>
+          {isPopular && (
+            <StatusBadge
+              variant='info'
+              copyable={false}
+              className='shrink-0'
+            >
+              <Sparkles className='h-3 w-3' />
+              {t('Recommended')}
+            </StatusBadge>
+          )}
+        </div>
+
+        <div className='py-2'>
+          <span className='text-primary text-2xl font-bold'>
+            {formatBillingCurrencyFromUSD(Number(plan.price_amount || 0))}
+          </span>
+        </div>
+
+        <PlanBenefitsList plan={plan} t={t} />
+
+        <Separator className='mb-3' />
+
+        <SubscribeButton
+          plan={plan}
+          t={t}
+          planPurchaseCountMap={planPurchaseCountMap}
+          onSubscribe={onSubscribe}
+        />
+      </CardContent>
+    </Card>
   )
 }

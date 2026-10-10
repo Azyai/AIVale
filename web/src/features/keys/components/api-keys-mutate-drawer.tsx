@@ -62,6 +62,7 @@ import {
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { getTeamSelf } from '@/features/team/api'
 import { RelatedPolicyLink } from '@/features/system-settings/request-policies/related-policy-link'
 import { useStatus } from '@/hooks/use-status'
 import { getUserModels, getUserGroups } from '@/lib/api'
@@ -114,6 +115,29 @@ export function ApiKeysMutateDrawer({
     null
   )
   const defaultUseAutoGroup = status?.default_use_auto_group === true
+  const [userTeam, setUserTeam] = useState<{
+    id: number
+    name: string
+  } | null>(null)
+
+  // Fetch the caller's team (for team-token scope) when the drawer opens
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    getTeamSelf()
+      .then((res) => {
+        if (cancelled) return
+        if (res.success && res.data?.team) {
+          setUserTeam({ id: res.data.team.id, name: res.data.team.name })
+        } else {
+          setUserTeam(null)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   // Fetch models
   const { data: modelsData } = useQuery({
@@ -284,7 +308,7 @@ export function ApiKeysMutateDrawer({
   const onSubmit = async (data: ApiKeyFormValues) => {
     setIsSubmitting(true)
     try {
-      const basePayload = transformFormDataToPayload(data)
+      const basePayload = transformFormDataToPayload(data, userTeam?.id || 0)
 
       if (isUpdate && currentRow) {
         const result = await updateApiKey({

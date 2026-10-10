@@ -46,6 +46,9 @@ export const apiKeySchema = z.object({
   model_limits_enabled: z.boolean(),
   model_limits: z.string().nullish().default(''),
   allow_ips: z.string().nullish().default(''),
+  // Team billing scope: 0 = personal token, >0 = team token billed from
+  // the team's shared subscription pool / team wallet.
+  team_id: z.number().optional(),
 })
 
 export type ApiKey = z.infer<typeof apiKeySchema>
@@ -94,6 +97,7 @@ export interface ApiKeyFormData {
   group: string
   auto_groups: string[]
   cross_group_retry: boolean
+  team_id: number
 }
 
 export interface TokenAutoGroupsConfig {

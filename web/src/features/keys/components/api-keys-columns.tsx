@@ -107,7 +107,14 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
         accessorKey: 'name',
         header: t('Name'),
         cell: ({ row }) => (
-          <span className='font-medium'>{row.getValue('name')}</span>
+          <span className='flex items-center gap-1.5'>
+            <span className='font-medium'>{row.getValue('name')}</span>
+            {(row.original.team_id ?? 0) > 0 && (
+              <span className='bg-primary/10 text-primary inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium'>
+                {t('Team')}
+              </span>
+            )}
+          </span>
         ),
         size: 180,
         meta: { mobileTitle: true },

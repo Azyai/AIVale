@@ -184,6 +184,8 @@ export interface PaymentRequest {
   amount: number
   /** Payment method identifier */
   payment_method: string
+  /** Team wallet target (team owner only); omit for personal wallet */
+  team_id?: number
 }
 
 /**
@@ -194,6 +196,8 @@ export interface WaffoPaymentRequest {
   amount: number
   /** Optional server-side Waffo payment method index */
   pay_method_index?: number
+  /** Team wallet target (team owner only); omit for personal wallet */
+  team_id?: number
 }
 
 /**
@@ -202,6 +206,8 @@ export interface WaffoPaymentRequest {
 export interface WaffoPancakePaymentRequest {
   /** Topup amount */
   amount: number
+  /** Team wallet target (team owner only); omit for personal wallet */
+  team_id?: number
 }
 
 /**

@@ -27,8 +27,20 @@ export function getPlanFormSchema(t: TFunction) {
   return z.object({
     title: z.string().min(1, t('Please enter plan title')),
     subtitle: z.string().optional(),
+    tier: z.string().optional(),
+    plan_type: z.enum(['personal', 'team']),
+    is_hot: z.boolean(),
+    team_min_seats: z.coerce.number().min(1),
+    team_max_seats: z.coerce.number().min(0),
     price_amount: z.coerce.number().min(0, t('Please enter amount')),
-    duration_unit: z.enum(['year', 'month', 'day', 'hour', 'custom']),
+    duration_unit: z.enum([
+      'year',
+      'quarter',
+      'month',
+      'day',
+      'hour',
+      'custom',
+    ]),
     duration_value: z.coerce.number().min(1),
     custom_seconds: z.coerce.number().min(0).optional(),
     quota_reset_period: z.enum([
@@ -58,6 +70,11 @@ export type PlanFormValues = z.infer<ReturnType<typeof getPlanFormSchema>>
 export const PLAN_FORM_DEFAULTS: PlanFormValues = {
   title: '',
   subtitle: '',
+  tier: '',
+  plan_type: 'personal',
+  is_hot: false,
+  team_min_seats: 3,
+  team_max_seats: 0,
   price_amount: 0,
   duration_unit: 'month',
   duration_value: 1,
@@ -81,6 +98,11 @@ export function planToFormValues(plan: SubscriptionPlan): PlanFormValues {
   return {
     title: plan.title || '',
     subtitle: plan.subtitle || '',
+    tier: plan.tier || '',
+    plan_type: plan.plan_type || 'personal',
+    is_hot: plan.is_hot === true,
+    team_min_seats: Number(plan.team_min_seats || 1),
+    team_max_seats: Number(plan.team_max_seats || 0),
     price_amount: Number(plan.price_amount || 0),
     duration_unit: plan.duration_unit || 'month',
     duration_value: Number(plan.duration_value || 1),
@@ -105,6 +127,11 @@ export function formValuesToPlanPayload(values: PlanFormValues): PlanPayload {
   return {
     plan: {
       ...values,
+      tier: (values.tier || '').trim(),
+      plan_type: values.plan_type || 'personal',
+      is_hot: values.is_hot === true,
+      team_min_seats: Number(values.team_min_seats || 1),
+      team_max_seats: Number(values.team_max_seats || 0),
       price_amount: Number(values.price_amount || 0),
       currency: 'USD',
       duration_value: Number(values.duration_value || 0),

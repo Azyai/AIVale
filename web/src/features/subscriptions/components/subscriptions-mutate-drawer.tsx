@@ -151,6 +151,7 @@ export function SubscriptionsMutateDrawer({
 
   const durationUnit = form.watch('duration_unit')
   const resetPeriod = form.watch('quota_reset_period')
+  const planType = form.watch('plan_type')
   // Gate "+ Create on Pancake" on the same checks the mint handler runs.
   const watchedTitle = form.watch('title')
   const watchedPrice = form.watch('price_amount')
@@ -258,6 +259,10 @@ export function SubscriptionsMutateDrawer({
 
   const durationUnitOpts = getDurationUnitOptions(t)
   const resetPeriodOpts = getResetPeriodOptions(t)
+  const planTypeOpts = [
+    { value: 'personal', label: t('Personal Plan') },
+    { value: 'team', label: t('Team Plan') },
+  ]
 
   return (
     <Sheet
@@ -331,6 +336,138 @@ export function SubscriptionsMutateDrawer({
               <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
                 <FormField
                   control={form.control}
+                  name='plan_type'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Plan Type')}</FormLabel>
+                      <Select
+                        items={planTypeOpts.map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                        }))}
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectGroup>
+                            {planTypeOpts.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t(
+                          'Team plans are billed per seat and share one quota pool across team tokens.'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='tier'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Plan Tier')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t('e.g. Lite / Standard / Pro')}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t(
+                          'Plans with the same tier are grouped into one pricing card with monthly/quarterly/yearly cycle tabs. Empty means standalone card.'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {planType === 'team' && (
+                <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+                  <FormField
+                    control={form.control}
+                    name='team_min_seats'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Min Seats')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type='number'
+                            min={1}
+                            onChange={(e) =>
+                              field.onChange(
+                                Number.parseInt(e.target.value, 10) || 1
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='team_max_seats'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Max Seats')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type='number'
+                            min={0}
+                            onChange={(e) =>
+                              field.onChange(
+                                Number.parseInt(e.target.value, 10) || 0
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>{t('0 means unlimited')}</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              <FormField
+                control={form.control}
+                name='is_hot'
+                render={({ field }) => (
+                  <FormItem className={sideDrawerSwitchItemClassName()}>
+                    <FormLabel className='!mt-0'>
+                      {t('Mark as hot (badge on pricing card)')}
+                    </FormLabel>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+                <FormField
+                  control={form.control}
                   name='price_amount'
                   render={({ field }) => (
                     <FormItem>
@@ -350,7 +487,7 @@ export function SubscriptionsMutateDrawer({
                       </FormControl>
                       <FormDescription>
                         {t(
-                          'Amount the user pays to purchase this plan; the actual currency depends on the payment gateway.'
+                          'System USD base price. Shown to users in the display currency configured in Billing → Currency (e.g. ¥ under CNY display); epay charges are converted with the recharge unit price.'
                         )}
                       </FormDescription>
                       <FormMessage />

@@ -117,6 +117,11 @@ export function useSidebarData(): SidebarData {
             icon: Wallet,
           },
           {
+            title: t('My Team'),
+            url: '/team',
+            icon: Users,
+          },
+          {
             title: t('Profile'),
             url: '/profile',
             icon: User,
@@ -156,6 +161,11 @@ export function useSidebarData(): SidebarData {
             title: t('Subscriptions'),
             url: '/subscriptions',
             icon: CreditCard,
+          },
+          {
+            title: t('Teams'),
+            url: '/teams',
+            icon: Users,
           },
           {
             title: t('System Info'),

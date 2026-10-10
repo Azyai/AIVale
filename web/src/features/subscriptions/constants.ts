@@ -24,10 +24,23 @@ import { type TFunction } from 'i18next'
 
 export const DURATION_UNITS = [
   { value: 'year', labelKey: 'years' },
+  { value: 'quarter', labelKey: 'quarters' },
   { value: 'month', labelKey: 'months' },
   { value: 'day', labelKey: 'days' },
   { value: 'hour', labelKey: 'hours' },
   { value: 'custom', labelKey: 'Custom (seconds)' },
+] as const
+
+// Billing cycles shown as pricing-card tabs; ordering matters (月→季→年).
+export const PRICING_CYCLES = [
+  { value: 'month', labelKey: 'Monthly' },
+  { value: 'quarter', labelKey: 'Quarterly' },
+  { value: 'year', labelKey: 'Yearly' },
+] as const
+
+export const PLAN_TYPES = [
+  { value: 'personal', labelKey: 'Personal Plan' },
+  { value: 'team', labelKey: 'Team Plan' },
 ] as const
 
 export const RESET_PERIODS = [

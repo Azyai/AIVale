@@ -22,6 +22,7 @@ import type {
   ApiResponse,
   PlanRecord,
   PlanPayload,
+  PublicSubscriptionPlan,
   UserSubscriptionRecord,
   CreateUserSubscriptionRequest,
   ResetUserSubscriptionsRequest,
@@ -221,6 +222,15 @@ export async function getSelfSubscriptionFull(): Promise<
 
 export async function getPublicPlans(): Promise<ApiResponse<PlanRecord[]>> {
   const res = await api.get('/api/subscription/plans')
+  return res.data
+}
+
+// Sanitized plan list for the marketing homepage; no auth required and
+// payment gateway product IDs are stripped by the backend.
+export async function getPublicPlanCards(): Promise<
+  ApiResponse<PublicSubscriptionPlan[]>
+> {
+  const res = await api.get('/api/subscription/plans/public')
   return res.data
 }
 

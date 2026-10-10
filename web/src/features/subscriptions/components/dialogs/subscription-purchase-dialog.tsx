@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Crown, CalendarClock, Package } from 'lucide-react'
+import { Crown, CalendarClock, Package, Users, Minus, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
 import { Separator } from '@/components/ui/separator'
 import { useSystemConfig } from '@/hooks/use-system-config'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatQuota } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
 import { DEFAULT_CURRENCY_CONFIG } from '@/stores/system-config-store'
@@ -67,6 +68,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const { currency } = useSystemConfig()
   const [paying, setPaying] = useState(false)
   const [selectedEpayMethod, setSelectedEpayMethod] = useState('')
+  const [seats, setSeats] = useState(1)
 
   useEffect(() => {
     if (props.open && props.epayMethods && props.epayMethods.length > 0) {
@@ -77,6 +79,14 @@ export function SubscriptionPurchaseDialog(props: Props) {
   }, [props.open, props.epayMethods])
 
   const plan = props.plan?.plan
+  const isTeamPlan = plan?.plan_type === 'team'
+
+  useEffect(() => {
+    if (props.open && plan && isTeamPlan) {
+      setSeats(Math.max(1, Number(plan.team_min_seats || 1)))
+    }
+  }, [props.open, plan?.id, isTeamPlan])
+
   if (!plan) return null
 
   const hasStripe = props.enableStripe && !!plan.stripe_price_id
@@ -86,15 +96,25 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const hasEpay =
     props.enableOnlineTopUp && (props.epayMethods || []).length > 0
   const hasAnyPayment = hasStripe || hasCreem || hasWaffoPancake || hasEpay
-  const totalAmount = Number(plan.total_amount || 0)
-  const price = Number(plan.price_amount || 0).toFixed(2)
+  const effectiveSeats = isTeamPlan ? Math.max(1, seats) : 1
+  const seatMin = Math.max(1, Number(plan.team_min_seats || 1))
+  const seatMax = Number(plan.team_max_seats || 0) // 0 = unlimited
+  const totalAmount = isTeamPlan
+    ? Number(plan.total_amount || 0) * effectiveSeats
+    : Number(plan.total_amount || 0)
+  const price = formatBillingCurrencyFromUSD(
+    Number(plan.price_amount || 0) * effectiveSeats
+  )
+  const seatPrice = formatBillingCurrencyFromUSD(
+    Number(plan.price_amount || 0)
+  )
   const quotaPerUnit =
     currency?.quotaPerUnit && currency.quotaPerUnit > 0
       ? currency.quotaPerUnit
       : DEFAULT_CURRENCY_CONFIG.quotaPerUnit
   const balanceCost = Math.max(
     0,
-    Math.ceil(Number(plan.price_amount || 0) * quotaPerUnit)
+    Math.ceil(Number(plan.price_amount || 0) * effectiveSeats * quotaPerUnit)
   )
   const userQuota = Math.max(0, Number(props.userQuota || 0))
   const allowBalancePay = plan.allow_balance_pay !== false
@@ -106,7 +126,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const handlePayStripe = async () => {
     setPaying(true)
     try {
-      const res = await paySubscriptionStripe({ plan_id: plan.id })
+      const res = await paySubscriptionStripe({ plan_id: plan.id, seats: effectiveSeats })
       if (res.message === 'success' && res.data?.pay_link) {
         window.open(res.data.pay_link, '_blank')
         toast.success(t('Payment page opened'))
@@ -124,7 +144,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const handlePayCreem = async () => {
     setPaying(true)
     try {
-      const res = await paySubscriptionCreem({ plan_id: plan.id })
+      const res = await paySubscriptionCreem({ plan_id: plan.id, seats: effectiveSeats })
       if (res.message === 'success' && res.data?.checkout_url) {
         window.open(res.data.checkout_url, '_blank')
         toast.success(t('Payment page opened'))
@@ -144,7 +164,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const handlePayWaffoPancake = async () => {
     setPaying(true)
     try {
-      const res = await paySubscriptionWaffoPancake({ plan_id: plan.id })
+      const res = await paySubscriptionWaffoPancake({ plan_id: plan.id, seats: effectiveSeats })
       if (res.message === 'success' && res.data?.checkout_url) {
         toast.success(t('Redirecting to payment page...'))
         window.location.href = res.data.checkout_url
@@ -172,6 +192,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
       const res = await paySubscriptionEpay({
         plan_id: plan.id,
         payment_method: selectedEpayMethod,
+        seats: effectiveSeats,
       })
       if (res.message === 'success' && res.url) {
         const form = document.createElement('form')
@@ -209,7 +230,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
     }
     setPaying(true)
     try {
-      const res = await paySubscriptionBalance({ plan_id: plan.id })
+      const res = await paySubscriptionBalance({ plan_id: plan.id, seats: effectiveSeats })
       if (res.success) {
         toast.success(t('Subscription purchased successfully'))
         void props.onPurchaseSuccess?.()
@@ -240,6 +261,79 @@ export function SubscriptionPurchaseDialog(props: Props) {
       bodyClassName='space-y-4'
     >
       <div className='space-y-3 sm:space-y-4'>
+        {isTeamPlan && (
+          <div className='space-y-2.5 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4'>
+            <div className='flex items-center justify-between'>
+              <span className='flex items-center gap-1.5 text-sm font-medium'>
+                <Users className='text-primary h-4 w-4' />
+                {t('Seats')}
+              </span>
+              <span className='text-muted-foreground text-xs'>
+                {t('单价')}: {seatPrice}
+                {t('/ 席位')}
+              </span>
+            </div>
+            <div className='flex items-center justify-between gap-3'>
+              <div className='flex items-center gap-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='icon'
+                  className='h-8 w-8'
+                  onClick={() =>
+                    setSeats((v) => Math.max(seatMin, Number(v) - 1))
+                  }
+                  disabled={seats <= seatMin}
+                >
+                  <Minus className='size-3.5' />
+                </Button>
+                <input
+                  type='number'
+                  className='border-input bg-background h-8 w-20 rounded-md border text-center text-sm'
+                  value={seats}
+                  min={seatMin}
+                  max={seatMax > 0 ? seatMax : undefined}
+                  onChange={(e) => {
+                    const v = Number.parseInt(e.target.value, 10)
+                    if (Number.isNaN(v)) return
+                    setSeats(Math.max(1, v))
+                  }}
+                  onBlur={() => {
+                    setSeats((v) => {
+                      let n = Math.max(seatMin, Number(v) || seatMin)
+                      if (seatMax > 0) n = Math.min(seatMax, n)
+                      return n
+                    })
+                  }}
+                />
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='icon'
+                  className='h-8 w-8'
+                  onClick={() =>
+                    setSeats((v) =>
+                      seatMax > 0 ? Math.min(seatMax, v + 1) : v + 1
+                    )
+                  }
+                  disabled={seatMax > 0 && seats >= seatMax}
+                >
+                  <Plus className='size-3.5' />
+                </Button>
+              </div>
+              <span className='text-muted-foreground text-xs'>
+                {seatMax > 0 ? `${seatMin} ~ ${seatMax}` : `${seatMin}+`}
+                {t('人')}
+              </span>
+            </div>
+            <p className='text-muted-foreground/70 text-xs leading-relaxed'>
+              {t(
+                '团队套餐按席位计价：总价=单价×席位数，总额度随席位数等比增加。购买后自动创建/绑定您的团队。'
+              )}
+            </p>
+          </div>
+        )}
+
         <div className='bg-muted/50 space-y-2.5 rounded-lg border p-3 sm:space-y-3 sm:p-4'>
           <div className='flex justify-between'>
             <span className='text-muted-foreground text-sm'>
@@ -286,7 +380,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
           <Separator />
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium'>{t('Amount Due')}</span>
-            <span className='text-primary text-lg font-bold'>${price}</span>
+            <span className='text-primary text-lg font-bold'>{price}</span>
           </div>
         </div>
 

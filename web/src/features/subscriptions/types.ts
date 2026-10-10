@@ -26,9 +26,14 @@ export const subscriptionPlanSchema = z.object({
   id: z.number(),
   title: z.string(),
   subtitle: z.string().optional(),
+  tier: z.string().optional().default(''),
+  plan_type: z.enum(['personal', 'team']).optional().default('personal'),
+  is_hot: z.boolean().optional().default(false),
+  team_min_seats: z.number().optional().default(1),
+  team_max_seats: z.number().optional().default(0),
   price_amount: z.number(),
   currency: z.string().default('USD'),
-  duration_unit: z.enum(['year', 'month', 'day', 'hour', 'custom']),
+  duration_unit: z.enum(['year', 'quarter', 'month', 'day', 'hour', 'custom']),
   duration_value: z.number(),
   custom_seconds: z.number().optional(),
   quota_reset_period: z.enum(['never', 'daily', 'weekly', 'monthly', 'custom']),
@@ -50,6 +55,27 @@ export type SubscriptionPlan = z.infer<typeof subscriptionPlanSchema>
 
 export interface PlanRecord {
   plan: SubscriptionPlan
+}
+
+// Sanitized plan served by GET /api/subscription/plans/public for the
+// marketing homepage (no payment gateway IDs, no admin-only knobs).
+export interface PublicSubscriptionPlan {
+  id: number
+  title: string
+  subtitle: string
+  tier: string
+  plan_type: 'personal' | 'team'
+  is_hot: boolean
+  price_amount: number
+  currency: string
+  duration_unit: 'year' | 'quarter' | 'month' | 'day' | 'hour' | 'custom'
+  duration_value: number
+  total_amount: number
+  quota_reset_period: 'never' | 'daily' | 'weekly' | 'monthly' | 'custom'
+  team_min_seats: number
+  team_max_seats: number
+  sort_order: number
+  upgrade_group: string
 }
 
 // ============================================================================
@@ -92,6 +118,8 @@ export interface PlanPayload {
 export interface SubscriptionPayRequest {
   plan_id: number
   payment_method?: string
+  // Seats for team plans (price and quota scale with it); personal plans ignore.
+  seats?: number
 }
 
 export interface SubscriptionPayResponse {

@@ -45,6 +45,7 @@ export function getApiKeyFormSchema(t: TFunction, maxAutoGroups = 5) {
       auto_groups: z.array(z.string()),
       cross_group_retry: z.boolean().optional(),
       tokenCount: z.number().min(1).optional(),
+      scope: z.enum(['personal', 'team']).optional(),
     })
     .superRefine((data, ctx) => {
       if (data.group === 'auto') {
@@ -115,6 +116,7 @@ export const API_KEY_FORM_DEFAULT_VALUES: ApiKeyFormValues = {
   auto_groups: [],
   cross_group_retry: true,
   tokenCount: 1,
+  scope: 'personal',
 }
 
 export function getApiKeyFormDefaultValues(
@@ -137,7 +139,8 @@ export function getApiKeyFormDefaultValues(
  * Transform form data to API payload
  */
 export function transformFormDataToPayload(
-  data: ApiKeyFormValues
+  data: ApiKeyFormValues,
+  userTeamId = 0
 ): ApiKeyFormData {
   return {
     name: data.name,
@@ -157,6 +160,7 @@ export function transformFormDataToPayload(
         ? data.auto_groups
         : [],
     cross_group_retry: data.group === 'auto' ? !!data.cross_group_retry : false,
+    team_id: data.scope === 'team' && userTeamId > 0 ? userTeamId : 0,
   }
 }
 
@@ -194,5 +198,6 @@ export function transformApiKeyToFormDefaults(
     auto_groups: autoGroups,
     cross_group_retry: !!apiKey.cross_group_retry,
     tokenCount: 1,
+    scope: ((apiKey as { team_id?: number }).team_id ?? 0) > 0 ? 'team' : 'personal',
   }
 }
