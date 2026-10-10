@@ -77,6 +77,13 @@ export const THEME_PRESETS = [
     name: 'Lavender Dream',
     swatches: ['oklch(0.5709 0.1808 306.89)', 'oklch(0.811 0.0589 201.14)'],
   },
+  {
+    // Electric violet × cyan, curated for the rankings big screen; rounded
+    // by default. Swatches preview violet → cyan, the palette's two poles.
+    value: 'aurora-violet',
+    name: 'Aurora Violet',
+    swatches: ['oklch(0.56 0.2 295)', 'oklch(0.62 0.12 220)'],
+  },
 ] as const
 
 export type ThemePreset = (typeof THEME_PRESETS)[number]['value']

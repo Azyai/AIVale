@@ -291,6 +291,48 @@ For commercial licensing, please contact support@quantumnous.com
   --sidebar-ring: oklch(0.6359 0.1699 307.95);
 }
 
+/* ── Aurora Violet ──────────────────────────────────────────────────────
+ * Curated for the rankings big screen: electric violet primary paired with
+ * a cyan counterpoint, plus a data palette (magenta / jade / amber) tuned
+ * for chart legibility on both light and dark surfaces. Rounded by default
+ * (--radius 0.75rem). Surfaces derive automatically via the semantic
+ * surface bridge below. */
+[data-theme-preset='aurora-violet'] {
+  --primary: oklch(0.56 0.2 295);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.75 0.09 295);
+  --secondary-foreground: oklch(0.32 0.05 295);
+  --ring: oklch(0.56 0.2 295);
+  --chart-1: oklch(0.56 0.2 295);
+  --chart-2: oklch(0.62 0.12 220);
+  --chart-3: oklch(0.6 0.19 345);
+  --chart-4: oklch(0.64 0.12 165);
+  --chart-5: oklch(0.75 0.13 85);
+  --sidebar-primary: oklch(0.56 0.2 295);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.56 0.2 295);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.56 0.2 295);
+  --radius: 0.75rem;
+}
+.dark [data-theme-preset='aurora-violet'] {
+  --primary: oklch(0.72 0.16 295);
+  --primary-foreground: oklch(0.145 0.02 295);
+  --secondary: oklch(0.42 0.08 295);
+  --secondary-foreground: oklch(0.9 0.05 295);
+  --ring: oklch(0.72 0.16 295);
+  --chart-1: oklch(0.72 0.16 295);
+  --chart-2: oklch(0.78 0.11 220);
+  --chart-3: oklch(0.7 0.16 345);
+  --chart-4: oklch(0.72 0.12 165);
+  --chart-5: oklch(0.82 0.12 85);
+  --sidebar-primary: oklch(0.72 0.16 295);
+  --sidebar-primary-foreground: oklch(0.145 0.02 295);
+  --sidebar-accent: oklch(0.72 0.16 295);
+  --sidebar-accent-foreground: oklch(0.145 0.02 295);
+  --sidebar-ring: oklch(0.72 0.16 295);
+}
+
 /* ── Simple Large-font ────────────────────────────────────────────────── */
 [data-theme-preset='simple-large'] {
   --background: oklch(0.99 0 0);
