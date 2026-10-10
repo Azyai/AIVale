@@ -37,6 +37,22 @@ type tokenRequest struct {
 	AutoGroups tokenAutoGroupsInput `json:"auto_groups"`
 }
 
+// validateTeamTokenScope checks that a team-scoped token belongs to the
+// caller's team. Returns the effective team id (0 = personal).
+func validateTeamTokenScope(userId int, teamId int) (int, string) {
+	if teamId <= 0 {
+		return 0, ""
+	}
+	team, member, err := model.GetUserTeam(userId)
+	if err != nil || team == nil || member == nil {
+		return 0, "您当前不在任何团队中，无法创建团队令牌"
+	}
+	if team.Id != teamId {
+		return 0, "只能为您的团队创建团队令牌"
+	}
+	return team.Id, ""
+}
+
 type tokenResponse struct {
 	*model.Token
 	AutoGroups []string `json:"auto_groups"`
@@ -323,6 +339,11 @@ func AddToken(c *gin.Context) {
 		token.CrossGroupRetry = false
 		_ = token.SetAutoGroups(nil)
 	}
+	teamId, msg := validateTeamTokenScope(c.GetInt("id"), token.TeamId)
+	if msg != "" {
+		common.ApiErrorMsg(c, msg)
+		return
+	}
 	key, err := common.GenerateKey()
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgTokenGenerateFailed)
@@ -344,6 +365,7 @@ func AddToken(c *gin.Context) {
 		Group:              token.Group,
 		CrossGroupRetry:    token.CrossGroupRetry,
 		AutoGroups:         token.AutoGroups,
+		TeamId:             teamId,
 	}
 	err = cleanToken.Insert()
 	if err != nil {
@@ -439,6 +461,15 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.AllowIps = token.AllowIps
 		cleanToken.Group = token.Group
 		cleanToken.CrossGroupRetry = token.CrossGroupRetry
+		// Team scope changes are validated: personal <-> own team only.
+		if token.TeamId != cleanToken.TeamId {
+			teamId, msg := validateTeamTokenScope(userId, token.TeamId)
+			if msg != "" {
+				common.ApiErrorMsg(c, msg)
+				return
+			}
+			cleanToken.TeamId = teamId
+		}
 		if token.Group != "auto" {
 			cleanToken.CrossGroupRetry = false
 			_ = cleanToken.SetAutoGroups(nil)

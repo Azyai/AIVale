@@ -18,6 +18,7 @@ import (
 
 type SubscriptionStripePayRequest struct {
 	PlanId int `json:"plan_id"`
+	Seats  int `json:"seats"`
 }
 
 func SubscriptionRequestStripePay(c *gin.Context) {
@@ -64,6 +65,14 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 		return
 	}
 
+	// Team plans charge per seat; Stripe quantity carries the seat count and
+	// the line item totals to price × seats automatically.
+	seats, money, msg := resolveSubscriptionPurchase(userId, plan, req.Seats)
+	if msg != "" {
+		common.ApiErrorMsg(c, msg)
+		return
+	}
+
 	if plan.MaxPurchasePerUser > 0 {
 		count, err := model.CountUserSubscriptionsByPlan(userId, plan.Id)
 		if err != nil {
@@ -79,7 +88,7 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 	reference := fmt.Sprintf("sub-stripe-ref-%d-%d-%s", user.Id, time.Now().UnixMilli(), randstr.String(4))
 	referenceId := "sub_ref_" + common.Sha1([]byte(reference))
 
-	payLink, err := genStripeSubscriptionLink(referenceId, user.StripeCustomer, user.Email, plan.StripePriceId)
+	payLink, err := genStripeSubscriptionLink(referenceId, user.StripeCustomer, user.Email, plan.StripePriceId, seats)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Stripe 订阅支付链接创建失败 trade_no=%s plan_id=%d error=%q", referenceId, plan.Id, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
@@ -89,7 +98,8 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 	order := &model.SubscriptionOrder{
 		UserId:          userId,
 		PlanId:          plan.Id,
-		Money:           plan.PriceAmount,
+		Money:           money,
+		Seats:           seats,
 		TradeNo:         referenceId,
 		PaymentMethod:   model.PaymentMethodStripe,
 		PaymentProvider: model.PaymentProviderStripe,
@@ -109,8 +119,11 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 	})
 }
 
-func genStripeSubscriptionLink(referenceId string, customerId string, email string, priceId string) (string, error) {
+func genStripeSubscriptionLink(referenceId string, customerId string, email string, priceId string, seats int) (string, error) {
 	stripe.Key = setting.StripeApiSecret
+	if seats < 1 {
+		seats = 1
+	}
 
 	params := &stripe.CheckoutSessionParams{
 		ClientReferenceID: stripe.String(referenceId),
@@ -119,7 +132,7 @@ func genStripeSubscriptionLink(referenceId string, customerId string, email stri
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(priceId),
-				Quantity: stripe.Int64(1),
+				Quantity: stripe.Int64(int64(seats)),
 			},
 		},
 		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),

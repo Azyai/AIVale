@@ -19,6 +19,7 @@ import (
 type SubscriptionEpayPayRequest struct {
 	PlanId        int    `json:"plan_id"`
 	PaymentMethod string `json:"payment_method"`
+	Seats         int    `json:"seats"`
 }
 
 func SubscriptionRequestEpay(c *gin.Context) {
@@ -51,6 +52,15 @@ func SubscriptionRequestEpay(c *gin.Context) {
 	}
 
 	userId := c.GetInt("id")
+	seats, money, msg := resolveSubscriptionPurchase(userId, plan, req.Seats)
+	if msg != "" {
+		common.ApiErrorMsg(c, msg)
+		return
+	}
+	if money < 0.01 {
+		common.ApiErrorMsg(c, "套餐金额过低")
+		return
+	}
 	if plan.MaxPurchasePerUser > 0 {
 		count, err := model.CountUserSubscriptionsByPlan(userId, plan.Id)
 		if err != nil {
@@ -84,10 +94,18 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		return
 	}
 
+	// 与钱包充值（易支付）同一换算惯例：套餐美元基准价 × 充值单价(Price)
+	// = 网关实际扣费金额。order.Money 记录实际扣费（与 TopUp.Money 语义一致）。
+	payMoney := money * operation_setting.Price
+	if payMoney < 0.01 {
+		payMoney = money
+	}
+
 	order := &model.SubscriptionOrder{
 		UserId:          userId,
 		PlanId:          plan.Id,
-		Money:           plan.PriceAmount,
+		Money:           payMoney,
+		Seats:           seats,
 		TradeNo:         tradeNo,
 		PaymentMethod:   req.PaymentMethod,
 		PaymentProvider: model.PaymentProviderEpay,
@@ -102,7 +120,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		Type:           req.PaymentMethod,
 		ServiceTradeNo: tradeNo,
 		Name:           fmt.Sprintf("SUB:%s", plan.Title),
-		Money:          strconv.FormatFloat(plan.PriceAmount, 'f', 2, 64),
+		Money:          strconv.FormatFloat(payMoney, 'f', 2, 64),
 		Device:         epay.PC,
 		NotifyUrl:      notifyUrl,
 		ReturnUrl:      returnUrl,

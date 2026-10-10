@@ -127,6 +127,8 @@ func GetTopUpInfo(c *gin.Context) {
 type EpayRequest struct {
 	Amount        int64  `json:"amount"`
 	PaymentMethod string `json:"payment_method"`
+	// TeamId targets the caller's team wallet instead of the personal wallet.
+	TeamId int `json:"team_id"`
 }
 
 type AmountRequest struct {
@@ -267,6 +269,34 @@ func rejectInvalidTopUpQuota(c *gin.Context, userId int, amount int64) bool {
 	return false
 }
 
+// resolveTopUpTarget validates an optional team wallet target. Only the team
+// owner may credit the team wallet; returns the effective team id (0 = personal).
+func resolveTopUpTarget(userId int, teamId int) (int, string) {
+	if teamId <= 0 {
+		return 0, ""
+	}
+	team, member, err := model.GetUserTeam(userId)
+	if err != nil || team == nil || member == nil {
+		return 0, "您当前不在任何团队中"
+	}
+	if team.Id != teamId {
+		return 0, "只能为您的团队充值"
+	}
+	if member.Role != model.TeamRoleOwner {
+		return 0, "只有团队所有者可以为团队钱包充值"
+	}
+	return team.Id, ""
+}
+
+// rejectTopUpTargetError renders a top-up target validation failure.
+func rejectTopUpTargetError(c *gin.Context, msg string) bool {
+	if msg == "" {
+		return false
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "error", "data": msg})
+	return true
+}
+
 func RequestEpay(c *gin.Context) {
 	var req EpayRequest
 	err := c.ShouldBindJSON(&req)
@@ -279,7 +309,12 @@ func RequestEpay(c *gin.Context) {
 		return
 	}
 	id := c.GetInt("id")
-	if rejectInvalidTopUpQuota(c, id, req.Amount) {
+	teamId, targetMsg := resolveTopUpTarget(id, req.TeamId)
+	if rejectTopUpTargetError(c, targetMsg) {
+		return
+	}
+	// The personal wallet ceiling does not apply to team wallet top-ups.
+	if teamId == 0 && rejectInvalidTopUpQuota(c, id, req.Amount) {
 		return
 	}
 
@@ -331,6 +366,7 @@ func RequestEpay(c *gin.Context) {
 	}
 	topUp := &model.TopUp{
 		UserId:          id,
+		TeamId:          teamId,
 		Amount:          amount,
 		Money:           payMoney,
 		TradeNo:         tradeNo,

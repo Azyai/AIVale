@@ -34,7 +34,9 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/privacy-policy", controller.GetPrivacyPolicy)
 		apiRouter.GET("/about", controller.GetAbout)
 		//apiRouter.GET("/midjourney", controller.GetMidjourney)
-		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
+		// Public sanitized plan list for the marketing homepage (no auth).
+		// Must be registered before the UserAuth-guarded /subscription group.
+		apiRouter.GET("/subscription/plans/public", controller.GetPublicSubscriptionPlans)
 		apiRouter.GET("/pricing", middleware.HeaderNavModuleAuth("pricing"), controller.GetPricing)
 		perfMetricsRoute := apiRouter.Group("/perf-metrics")
 		perfMetricsRoute.Use(middleware.HeaderNavModulePublicOrUserAuth("pricing"))
@@ -209,6 +211,25 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/subscription/epay/notify", controller.SubscriptionEpayNotify)
 		apiRouter.GET("/subscription/epay/return", controller.SubscriptionEpayReturn)
 		apiRouter.POST("/subscription/epay/return", anonymousRequestBodyLimit, controller.SubscriptionEpayReturn)
+
+		// Team management (multi-tenant billing scope)
+		teamRoute := apiRouter.Group("/team")
+		teamRoute.Use(middleware.UserAuth())
+		{
+			teamRoute.GET("/self", controller.GetTeamSelf)
+			teamRoute.PUT("/self/name", controller.UpdateTeamName)
+			teamRoute.POST("/self/invite/refresh", controller.RefreshTeamInviteCode)
+			teamRoute.POST("/self/leave", controller.LeaveTeam)
+			teamRoute.DELETE("/self/members/:user_id", controller.RemoveTeamMember)
+			teamRoute.POST("/join", middleware.CriticalRateLimit(), controller.JoinTeam)
+		}
+		teamAdminRoute := apiRouter.Group("/team/admin")
+		teamAdminRoute.Use(middleware.AdminAuth())
+		{
+			teamAdminRoute.GET("/teams", controller.AdminListTeams)
+			teamAdminRoute.GET("/teams/:id", controller.AdminGetTeamDetail)
+			teamAdminRoute.PUT("/teams/:id/quota", controller.AdminUpdateTeamQuota)
+		}
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())
 		{
@@ -216,6 +237,7 @@ func SetApiRouter(router *gin.Engine) {
 			optionRoute.GET("/request_policy", controller.GetRequestPolicy)
 			optionRoute.PATCH("/request_policy", controller.UpdateRequestPolicy)
 			optionRoute.PUT("/", controller.UpdateOption)
+			optionRoute.POST("/login_media", controller.UploadLoginMedia)
 			optionRoute.PUT("/passkey/domains", controller.UpdatePasskeyDomains)
 			optionRoute.GET("/model_pricing", controller.GetModelPricingConfig)
 			optionRoute.PATCH("/model_pricing", controller.UpdateModelPricingConfig)

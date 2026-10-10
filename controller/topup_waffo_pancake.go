@@ -20,6 +20,8 @@ import (
 
 type WaffoPancakePayRequest struct {
 	Amount int64 `json:"amount"`
+	// TeamId targets the caller's team wallet instead of the personal wallet.
+	TeamId int `json:"team_id,omitempty"`
 }
 
 func RequestWaffoPancakeAmount(c *gin.Context) {
@@ -355,7 +357,11 @@ func RequestWaffoPancakePay(c *gin.Context) {
 		return
 	}
 	id := c.GetInt("id")
-	if rejectInvalidTopUpQuota(c, id, req.Amount) {
+	teamId, targetMsg := resolveTopUpTarget(id, req.TeamId)
+	if rejectTopUpTargetError(c, targetMsg) {
+		return
+	}
+	if teamId == 0 && rejectInvalidTopUpQuota(c, id, req.Amount) {
 		return
 	}
 
@@ -380,6 +386,7 @@ func RequestWaffoPancakePay(c *gin.Context) {
 	tradeNo := fmt.Sprintf("WAFFO_PANCAKE-%d-%d-%s", id, time.Now().UnixMilli(), randstr.String(6))
 	topUp := &model.TopUp{
 		UserId:          id,
+		TeamId:          teamId,
 		Amount:          normalizeWaffoPancakeTopUpAmount(req.Amount),
 		Money:           payMoney,
 		TradeNo:         tradeNo,

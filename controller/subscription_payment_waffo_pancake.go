@@ -18,6 +18,7 @@ import (
 
 type SubscriptionWaffoPancakePayRequest struct {
 	PlanId int `json:"plan_id"`
+	Seats  int `json:"seats"`
 }
 
 func SubscriptionRequestWaffoPancakePay(c *gin.Context) {
@@ -63,6 +64,13 @@ func SubscriptionRequestWaffoPancakePay(c *gin.Context) {
 		return
 	}
 
+	// Team plans charge per seat; the checkout price snapshot pins the total.
+	seats, money, msg := resolveSubscriptionPurchase(userId, plan, req.Seats)
+	if msg != "" {
+		common.ApiErrorMsg(c, msg)
+		return
+	}
+
 	if plan.MaxPurchasePerUser > 0 {
 		count, err := model.CountUserSubscriptionsByPlan(userId, plan.Id)
 		if err != nil {
@@ -82,7 +90,8 @@ func SubscriptionRequestWaffoPancakePay(c *gin.Context) {
 	order := &model.SubscriptionOrder{
 		UserId:          userId,
 		PlanId:          plan.Id,
-		Money:           plan.PriceAmount,
+		Money:           money,
+		Seats:           seats,
 		TradeNo:         tradeNo,
 		PaymentMethod:   model.PaymentMethodWaffoPancake,
 		PaymentProvider: model.PaymentProviderWaffoPancake,
@@ -100,7 +109,7 @@ func SubscriptionRequestWaffoPancakePay(c *gin.Context) {
 		ProductID:     plan.WaffoPancakeProductId,
 		BuyerIdentity: service.WaffoPancakeBuyerIdentityFromUserID(user.Id),
 		PriceSnapshot: &service.WaffoPancakePriceSnapshot{
-			Amount:      decimal.NewFromFloat(plan.PriceAmount).StringFixed(2),
+			Amount:      decimal.NewFromFloat(money).StringFixed(2),
 			TaxCategory: "saas",
 		},
 		BuyerEmail:              getWaffoPancakeBuyerEmail(user),
@@ -114,7 +123,7 @@ func SubscriptionRequestWaffoPancakePay(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
 	}
-	logger.LogInfo(c.Request.Context(), fmt.Sprintf("Waffo Pancake 订阅订单创建成功 user_id=%d plan_id=%d trade_no=%s session_id=%s money=%.2f", userId, plan.Id, tradeNo, session.SessionID, plan.PriceAmount))
+	logger.LogInfo(c.Request.Context(), fmt.Sprintf("Waffo Pancake 订阅订单创建成功 user_id=%d plan_id=%d trade_no=%s session_id=%s money=%.2f", userId, plan.Id, tradeNo, session.SessionID, money))
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",

@@ -25,6 +25,34 @@ type BillingPreferenceRequest struct {
 
 type SubscriptionBalancePayRequest struct {
 	PlanId int `json:"plan_id"`
+	// Seats applies to team plans only; personal plans ignore it.
+	Seats int `json:"seats"`
+}
+
+// resolveSubscriptionPurchase normalizes the seat count for a plan purchase
+// and computes the charged money (price × seats for team plans). It also
+// rejects buyers who are only a member of someone else's team (they should
+// ask their team owner to purchase). Returns an error message on failure.
+func resolveSubscriptionPurchase(userId int, plan *model.SubscriptionPlan, seats int) (int, float64, string) {
+	if model.NormalizePlanType(plan.PlanType) != model.SubscriptionPlanTypeTeam {
+		return 1, plan.PriceAmount, ""
+	}
+	if seats < 1 {
+		seats = plan.TeamMinSeats
+	}
+	if seats < 1 {
+		seats = 1
+	}
+	if plan.TeamMinSeats > 1 && seats < plan.TeamMinSeats {
+		return 0, 0, fmt.Sprintf("团队套餐至少需要 %d 个席位", plan.TeamMinSeats)
+	}
+	if plan.TeamMaxSeats > 0 && seats > plan.TeamMaxSeats {
+		return 0, 0, fmt.Sprintf("团队套餐最多支持 %d 个席位", plan.TeamMaxSeats)
+	}
+	if team, _, err := model.GetUserTeam(userId); err == nil && team != nil && team.OwnerUserId != userId {
+		return 0, 0, "您已是其他团队的成员，请让团队所有者购买或先退出当前团队"
+	}
+	return seats, plan.PriceAmount * float64(seats), ""
 }
 
 // ---- User APIs ----
@@ -45,6 +73,63 @@ func GetSubscriptionPlans(c *gin.Context) {
 		p.NormalizeDefaults()
 		result = append(result, SubscriptionPlanDTO{
 			Plan: p,
+		})
+	}
+	common.ApiSuccess(c, result)
+}
+
+// PublicPlanDTO exposes sanitized plan fields for the marketing homepage.
+// Payment gateway product IDs and admin-only knobs are intentionally omitted.
+type PublicPlanDTO struct {
+	Id               int     `json:"id"`
+	Title            string  `json:"title"`
+	Subtitle         string  `json:"subtitle"`
+	Tier             string  `json:"tier"`
+	PlanType         string  `json:"plan_type"`
+	IsHot            bool    `json:"is_hot"`
+	PriceAmount      float64 `json:"price_amount"`
+	Currency         string  `json:"currency"`
+	DurationUnit     string  `json:"duration_unit"`
+	DurationValue    int     `json:"duration_value"`
+	TotalAmount      int64   `json:"total_amount"`
+	QuotaResetPeriod string  `json:"quota_reset_period"`
+	TeamMinSeats     int     `json:"team_min_seats"`
+	TeamMaxSeats     int     `json:"team_max_seats"`
+	SortOrder        int     `json:"sort_order"`
+	UpgradeGroup     string  `json:"upgrade_group"`
+}
+
+// GetPublicSubscriptionPlans serves the pricing cards on the public homepage.
+func GetPublicSubscriptionPlans(c *gin.Context) {
+	if !operation_setting.IsPaymentComplianceConfirmed() {
+		common.ApiSuccess(c, []PublicPlanDTO{})
+		return
+	}
+
+	var plans []model.SubscriptionPlan
+	if err := model.DB.Where("enabled = ?", true).Order("sort_order desc, id desc").Find(&plans).Error; err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	result := make([]PublicPlanDTO, 0, len(plans))
+	for _, p := range plans {
+		result = append(result, PublicPlanDTO{
+			Id:               p.Id,
+			Title:            p.Title,
+			Subtitle:         p.Subtitle,
+			Tier:             p.Tier,
+			PlanType:         model.NormalizePlanType(p.PlanType),
+			IsHot:            p.IsHot,
+			PriceAmount:      p.PriceAmount,
+			Currency:         p.Currency,
+			DurationUnit:     p.DurationUnit,
+			DurationValue:    p.DurationValue,
+			TotalAmount:      p.TotalAmount,
+			QuotaResetPeriod: model.NormalizeResetPeriod(p.QuotaResetPeriod),
+			TeamMinSeats:     p.TeamMinSeats,
+			TeamMaxSeats:     p.TeamMaxSeats,
+			SortOrder:        p.SortOrder,
+			UpgradeGroup:     p.UpgradeGroup,
 		})
 	}
 	common.ApiSuccess(c, result)
@@ -109,7 +194,7 @@ func SubscriptionRequestBalancePay(c *gin.Context) {
 		return
 	}
 
-	if err := model.PurchaseSubscriptionWithBalance(userId, req.PlanId); err != nil {
+	if err := model.PurchaseSubscriptionWithBalance(userId, req.PlanId, req.Seats); err != nil {
 		common.ApiError(c, err)
 		return
 	}
@@ -138,6 +223,25 @@ type AdminUpsertSubscriptionPlanRequest struct {
 	Plan model.SubscriptionPlan `json:"plan"`
 }
 
+// normalizePlanDisplayFields fills display/billing-mode fields with sane
+// defaults and validates team seat settings shared by create and update.
+func normalizePlanDisplayFields(plan *model.SubscriptionPlan) string {
+	plan.Tier = strings.TrimSpace(plan.Tier)
+	plan.PlanType = model.NormalizePlanType(plan.PlanType)
+	if plan.PlanType == model.SubscriptionPlanTypeTeam {
+		if plan.TeamMinSeats < 1 {
+			plan.TeamMinSeats = 1
+		}
+		if plan.TeamMaxSeats < 0 {
+			plan.TeamMaxSeats = 0
+		}
+		if plan.TeamMaxSeats > 0 && plan.TeamMaxSeats < plan.TeamMinSeats {
+			return "团队最大席位数不能小于最小席位数"
+		}
+	}
+	return ""
+}
+
 func AdminCreateSubscriptionPlan(c *gin.Context) {
 	if !requirePaymentCompliance(c) {
 		return
@@ -159,6 +263,10 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 	}
 	if req.Plan.PriceAmount > 9999 {
 		common.ApiErrorMsg(c, "价格不能超过9999")
+		return
+	}
+	if msg := normalizePlanDisplayFields(&req.Plan); msg != "" {
+		common.ApiErrorMsg(c, msg)
 		return
 	}
 	if req.Plan.Currency == "" {
@@ -240,6 +348,10 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "价格不能超过9999")
 		return
 	}
+	if msg := normalizePlanDisplayFields(&req.Plan); msg != "" {
+		common.ApiErrorMsg(c, msg)
+		return
+	}
 	req.Plan.Id = id
 	if req.Plan.Currency == "" {
 		req.Plan.Currency = "USD"
@@ -284,6 +396,11 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		updateMap := map[string]any{
 			"title":                      req.Plan.Title,
 			"subtitle":                   req.Plan.Subtitle,
+			"tier":                       req.Plan.Tier,
+			"plan_type":                  req.Plan.PlanType,
+			"team_min_seats":             req.Plan.TeamMinSeats,
+			"team_max_seats":             req.Plan.TeamMaxSeats,
+			"is_hot":                     req.Plan.IsHot,
 			"price_amount":               req.Plan.PriceAmount,
 			"currency":                   req.Plan.Currency,
 			"duration_unit":              req.Plan.DurationUnit,

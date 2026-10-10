@@ -109,6 +109,8 @@ type WaffoPayRequest struct {
 	PayMethodIndex *int   `json:"pay_method_index"` // 服务端支付方式列表的索引，nil 表示由 Waffo 自动选择
 	PayMethodType  string `json:"pay_method_type"`  // Deprecated: 兼容旧前端，优先使用 pay_method_index
 	PayMethodName  string `json:"pay_method_name"`  // Deprecated: 兼容旧前端，优先使用 pay_method_index
+	// TeamId targets the caller's team wallet instead of the personal wallet.
+	TeamId int `json:"team_id,omitempty"`
 }
 
 func RequestWaffoAmount(c *gin.Context) {
@@ -161,7 +163,11 @@ func RequestWaffoPay(c *gin.Context) {
 		return
 	}
 	id := c.GetInt("id")
-	if rejectInvalidTopUpQuota(c, id, req.Amount) {
+	teamId, targetMsg := resolveTopUpTarget(id, req.TeamId)
+	if rejectTopUpTargetError(c, targetMsg) {
+		return
+	}
+	if teamId == 0 && rejectInvalidTopUpQuota(c, id, req.Amount) {
 		return
 	}
 
@@ -223,6 +229,7 @@ func RequestWaffoPay(c *gin.Context) {
 	// 创建本地订单
 	topUp := &model.TopUp{
 		UserId:          id,
+		TeamId:          teamId,
 		Amount:          amount,
 		Money:           payMoney,
 		TradeNo:         merchantOrderId,

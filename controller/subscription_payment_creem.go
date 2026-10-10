@@ -18,6 +18,7 @@ import (
 
 type SubscriptionCreemPayRequest struct {
 	PlanId int `json:"plan_id"`
+	Seats  int `json:"seats"`
 }
 
 func SubscriptionRequestCreemPay(c *gin.Context) {
@@ -70,6 +71,13 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		return
 	}
 
+	// Team plans charge per seat; Creem units carries the seat count.
+	seats, money, msg := resolveSubscriptionPurchase(userId, plan, req.Seats)
+	if msg != "" {
+		common.ApiErrorMsg(c, msg)
+		return
+	}
+
 	if plan.MaxPurchasePerUser > 0 {
 		count, err := model.CountUserSubscriptionsByPlan(userId, plan.Id)
 		if err != nil {
@@ -89,7 +97,8 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 	order := &model.SubscriptionOrder{
 		UserId:          userId,
 		PlanId:          plan.Id,
-		Money:           plan.PriceAmount,
+		Money:           money,
+		Seats:           seats,
 		TradeNo:         referenceId,
 		PaymentMethod:   model.PaymentMethodCreem,
 		PaymentProvider: model.PaymentProviderCreem,
@@ -119,7 +128,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		Quota:     0,
 	}
 
-	checkoutUrl, err := genCreemLink(c.Request.Context(), referenceId, product, user.Email, user.Username)
+	checkoutUrl, err := genCreemLink(c.Request.Context(), referenceId, product, user.Email, user.Username, seats)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Creem 订阅支付链接创建失败 trade_no=%s product_id=%s error=%q", referenceId, product.ProductId, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})

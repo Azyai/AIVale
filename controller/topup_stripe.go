@@ -38,6 +38,8 @@ type StripePayRequest struct {
 	// CancelURL is the optional custom URL to redirect when payment is canceled.
 	// If empty, defaults to the server's console topup page.
 	CancelURL string `json:"cancel_url,omitempty"`
+	// TeamId targets the caller's team wallet instead of the personal wallet.
+	TeamId int `json:"team_id,omitempty"`
 }
 
 type StripeAdaptor struct {
@@ -94,13 +96,17 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	}
 
 	id := c.GetInt("id")
+	teamId, targetMsg := resolveTopUpTarget(id, req.TeamId)
+	if rejectTopUpTargetError(c, targetMsg) {
+		return
+	}
 	user, err := model.GetUserById(id, false)
 	if err != nil || user == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "用户不存在"})
 		return
 	}
 	chargedMoney := GetChargedAmount(float64(req.Amount), *user)
-	if rejectInvalidCreditedQuota(c, id,
+	if teamId == 0 && rejectInvalidCreditedQuota(c, id,
 		decimal.NewFromFloat(chargedMoney).Mul(decimal.NewFromFloat(common.QuotaPerUnit)),
 	) {
 		return
@@ -118,6 +124,7 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 
 	topUp := &model.TopUp{
 		UserId:          id,
+		TeamId:          teamId,
 		Amount:          req.Amount,
 		Money:           chargedMoney,
 		TradeNo:         referenceId,

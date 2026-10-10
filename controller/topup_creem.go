@@ -51,6 +51,8 @@ func verifyCreemSignature(payload string, signature string, secret string) bool 
 type CreemPayRequest struct {
 	ProductId     string `json:"product_id"`
 	PaymentMethod string `json:"payment_method"`
+	// TeamId targets the caller's team wallet instead of the personal wallet.
+	TeamId int `json:"team_id,omitempty"`
 }
 
 type CreemProduct struct {
@@ -99,7 +101,11 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 	}
 
 	id := c.GetInt("id")
-	if rejectInvalidCreditedQuota(c, id, decimal.NewFromInt(selectedProduct.Quota)) {
+	teamId, targetMsg := resolveTopUpTarget(id, req.TeamId)
+	if rejectTopUpTargetError(c, targetMsg) {
+		return
+	}
+	if teamId == 0 && rejectInvalidCreditedQuota(c, id, decimal.NewFromInt(selectedProduct.Quota)) {
 		return
 	}
 
@@ -116,6 +122,7 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 	// 先创建订单记录，使用产品配置的金额和充值额度
 	topUp := &model.TopUp{
 		UserId:          id,
+		TeamId:          teamId,
 		Amount:          selectedProduct.Quota, // 充值额度
 		Money:           selectedProduct.Price, // 支付金额
 		TradeNo:         referenceId,
@@ -132,7 +139,7 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 	}
 
 	// 创建支付链接，传入用户邮箱
-	checkoutUrl, err := genCreemLink(c.Request.Context(), referenceId, selectedProduct, user.Email, user.Username)
+	checkoutUrl, err := genCreemLink(c.Request.Context(), referenceId, selectedProduct, user.Email, user.Username, 1)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Creem 创建支付链接失败 user_id=%d trade_no=%s product_id=%s error=%q", id, referenceId, selectedProduct.ProductId, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
@@ -374,6 +381,9 @@ type CreemCheckoutRequest struct {
 		Email string `json:"email"`
 	} `json:"customer"`
 	Metadata map[string]string `json:"metadata,omitempty"`
+	// Units carries the quantity for per-seat products (team plans);
+	// omit for single-unit checkouts.
+	Units int `json:"units,omitempty"`
 }
 
 type CreemCheckoutResponse struct {
@@ -381,7 +391,7 @@ type CreemCheckoutResponse struct {
 	Id          string `json:"id"`
 }
 
-func genCreemLink(ctx context.Context, referenceId string, product *CreemProduct, email string, username string) (string, error) {
+func genCreemLink(ctx context.Context, referenceId string, product *CreemProduct, email string, username string, units int) (string, error) {
 	if setting.CreemApiKey == "" {
 		return "", fmt.Errorf("未配置Creem API密钥")
 	}
@@ -402,6 +412,7 @@ func genCreemLink(ctx context.Context, referenceId string, product *CreemProduct
 		}{
 			Email: email, // 用户邮箱会在支付页面预填充
 		},
+		Units: units,
 		Metadata: map[string]string{
 			"username":     username,
 			"reference_id": referenceId,
