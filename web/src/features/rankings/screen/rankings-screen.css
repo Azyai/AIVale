@@ -1,0 +1,490 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/*
+ * Rankings big-screen styles (fluid layout, no transform scaling).
+ * Design language: modern rounded cockpit — generous radii, quiet borders,
+ * static gradients only (no animated glows / scans / pulses). Every color
+ * derives from the app theme tokens, so the screen follows the selected
+ * light / dark / system theme and any admin theme preset (e.g. the curated
+ * `aurora-violet` palette designed for this screen). All classes are
+ * `bsc-` prefixed so they cannot collide with Tailwind or app styles.
+ */
+.bsc-root {
+  --bsc-bg-main: var(--background);
+  --bsc-bg-panel: var(--card);
+  --bsc-border-glow: var(--border);
+  --bsc-text-title: var(--foreground);
+  --bsc-text-main: var(--foreground);
+  --bsc-text-sub: var(--muted-foreground);
+  --bsc-accent: var(--primary);
+  --bsc-accent-fg: var(--primary-foreground);
+  --bsc-accent-warn: var(--chart-4);
+  --bsc-accent-danger: var(--destructive);
+  --bsc-up: var(--success);
+
+  /* Fills the content area below the fixed site header; the exact height is
+   * set from JS so the stage fills the viewport edge-to-edge. */
+  position: relative;
+  width: 100%;
+  min-height: 480px;
+  overflow: hidden;
+  background: var(--bsc-bg-main);
+  color: var(--bsc-text-main);
+  font-family:
+    'PingFang SC', 'Microsoft YaHei', 'Segoe UI', 'Public Sans', sans-serif;
+}
+
+/* Fluid stage: fills the root below the site header. Panels and charts
+ * re-layout with the container (no transform scaling → no text distortion);
+ * the design proportions follow the 1920×1080 demo (27/46/27 columns,
+ * ~56/42 panel split, 72px header). */
+.bsc-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background:
+    radial-gradient(
+      ellipse 900px 500px at 50% -10%,
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 700px 400px at 8% 100%,
+      color-mix(in srgb, var(--primary) 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 700px 400px at 92% 100%,
+      color-mix(in srgb, var(--chart-2) 8%, transparent),
+      transparent 70%
+    ),
+    var(--bsc-bg-main);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Header (h = 72px) ===== */
+.bsc-header {
+  height: 72px;
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 28px;
+}
+.bsc-header::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bsc-border-glow) 18%,
+    var(--bsc-accent) 50%,
+    var(--bsc-border-glow) 82%,
+    transparent
+  );
+}
+.bsc-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: center;
+  font-size: clamp(20px, 1.7vw, 32px);
+  font-weight: 700;
+  color: var(--bsc-text-title);
+  letter-spacing: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+/* Fade-out flourish lines flanking the title (static deco). */
+.bsc-title::before,
+.bsc-title::after {
+  content: '';
+  flex: 1 1 0;
+  max-width: 300px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--primary) 45%, transparent)
+  );
+}
+.bsc-title::after {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary) 45%, transparent),
+    transparent
+  );
+}
+.bsc-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Period tabs — pill-shaped segmented control. */
+.bsc-periods {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.bsc-period-btn {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bsc-text-sub);
+  padding: 4px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.15s, background-color 0.15s;
+}
+.bsc-period-btn:hover {
+  color: var(--bsc-text-main);
+}
+.bsc-period-btn[aria-selected='true'] {
+  color: var(--bsc-accent-fg);
+  background: var(--bsc-accent);
+}
+.bsc-period-btn:focus-visible {
+  outline: 2px solid var(--bsc-accent);
+  outline-offset: 2px;
+}
+
+.bsc-clock {
+  text-align: right;
+  font-size: 14px;
+  color: var(--bsc-text-sub);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bsc-clock b {
+  color: var(--bsc-accent);
+  font-weight: 600;
+}
+
+/* ===== Three-column layout: left 27% / mid 46% / right 27% ===== */
+.bsc-layout {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+}
+.bsc-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+.bsc-col-side {
+  flex: 0 0 27%;
+}
+.bsc-col-mid {
+  flex: 1 1 46%;
+}
+
+/* ===== Panels — rounded cockpit cards ===== */
+.bsc-panel {
+  background: var(--bsc-bg-panel);
+  border: 1px solid var(--bsc-border-glow);
+  border-radius: 14px;
+  position: relative;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.bsc-panel-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bsc-text-title);
+  margin-bottom: 12px;
+}
+.bsc-panel-title::before {
+  content: '';
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--bsc-accent);
+}
+/* Static hairline divider under the panel title. */
+.bsc-panel-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary) 30%, transparent),
+    color-mix(in srgb, var(--primary) 8%, transparent) 60%,
+    transparent
+  );
+}
+.bsc-panel-title small {
+  font-size: 12px;
+  color: var(--bsc-text-sub);
+  font-weight: 400;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.bsc-chart {
+  flex: 1;
+  min-height: 0;
+}
+.bsc-chart-placeholder {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--bsc-text-sub);
+  font-size: 13px;
+}
+
+/* Panel split follows the demo proportions (~560:424 → 1.32:1), fluid. */
+.bsc-panel-rank {
+  flex: 1.32 1 0;
+  min-height: 240px;
+}
+.bsc-panel-fixed {
+  flex: 1 1 0;
+  min-height: 200px;
+}
+
+/* ===== KPI flip cards — tinted chips inside the panel ===== */
+.bsc-kpi-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  /* Tall enough for the three-row chip (value + label + sub) at any
+   * viewport scale — the top-model card is the tallest. */
+  height: 132px;
+  flex: none;
+}
+.bsc-kpi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+}
+.bsc-kpi-value {
+  font-size: clamp(26px, 2.3vw, 38px);
+  font-weight: 700;
+  color: var(--bsc-accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bsc-kpi-label {
+  font-size: 13px;
+  color: var(--bsc-text-sub);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.bsc-kpi-sub {
+  font-size: 11px;
+  color: var(--bsc-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ===== Movers marquee table ===== */
+.bsc-log-panel {
+  flex: 0 0 190px;
+}
+.bsc-scroll-table {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.bsc-scroll-table::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--bsc-bg-panel),
+    transparent 12%,
+    transparent 88%,
+    var(--bsc-bg-panel)
+  );
+}
+.bsc-scroll-table ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  will-change: transform;
+}
+.bsc-scroll-table li {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--bsc-text-main);
+}
+.bsc-scroll-table li:nth-child(even) {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+.bsc-scroll-table li > span {
+  padding: 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bsc-c-rank {
+  flex: 0 0 56px;
+  color: var(--bsc-text-sub);
+}
+.bsc-c-model {
+  flex: 1 1 auto;
+}
+.bsc-c-move {
+  flex: 0 0 72px;
+}
+.bsc-c-growth {
+  flex: 0 0 96px;
+  text-align: right;
+  font-weight: 600;
+}
+.bsc-lv {
+  display: inline-block;
+  min-width: 48px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--bsc-text-sub);
+}
+.bsc-lv-up {
+  color: var(--bsc-up);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+}
+.bsc-lv-down {
+  color: var(--bsc-accent-danger);
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent);
+}
+.bsc-growth-up {
+  color: var(--bsc-up);
+}
+.bsc-growth-down {
+  color: var(--bsc-accent-danger);
+}
+
+/* ===== Centered loading / error states ===== */
+.bsc-center {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--bsc-text-sub);
+  font-size: 15px;
+  line-height: 2;
+  padding: 24px;
+}
+.bsc-center b {
+  color: var(--bsc-accent);
+}
+.bsc-retry {
+  margin-top: 8px;
+  padding: 6px 20px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--bsc-accent);
+  font-size: 14px;
+  cursor: pointer;
+}
+.bsc-retry:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+.bsc-retry:focus-visible {
+  outline: 2px solid var(--bsc-accent);
+  outline-offset: 2px;
+}
+
+/* Dark mode: slightly deeper ambient washes; everything stays static. */
+.dark .bsc-screen {
+  background:
+    radial-gradient(
+      ellipse 900px 500px at 50% -10%,
+      color-mix(in srgb, var(--primary) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 700px 400px at 8% 100%,
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 700px 400px at 92% 100%,
+      color-mix(in srgb, var(--chart-2) 12%, transparent),
+      transparent 70%
+    ),
+    var(--bsc-bg-main);
+}
+.dark .bsc-title {
+  color: var(--bsc-text-title);
+}
+.dark .bsc-panel-title small {
+  color: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
+}

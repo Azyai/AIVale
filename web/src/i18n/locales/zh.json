@@ -6868,6 +6868,24 @@
     "Zhipu": "智谱",
     "Zhipu GLM": "智谱GLM",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "Others": "其他",
+    "Concentration": "集中度",
+    "Screen Mode": "大屏模式",
+    "Usage Data Monitor": "用量数据监控",
+    "Model Rankings": "模型排行",
+    "User Rankings": "用户排行",
+    "Vendor Share": "厂商份额",
+    "Token Trend": "Token 用量趋势",
+    "Rank Movements": "排名异动",
+    "Back to rankings": "返回排行榜",
+    "Failed to load rankings data": "排行榜数据加载失败",
+    "Active Models": "活跃模型",
+    "Listed Users": "上榜用户",
+    "Active Vendors": "服务厂商",
+    "Top Model Share": "冠军模型份额",
+    "Top 10 Model Concentration": "模型 Top10 集中度",
+    "Top 10 User Concentration": "用户 Top10 集中度",
+    "Top Vendor Share": "头部厂商份额"
   }
 }
