@@ -94,6 +94,10 @@ export interface SystemStatus {
     version?: string
     system_name?: string
     logo?: string
+    login_panel_title?: string
+    login_panel_description?: string
+    login_panel_media?: string
+    login_panel_tags?: string
     github_oauth?: boolean
     github_client_id?: string
     discord_oauth?: boolean
@@ -141,6 +145,10 @@ export interface SystemStatus {
   version?: string
   system_name?: string
   logo?: string
+  login_panel_title?: string
+  login_panel_description?: string
+  login_panel_media?: string
+  login_panel_tags?: string
   github_oauth?: boolean
   github_client_id?: string
   discord_oauth?: boolean

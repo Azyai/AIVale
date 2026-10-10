@@ -487,6 +487,7 @@ func UpdateOption(c *gin.Context) {
 		common.ApiSuccess(c, change)
 		return
 	}
+	previousLoginPanelMedia := common.LoginPanelMedia
 	err = model.UpdateOption(option.Key, option.Value.(string))
 	if err != nil {
 		if errors.Is(err, system_setting.ErrPasskeyRPIDInvalid) {
@@ -495,6 +496,11 @@ func UpdateOption(c *gin.Context) {
 			common.ApiError(c, err)
 		}
 		return
+	}
+	// The login panel keeps a single media file on disk: remove the replaced
+	// one so successive uploads do not accumulate.
+	if option.Key == "LoginPanelMedia" && option.Value.(string) != previousLoginPanelMedia {
+		DeleteLoginMediaFile(previousLoginPanelMedia)
 	}
 	// 出于安全考虑只记录被修改的配置项名称，不记录配置值（可能含密钥等敏感信息）。
 	recordManageAudit(c, "option.update", map[string]any{

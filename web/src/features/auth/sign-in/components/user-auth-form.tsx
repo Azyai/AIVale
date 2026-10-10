@@ -308,7 +308,7 @@ export function UserAuthForm({
             variant='outline'
             disabled={passkeyButtonDisabled}
             onClick={handlePasskeyLogin}
-            className='h-11 w-full justify-center gap-2 rounded-lg'
+            className='h-12 w-full justify-center gap-2 rounded-full'
           >
             {isPasskeyLoading ? (
               <Loader2 className='h-4 w-4 animate-spin' />
@@ -362,6 +362,7 @@ export function UserAuthForm({
                   <FormLabel>{t('Username or Email')}</FormLabel>
                   <FormControl>
                     <Input
+                      className='h-12 rounded-full px-5'
                       placeholder={t('Enter your username or email')}
                       {...field}
                     />
@@ -380,6 +381,7 @@ export function UserAuthForm({
                   <FormLabel>{t('Password')}</FormLabel>
                   <FormControl>
                     <PasswordInput
+                      inputClassName='h-12 rounded-full px-5 pr-12'
                       placeholder={t('Enter password')}
                       {...field}
                     />
@@ -398,7 +400,7 @@ export function UserAuthForm({
             {/* Submit Button */}
             <Button
               type='submit'
-              className='mt-2 w-full justify-center gap-2'
+              className='bg-foreground text-background hover:bg-foreground/90 mt-2 h-12 w-full justify-center gap-2 rounded-full'
               disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
             >
               {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}

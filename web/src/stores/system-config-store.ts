@@ -44,6 +44,12 @@ export interface SystemConfig {
   footerHtml?: string
   demoSiteEnabled?: boolean
   displayTokenStatEnabled?: boolean
+  /** Login page left panel overrides (empty string → built-in defaults) */
+  loginPanelTitle?: string
+  loginPanelDescription?: string
+  loginPanelMedia?: string
+  /** Newline-separated tag labels shown at the bottom of the left panel */
+  loginPanelTags?: string
   currency: CurrencyConfig
 }
 

@@ -146,14 +146,23 @@ export type SiteSettings = {
   Logo: string
   Footer: string
   About: string
-  HomePageContent: string
   ServerAddress: string
   TaskPublicAddress: string
+  LoginPanelTitle: string
+  LoginPanelDescription: string
+  LoginPanelMedia: string
+  LoginPanelTags: string
   'general_setting.docs_link': string
   'legal.user_agreement': string
   'legal.privacy_policy': string
   HeaderNavModules: string
   SidebarModulesAdmin: string
+}
+
+export type LoginMediaUploadResponse = {
+  success: boolean
+  message: string
+  data?: { url: string }
 }
 
 export type AuthSettings = {

@@ -99,6 +99,10 @@ export function mapStatusDataToConfig(
     displayTokenStatEnabled: data.display_token_stat_enabled as
       | boolean
       | undefined,
+    loginPanelTitle: data.login_panel_title as string | undefined,
+    loginPanelDescription: data.login_panel_description as string | undefined,
+    loginPanelMedia: data.login_panel_media as string | undefined,
+    loginPanelTags: data.login_panel_tags as string | undefined,
     currency,
   }
 }

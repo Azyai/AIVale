@@ -20,6 +20,11 @@ func SetRouter(router *gin.Engine, assets WebAssets) {
 	SetVideoRouter(router)
 	SetTaskRouter(router)
 	pluginDispatcher := SetPluginRouter(router)
+	if err := os.MkdirAll(common.LoginMediaDir(), os.ModePerm); err != nil {
+		common.SysLog("failed to create login media dir: " + err.Error())
+	}
+	// Admin-uploaded login panel media, stored under the persistent data dir.
+	router.Static("/uploads", common.LoginMediaDir())
 	frontendBaseUrl := os.Getenv("FRONTEND_BASE_URL")
 	if common.IsMasterNode && frontendBaseUrl != "" {
 		frontendBaseUrl = ""

@@ -22,6 +22,7 @@ import type {
   ConfirmPaymentComplianceResponse,
   FetchUpstreamRatiosRequest,
   LogCleanupTask,
+  LoginMediaUploadResponse,
   SystemOptionsResponse,
   SystemTaskListResponse,
   SystemTaskFilters,
@@ -41,6 +42,16 @@ export async function getSystemOptions() {
 
 export async function updateSystemOption(request: UpdateOptionRequest) {
   const res = await api.put<UpdateOptionResponse>('/api/option/', request)
+  return res.data
+}
+
+export async function uploadLoginMedia(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await api.post<LoginMediaUploadResponse>(
+    '/api/option/login_media',
+    formData
+  )
   return res.data
 }
 

@@ -29,10 +29,13 @@ type PasswordInputProps = Omit<
   'type'
 > & {
   ref?: React.Ref<HTMLInputElement>
+  /** Class name applied to the inner input element (outer wrapper takes `className`). */
+  inputClassName?: string
 }
 
 export function PasswordInput({
   className,
+  inputClassName,
   disabled,
   ref,
   ...props
@@ -45,6 +48,7 @@ export function PasswordInput({
         type={showPassword ? 'text' : 'password'}
         ref={ref}
         disabled={disabled}
+        className={inputClassName}
         {...props}
       />
       <Button

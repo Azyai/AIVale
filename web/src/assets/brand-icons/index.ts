@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 export { IconDiscord } from './icon-discord'
 export { IconDocker } from './icon-docker'
 export { IconFacebook } from './icon-facebook'
+export { IconFeishu } from './icon-feishu'
 export { IconFigma } from './icon-figma'
 export { IconGithub } from './icon-github'
 export { IconGitlab } from './icon-gitlab'

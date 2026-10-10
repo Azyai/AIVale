@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import {
   IconDiscord,
+  IconFeishu,
   IconGithub,
   IconLinuxDo,
   IconTelegram,
@@ -47,6 +48,21 @@ type ProviderButton = {
   onClick: () => void
   icon?: ReactNode
   disabled?: boolean
+}
+
+function isFeishuProvider(provider: {
+  slug?: string
+  name?: string
+}): boolean {
+  const slug = provider.slug?.toLowerCase() ?? ''
+  const name = provider.name?.toLowerCase() ?? ''
+  return (
+    slug === 'feishu' ||
+    slug === 'lark' ||
+    name.includes('飞书') ||
+    name.includes('feishu') ||
+    name.includes('lark')
+  )
 }
 
 export function OAuthProviders({
@@ -77,7 +93,7 @@ export function OAuthProviders({
       key: 'wechat',
       label: t('Continue with WeChat'),
       onClick: onWeChatLogin,
-      icon: <IconWeChat className='h-4 w-4' />,
+      icon: <IconWeChat className='h-5 w-5' />,
       disabled: isWeChatLoading,
     })
   }
@@ -87,7 +103,7 @@ export function OAuthProviders({
       key: 'github',
       label: githubButtonText || t('Continue with GitHub'),
       onClick: handleGitHubLogin,
-      icon: <IconGithub className='h-4 w-4' />,
+      icon: <IconGithub className='h-5 w-5' />,
       disabled: githubButtonDisabled,
     })
   }
@@ -97,7 +113,7 @@ export function OAuthProviders({
       key: 'discord',
       label: t('Continue with Discord'),
       onClick: handleDiscordLogin,
-      icon: <IconDiscord className='h-4 w-4' />,
+      icon: <IconDiscord className='h-5 w-5' />,
     })
   }
 
@@ -117,7 +133,7 @@ export function OAuthProviders({
       key: 'linuxdo',
       label: t('Continue with LinuxDO'),
       onClick: handleLinuxDOLogin,
-      icon: <IconLinuxDo className='h-4 w-4' />,
+      icon: <IconLinuxDo className='h-5 w-5' />,
     })
   }
 
@@ -138,6 +154,9 @@ export function OAuthProviders({
         key: `custom-${provider.slug}`,
         label: t('Continue with {{name}}', { name: provider.name }),
         onClick: () => handleCustomOAuthLogin(provider),
+        icon: isFeishuProvider(provider) ? (
+          <IconFeishu className='h-5 w-5' />
+        ) : undefined,
       })
     }
   }
@@ -150,7 +169,7 @@ export function OAuthProviders({
         <div className='absolute inset-0 flex items-center'>
           <span className='w-full border-t' />
         </div>
-        <div className='relative flex justify-center text-xs uppercase'>
+        <div className='relative flex justify-center text-xs'>
           <span className='bg-background text-muted-foreground px-2'>
             {t('Or continue with')}
           </span>
@@ -166,7 +185,7 @@ export function OAuthProviders({
               type='button'
               disabled={disabled || isLoading || extraDisabled}
               onClick={onClick}
-              className='h-11 w-full justify-center gap-2 rounded-lg'
+              className='h-12 w-full justify-center gap-2 rounded-full'
             >
               {icon}
               {label}
