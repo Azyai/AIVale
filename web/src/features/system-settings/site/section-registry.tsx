@@ -24,6 +24,7 @@ import {
   serializeSidebarModulesAdmin,
 } from '../maintenance/config'
 import { HeaderNavigationSection } from '../maintenance/header-navigation-section'
+import { LoginBrandingSection } from '../general/login-branding-section'
 import { NoticeSection } from '../maintenance/notice-section'
 import { SidebarModulesSection } from '../maintenance/sidebar-modules-section'
 import type { SiteSettings } from '../types'
@@ -40,7 +41,6 @@ const SITE_SECTIONS = [
           Logo: settings.Logo,
           Footer: settings.Footer,
           About: settings.About,
-          HomePageContent: settings.HomePageContent,
           ServerAddress: settings.ServerAddress,
           TaskPublicAddress: settings.TaskPublicAddress,
           general_setting: {
@@ -50,6 +50,20 @@ const SITE_SECTIONS = [
             user_agreement: settings['legal.user_agreement'],
             privacy_policy: settings['legal.privacy_policy'],
           },
+        }}
+      />
+    ),
+  },
+  {
+    id: 'login-branding',
+    titleKey: 'Login Page Branding',
+    build: (settings: SiteSettings) => (
+      <LoginBrandingSection
+        defaultValues={{
+          LoginPanelTitle: settings.LoginPanelTitle,
+          LoginPanelDescription: settings.LoginPanelDescription,
+          LoginPanelMedia: settings.LoginPanelMedia,
+          LoginPanelTags: settings.LoginPanelTags,
         }}
       />
     ),

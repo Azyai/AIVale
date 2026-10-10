@@ -68,6 +68,10 @@ func GetStatus(c *gin.Context) {
 		"system_name":                 common.SystemName,
 		"logo":                        common.Logo,
 		"footer_html":                 common.Footer,
+		"login_panel_title":           common.LoginPanelTitle,
+		"login_panel_description":     common.LoginPanelDescription,
+		"login_panel_media":           common.LoginPanelMedia,
+		"login_panel_tags":            common.LoginPanelTags,
 		"wechat_qrcode":               common.WeChatAccountQRCodeImageURL,
 		"wechat_login":                common.WeChatAuthEnabled,
 		"server_address":              system_setting.ServerAddress,
@@ -206,13 +210,6 @@ func GetMidjourney(c *gin.Context) {
 		"data":    common.OptionMap["Midjourney"],
 	})
 	return
-}
-
-func GetHomePageContent(c *gin.Context) {
-	common.OptionMapRWMutex.RLock()
-	homePageContent := common.OptionMap["HomePageContent"]
-	common.OptionMapRWMutex.RUnlock()
-	serveRevalidatedJSON(c, homePageContent)
 }
 
 func SendEmailVerification(c *gin.Context) {

@@ -76,10 +76,13 @@ func InitOptionMap() {
 	common.OptionMap["SMTPForceAuthLogin"] = strconv.FormatBool(common.SMTPForceAuthLogin)
 	common.OptionMap["Notice"] = ""
 	common.OptionMap["About"] = ""
-	common.OptionMap["HomePageContent"] = ""
 	common.OptionMap["Footer"] = common.Footer
 	common.OptionMap["SystemName"] = common.SystemName
 	common.OptionMap["Logo"] = common.Logo
+	common.OptionMap["LoginPanelTitle"] = common.LoginPanelTitle
+	common.OptionMap["LoginPanelDescription"] = common.LoginPanelDescription
+	common.OptionMap["LoginPanelMedia"] = common.LoginPanelMedia
+	common.OptionMap["LoginPanelTags"] = common.LoginPanelTags
 	common.OptionMap["ServerAddress"] = ""
 	common.OptionMap["TaskPublicAddress"] = system_setting.TaskPublicAddress
 	common.OptionMap["WorkerUrl"] = system_setting.WorkerUrl
@@ -591,6 +594,14 @@ func updateOptionMap(key string, value string) (err error) {
 		common.SystemName = value
 	case "Logo":
 		common.Logo = value
+	case "LoginPanelTitle":
+		common.LoginPanelTitle = value
+	case "LoginPanelDescription":
+		common.LoginPanelDescription = value
+	case "LoginPanelMedia":
+		common.LoginPanelMedia = value
+	case "LoginPanelTags":
+		common.LoginPanelTags = value
 	case "WeChatServerAddress":
 		common.WeChatServerAddress = value
 	case "WeChatServerToken":

@@ -17,23 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * Home page constants
- * All hardcoded data for home page sections
+ * Landing page constants — copy is i18n-driven; keys resolve through
+ * locales with zh as the primary brand language (京西智谷).
  */
-import { type TFunction } from 'i18next'
 
 // Layout - Main base classes
 export const MAIN_BASE_CLASSES = 'bg-background text-foreground w-full'
 
-// Hero section - AI Applications (Left side)
-export const AI_APPLICATIONS = [
-  'LobeHub.Color',
-  'Dify.Color',
-  'OpenWebUI',
-  'Cline',
-] as const
-
-// Hero section - AI Models (Right side)
+// Hero terminal demo - model names cycled in the request preview
 export const AI_MODELS = [
   'Qwen.Color',
   'DeepSeek.Color',
@@ -43,105 +34,67 @@ export const AI_MODELS = [
   'Gemini.Color',
 ] as const
 
-// Hero section - Gateway Features
-export const GATEWAY_FEATURES = [
-  'Cost Tracking',
-  'Model Access',
-  'Guardrails',
-  'Observability',
-  'Budgets',
-  'Load Balancing',
-  'Rate Limiting',
-  'Token Mgmt',
-  'Prompt Caching',
-  'Pass-Through',
-] as const
-
-// Stats section - Default statistics
-export const DEFAULT_STATS = [
+// Selling points (qianwen-style three pillars)
+export const SELLING_POINT_KEYS = [
   {
-    value: '50',
-    suffix: '+',
-    description: 'upstream services integrated',
+    titleKey: 'One API key, every modality',
+    descriptionKey:
+      'Text, image and audio models behind one unified endpoint — no separate vendor accounts needed',
+    iconName: 'Layers',
   },
   {
-    value: '100',
-    suffix: '+',
-    description: 'model billing support',
+    titleKey: 'Works with your favorite tools',
+    descriptionKey:
+      'Plug into Cherry Studio, Cline, Claude Code, Cursor, Codex and more with a compatible OpenAI-style API',
+    iconName: 'Blocks',
   },
   {
-    value: '50',
-    suffix: '+',
-    description: 'compatible API routes',
-  },
-  {
-    value: '10',
-    suffix: '+',
-    description: 'scheduling controls',
-  },
-] as const
-
-// Features section - Default features
-export const DEFAULT_FEATURES = [
-  {
-    title: 'Lightning Fast',
-    description:
-      'Optimized network architecture ensures millisecond response times',
-    iconName: 'Zap',
-  },
-  {
-    title: 'Secure & Reliable',
-    description:
-      'Enterprise-grade security with comprehensive permission management',
-    iconName: 'Shield',
-  },
-  {
-    title: 'Global Coverage',
-    description: 'Multi-region deployment for stable global access',
-    iconName: 'Globe',
-  },
-  {
-    title: 'Developer Friendly',
-    description: 'Compatible API routes for common AI application workflows',
-    iconName: 'Code',
-  },
-  {
-    title: 'High Performance',
-    description: 'Support for high concurrency with automatic load balancing',
+    titleKey: 'Budget under control',
+    descriptionKey:
+      'Subscribe monthly / quarterly / yearly for the best rate, or pay-as-you-go with real-time usage tracking',
     iconName: 'Gauge',
   },
-  {
-    title: 'Transparent Billing',
-    description: 'Pay-as-you-go with real-time usage monitoring',
-    iconName: 'DollarSign',
-  },
-  {
-    title: 'Team Collaboration',
-    description: 'Multi-user management with flexible permission allocation',
-    iconName: 'Users',
-  },
-  {
-    title: 'Open Source',
-    description: 'Community driven, self-hosted, and extensible',
-    iconName: 'HeartHandshake',
-  },
 ] as const
 
-export function getGatewayFeatures(t: TFunction) {
-  return GATEWAY_FEATURES.map((feature) => t(feature))
-}
+// Tools wall — lobe icon names shown in the compatibility grid
+export const SUPPORTED_TOOLS = [
+  { icon: 'CherryStudio', label: 'Cherry Studio' },
+  { icon: 'LobeHub.Color', label: 'LobeHub' },
+  { icon: 'Dify.Color', label: 'Dify' },
+  { icon: 'OpenWebUI', label: 'Open WebUI' },
+  { icon: 'Cline', label: 'Cline' },
+  { icon: 'Claude.Color', label: 'Claude Code' },
+  { icon: 'OpenAI', label: 'ChatGPT / Codex' },
+  { icon: 'Cursor', label: 'Cursor' },
+  { icon: 'Qwen.Color', label: 'Qwen Code' },
+  { icon: 'DeepSeek.Color', label: 'DeepSeek' },
+] as const
 
-export function getDefaultStats(t: TFunction) {
-  return DEFAULT_STATS.map((stat) => ({
-    ...stat,
-    description: stat.description ? t(stat.description) : undefined,
-  }))
-}
-
-export function getDefaultFeatures(t: TFunction) {
-  return DEFAULT_FEATURES.map((feature) => ({
-    ...feature,
-    title: t(feature.title),
-    description: t(feature.description),
-  }))
-}
+// FAQ entries — collapsed by default
+export const FAQ_KEYS = [
+  {
+    questionKey: 'How do I get started?',
+    answerKey:
+      'Register an account, top up or subscribe to a plan in the wallet, create an API key, then point your tool at the API address shown on the token page.',
+  },
+  {
+    questionKey: 'What is the difference between plans and pay-as-you-go?',
+    answerKey:
+      'Plans grant a fixed quota pool per cycle (monthly / quarterly / yearly) at a better rate, while pay-as-you-go charges per token from your wallet balance. Both are supported for personal and team usage.',
+  },
+  {
+    questionKey: 'Do quarterly and yearly plans save money?',
+    answerKey:
+      'Yes — administrators can price each cycle independently, and longer cycles are typically discounted compared to paying month by month.',
+  },
+  {
+    questionKey: 'How do team plans work?',
+    answerKey:
+      'Buy a team plan to create your team with the seat count you need. Invite members with the invite code, and team tokens draw from the shared team quota pool — strictly separated from personal keys.',
+  },
+  {
+    questionKey: 'Which tools can I connect?',
+    answerKey:
+      'Any client that speaks the OpenAI-compatible API: Cherry Studio, Cline, Claude Code, Cursor, Codex, and hundreds more.',
+  },
+] as const
