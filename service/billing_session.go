@@ -29,13 +29,14 @@ import (
 type BillingSession struct {
 	relayInfo        *relaycommon.RelayInfo
 	funding          FundingSource
-	preConsumedQuota int  // 实际预扣额度（信任用户可能为 0）
-	tokenConsumed    int  // 令牌额度实际扣减量
-	extraReserved    int  // 发送前补充预扣的额度（订阅退款时需要单独回滚）
-	trusted          bool // 是否命中信任额度旁路
-	fundingSettled   bool // funding.Settle 已成功，资金来源已提交
-	settled          bool // Settle 全部完成（资金 + 令牌）
-	refunded         bool // Refund 已调用
+	preConsumedQuota int    // 实际预扣额度（信任用户可能为 0）
+	tokenConsumed    int    // 令牌额度实际扣减量
+	extraReserved    int    // 发送前补充预扣的额度（订阅退款时需要单独回滚）
+	trusted          bool   // 是否命中信任额度旁路
+	teamQuota        int64  // 团队钱包余额（仅 team_wallet 资金来源使用，用于信任旁路判断）
+	fundingSettled   bool   // funding.Settle 已成功，资金来源已提交
+	settled          bool   // Settle 全部完成（资金 + 令牌）
+	refunded         bool   // Refund 已调用
 	mu               sync.Mutex
 }
 
@@ -236,6 +237,12 @@ func (s *BillingSession) preConsume(c *gin.Context, quota int) *types.NewAPIErro
 				types.ErrorCodeInsufficientUserQuota, http.StatusForbidden,
 				types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
 		}
+		if errors.Is(err, ErrInsufficientTeamQuota) {
+			return types.NewErrorWithStatusCode(
+				fmt.Errorf("团队钱包余额不足，请联系团队管理员充值"),
+				types.ErrorCodeInsufficientUserQuota, http.StatusForbidden,
+				types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+		}
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "no active subscription") || strings.Contains(errMsg, "subscription quota insufficient") {
 			return types.NewErrorWithStatusCode(fmt.Errorf("订阅额度不足或未配置订阅: %s", errMsg), types.ErrorCodeInsufficientUserQuota, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
@@ -274,6 +281,22 @@ func (s *BillingSession) reserveFunding(delta int, requireAvailableQuota bool) e
 		}
 		funding.consumed += delta
 		return nil
+	case *TeamWalletFunding:
+		if requireAvailableQuota {
+			if err := funding.PreConsume(delta); err != nil {
+				if errors.Is(err, ErrInsufficientTeamQuota) {
+					return types.NewErrorWithStatusCode(err, types.ErrorCodeInsufficientUserQuota, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+				}
+				return types.NewError(err, types.ErrorCodeUpdateDataError, types.ErrOptionWithSkipRetry())
+			}
+			return nil
+		}
+		// 团队钱包与个人钱包语义一致：非图像请求允许负余额（团队欠费）。
+		if err := model.DecreaseTeamQuota(funding.teamId, delta); err != nil {
+			return types.NewError(err, types.ErrorCodeUpdateDataError, types.ErrOptionWithSkipRetry())
+		}
+		funding.consumed += delta
+		return nil
 	case *SubscriptionFunding:
 		if err := model.PostConsumeUserSubscriptionDelta(funding.subscriptionId, int64(delta)); err != nil {
 			return types.NewErrorWithStatusCode(
@@ -295,6 +318,12 @@ func (s *BillingSession) rollbackFundingReserve(delta int) {
 	case *WalletFunding:
 		if err := model.IncreaseUserQuota(funding.userId, delta, false); err != nil {
 			common.SysLog("error rolling back wallet funding reserve: " + err.Error())
+		} else {
+			funding.consumed -= delta
+		}
+	case *TeamWalletFunding:
+		if err := model.IncreaseTeamQuota(funding.teamId, int64(delta)); err != nil {
+			common.SysLog("error rolling back team wallet funding reserve: " + err.Error())
 		} else {
 			funding.consumed -= delta
 		}
@@ -340,6 +369,9 @@ func (s *BillingSession) shouldTrust(c *gin.Context) bool {
 	switch s.funding.Source() {
 	case BillingSourceWallet:
 		return float64(s.relayInfo.UserQuota) > trustQuota
+	case BillingSourceTeamWallet:
+		// 团队钱包镜像个人钱包的信任逻辑：余额充足时跳过预扣，结算阶段补扣。
+		return float64(s.teamQuota) > trustQuota
 	case BillingSourceSubscription:
 		// 订阅不能启用信任旁路。原因：
 		// 1. PreConsumeUserSubscription 要求 amount>0 来创建预扣记录并锁定订阅
@@ -379,6 +411,12 @@ func (s *BillingSession) syncRelayInfo() {
 func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preConsumedQuota int) (*BillingSession, *types.NewAPIError) {
 	if relayInfo == nil {
 		return nil, types.NewError(fmt.Errorf("relayInfo is nil"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+	}
+
+	// 团队 Token：严格团队隔离。只扣团队资源（团队订阅池 → 团队钱包），
+	// 绝不回退到请求成员的个人钱包/订阅。
+	if relayInfo.TokenTeamId > 0 {
+		return newTeamBillingSession(c, relayInfo, preConsumedQuota)
 	}
 
 	pref := common.NormalizeBillingPreference(relayInfo.UserSetting.BillingPreference)
@@ -476,4 +514,91 @@ func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preCons
 		}
 		return session, nil
 	}
+}
+
+// newTeamBillingSession 为团队 Token 创建严格隔离的计费会话：
+// 团队订阅池优先，额度不足且订阅允许溢出时扣团队钱包；团队钱包也不足
+// 则直接报错提示联系管理员。请求成员的个人计费资源完全不受影响，
+// 也不受个人 billing_preference 影响（团队资源统一按订阅优先策略）。
+func newTeamBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preConsumedQuota int) (*BillingSession, *types.NewAPIError) {
+	teamId := relayInfo.TokenTeamId
+
+	tryTeamWallet := func() (*BillingSession, *types.NewAPIError) {
+		teamQuota, err := model.GetTeamQuota(teamId)
+		if err != nil {
+			return nil, types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
+		}
+		if teamQuota <= 0 {
+			return nil, types.NewErrorWithStatusCode(
+				fmt.Errorf("团队钱包余额不足，请联系团队管理员充值: %s", logger.FormatQuota(int(teamQuota))),
+				types.ErrorCodeInsufficientUserQuota, http.StatusForbidden,
+				types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+		}
+		if teamQuota-int64(preConsumedQuota) < 0 {
+			return nil, types.NewErrorWithStatusCode(
+				fmt.Errorf("团队钱包余额不足以预扣本次请求: 剩余 %s, 需要预扣 %s",
+					logger.FormatQuota(int(teamQuota)), logger.FormatQuota(preConsumedQuota)),
+				types.ErrorCodeInsufficientUserQuota, http.StatusForbidden,
+				types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+		}
+		session := &BillingSession{
+			relayInfo: relayInfo,
+			teamQuota: teamQuota,
+			funding:   &TeamWalletFunding{teamId: teamId},
+		}
+		if apiErr := session.preConsume(c, preConsumedQuota); apiErr != nil {
+			return nil, apiErr
+		}
+		return session, nil
+	}
+
+	tryTeamSubscription := func() (*BillingSession, *types.NewAPIError) {
+		subConsume := int64(preConsumedQuota)
+		if subConsume <= 0 {
+			subConsume = 1
+		}
+		session := &BillingSession{
+			relayInfo: relayInfo,
+			funding: &SubscriptionFunding{
+				requestId:  relayInfo.RequestId,
+				userId:     relayInfo.UserId,
+				teamId:     teamId,
+				modelName:  relayInfo.GetBillingModelName(),
+				amount:     subConsume,
+			},
+		}
+		// 必须传 subConsume 而非 preConsumedQuota，保证 SubscriptionFunding.amount、
+		// preConsume 参数和 FinalPreConsumedQuota 三者一致，避免订阅多扣费。
+		if apiErr := session.preConsume(c, int(subConsume)); apiErr != nil {
+			return nil, apiErr
+		}
+		return session, nil
+	}
+
+	hasSub, err := model.HasActiveTeamSubscription(teamId)
+	if err != nil {
+		return nil, types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
+	}
+	if !hasSub {
+		return tryTeamWallet()
+	}
+	session, apiErr := tryTeamSubscription()
+	if apiErr == nil {
+		return session, nil
+	}
+	if apiErr.GetErrorCode() == types.ErrorCodeInsufficientUserQuota {
+		// 团队订阅额度不足：仅当团队订阅允许钱包溢出时回退团队钱包
+		allowOverflow, overflowErr := model.TeamActiveSubscriptionsAllowWalletOverflow(teamId)
+		if overflowErr != nil {
+			return nil, types.NewError(overflowErr, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
+		}
+		if allowOverflow {
+			return tryTeamWallet()
+		}
+		return nil, types.NewErrorWithStatusCode(
+			fmt.Errorf("团队订阅额度不足，请联系团队管理员充值"),
+			types.ErrorCodeInsufficientUserQuota, http.StatusForbidden,
+			types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+	}
+	return nil, apiErr
 }

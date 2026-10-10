@@ -17,12 +17,29 @@ import (
 
 // Subscription duration units
 const (
-	SubscriptionDurationYear   = "year"
-	SubscriptionDurationMonth  = "month"
-	SubscriptionDurationDay    = "day"
-	SubscriptionDurationHour   = "hour"
-	SubscriptionDurationCustom = "custom"
+	SubscriptionDurationYear    = "year"
+	SubscriptionDurationQuarter = "quarter"
+	SubscriptionDurationMonth   = "month"
+	SubscriptionDurationDay     = "day"
+	SubscriptionDurationHour    = "hour"
+	SubscriptionDurationCustom  = "custom"
 )
+
+// Subscription plan types
+const (
+	SubscriptionPlanTypePersonal = "personal"
+	SubscriptionPlanTypeTeam     = "team"
+)
+
+// NormalizePlanType validates the plan type, defaulting to personal.
+func NormalizePlanType(planType string) string {
+	switch strings.TrimSpace(planType) {
+	case SubscriptionPlanTypeTeam:
+		return SubscriptionPlanTypeTeam
+	default:
+		return SubscriptionPlanTypePersonal
+	}
+}
 
 // Subscription quota reset period
 const (
@@ -149,6 +166,18 @@ type SubscriptionPlan struct {
 	Title    string `json:"title" gorm:"type:varchar(128);not null"`
 	Subtitle string `json:"subtitle" gorm:"type:varchar(255);default:''"`
 
+	// Tier groups plans of the same product level across billing cycles
+	// (e.g. Lite/Standard/Pro); empty = standalone card without cycle tabs
+	Tier string `json:"tier" gorm:"type:varchar(64);default:''"`
+
+	// Personal vs team plan; team plans are billed per seat
+	PlanType     string `json:"plan_type" gorm:"type:varchar(16);not null;default:'personal'"`
+	TeamMinSeats int    `json:"team_min_seats" gorm:"type:int;not null;default:1"`
+	TeamMaxSeats int    `json:"team_max_seats" gorm:"type:int;not null;default:0"` // 0 = unlimited
+
+	// Hot badge on the pricing card
+	IsHot bool `json:"is_hot" gorm:"default:false"`
+
 	// Display money amount (follow existing code style: float64 for money)
 	PriceAmount float64 `json:"price_amount" gorm:"type:decimal(10,6);not null;default:0"`
 	Currency    string  `json:"currency" gorm:"type:varchar(8);not null;default:'USD'"`
@@ -217,6 +246,9 @@ type SubscriptionOrder struct {
 	PlanId int     `json:"plan_id" gorm:"index"`
 	Money  float64 `json:"money"`
 
+	// Seats purchased (team plans only; total money and quota scale with it)
+	Seats int `json:"seats" gorm:"type:int;default:0"`
+
 	TradeNo         string `json:"trade_no" gorm:"unique;type:varchar(255);index"`
 	PaymentMethod   string `json:"payment_method" gorm:"type:varchar(50)"`
 	PaymentProvider string `json:"payment_provider" gorm:"type:varchar(50);default:''"`
@@ -254,6 +286,11 @@ type UserSubscription struct {
 	Id     int `json:"id"`
 	UserId int `json:"user_id" gorm:"index;index:idx_user_sub_active,priority:1"`
 	PlanId int `json:"plan_id" gorm:"index"`
+
+	// TeamId > 0 marks a team subscription: UserId is the purchaser (owner)
+	// and the shared quota pool is billed for every team token request.
+	// 0 = personal subscription billed only for the owner's personal tokens.
+	TeamId int `json:"team_id" gorm:"index;default:0"`
 
 	AmountTotal int64 `json:"amount_total" gorm:"type:bigint;not null;default:0"`
 	AmountUsed  int64 `json:"amount_used" gorm:"type:bigint;not null;default:0"`
@@ -316,6 +353,8 @@ func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 	switch plan.DurationUnit {
 	case SubscriptionDurationYear:
 		return start.AddDate(plan.DurationValue, 0, 0).Unix(), nil
+	case SubscriptionDurationQuarter:
+		return start.AddDate(0, plan.DurationValue*3, 0).Unix(), nil
 	case SubscriptionDurationMonth:
 		return start.AddDate(0, plan.DurationValue, 0).Unix(), nil
 	case SubscriptionDurationDay:
@@ -557,6 +596,106 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	return sub, nil
 }
 
+// CreateTeamSubscriptionFromPlanTx creates a team subscription bound to the
+// buyer's team (creating one when they own none). The shared quota pool and
+// the charged money both scale with the seat count. Group upgrades are not
+// applied for team plans — the team benefit is the shared pool itself.
+func CreateTeamSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *SubscriptionPlan, seats int, source string) (*UserSubscription, error) {
+	if tx == nil {
+		return nil, errors.New("tx is nil")
+	}
+	if plan == nil || plan.Id == 0 {
+		return nil, errors.New("invalid plan")
+	}
+	if userId <= 0 {
+		return nil, errors.New("invalid user id")
+	}
+	if NormalizePlanType(plan.PlanType) != SubscriptionPlanTypeTeam {
+		return nil, errors.New("plan is not a team plan")
+	}
+	if seats < 1 {
+		seats = 1
+	}
+	if plan.TeamMinSeats > 1 && seats < plan.TeamMinSeats {
+		return nil, fmt.Errorf("团队套餐至少需要 %d 个席位", plan.TeamMinSeats)
+	}
+	if plan.TeamMaxSeats > 0 && seats > plan.TeamMaxSeats {
+		return nil, fmt.Errorf("团队套餐最多支持 %d 个席位", plan.TeamMaxSeats)
+	}
+	if plan.MaxPurchasePerUser > 0 {
+		var count int64
+		if err := tx.Model(&UserSubscription{}).
+			Where("user_id = ? AND plan_id = ?", userId, plan.Id).
+			Count(&count).Error; err != nil {
+			return nil, err
+		}
+		if count >= int64(plan.MaxPurchasePerUser) {
+			return nil, errors.New("已达到该套餐购买上限")
+		}
+	}
+
+	var buyer User
+	if err := tx.Select("id", "username", "display_name").Where("id = ?", userId).First(&buyer).Error; err != nil {
+		return nil, err
+	}
+	defaultTeamName := strings.TrimSpace(buyer.DisplayName)
+	if defaultTeamName == "" {
+		defaultTeamName = buyer.Username
+	}
+	if defaultTeamName == "" {
+		defaultTeamName = fmt.Sprintf("User-%d", userId)
+	}
+	team, err := ResolveTeamForSubscriptionTx(tx, userId, fmt.Sprintf("%s的团队", defaultTeamName))
+	if err != nil {
+		return nil, err
+	}
+
+	nowUnix := GetDBTimestamp()
+	now := time.Unix(nowUnix, 0)
+	endUnix, err := calcPlanEndTime(now, plan)
+	if err != nil {
+		return nil, err
+	}
+	resetBase := now
+	nextReset := calcNextResetTime(resetBase, plan, endUnix)
+	lastReset := int64(0)
+	if nextReset > 0 {
+		lastReset = now.Unix()
+	}
+	allowWalletOverflow := true
+	if plan.AllowWalletOverflow != nil {
+		allowWalletOverflow = *plan.AllowWalletOverflow
+	}
+	totalAmount := plan.TotalAmount
+	if totalAmount > 0 {
+		// Unlimited plans (0) stay unlimited regardless of seats.
+		totalAmount = totalAmount * int64(seats)
+	}
+	sub := &UserSubscription{
+		UserId:              userId,
+		PlanId:              plan.Id,
+		TeamId:              team.Id,
+		AmountTotal:         totalAmount,
+		AmountUsed:          0,
+		StartTime:           now.Unix(),
+		EndTime:             endUnix,
+		Status:              "active",
+		Source:              source,
+		LastResetTime:       lastReset,
+		NextResetTime:       nextReset,
+		UpgradeGroup:        "", // team plans never change user groups
+		PrevUserGroup:       "",
+		DowngradeGroup:      "",
+		AllowWalletOverflow: allowWalletOverflow,
+		CreatedAt:           common.GetTimestamp(),
+		UpdatedAt:           common.GetTimestamp(),
+	}
+	if err := tx.Create(sub).Error; err != nil {
+		return nil, err
+	}
+	return sub, nil
+}
+
 func refreshSubscriptionUserGroupCache(userId int, operation string) {
 	if err := RefreshUserGroupCache(userId); err != nil {
 		common.SysError(fmt.Sprintf("failed to refresh user group cache after %s for user %d: %v", operation, userId, err))
@@ -578,6 +717,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 	var logPlanTitle string
 	var logMoney float64
 	var logPaymentMethod string
+	var logSeats int
 	var upgradeGroup string
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var order SubscriptionOrder
@@ -606,7 +746,19 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if err := lockForUpdate(tx).Select("id").Where("id = ?", order.UserId).First(&userRow).Error; err != nil {
 			return err
 		}
-		subscription, err := CreateUserSubscriptionFromPlanTx(tx, order.UserId, plan, "order")
+		var subscription *UserSubscription
+		if NormalizePlanType(plan.PlanType) == SubscriptionPlanTypeTeam {
+			seats := order.Seats
+			if seats < 1 {
+				seats = plan.TeamMinSeats
+			}
+			if seats < 1 {
+				seats = 1
+			}
+			subscription, err = CreateTeamSubscriptionFromPlanTx(tx, order.UserId, plan, seats, "order")
+		} else {
+			subscription, err = CreateUserSubscriptionFromPlanTx(tx, order.UserId, plan, "order")
+		}
 		if err != nil {
 			return err
 		}
@@ -631,6 +783,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		logPlanTitle = plan.Title
 		logMoney = order.Money
 		logPaymentMethod = order.PaymentMethod
+		logSeats = order.Seats
 		return nil
 	})
 	if err != nil {
@@ -641,6 +794,9 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 	}
 	if logUserId > 0 {
 		msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
+		if logSeats > 1 {
+			msg = fmt.Sprintf("订阅购买成功，套餐: %s，席位数: %d，支付金额: %.2f，支付方式: %s", logPlanTitle, logSeats, logMoney, logPaymentMethod)
+		}
 		RecordLog(logUserId, LogTypeTopup, msg)
 	}
 	return nil
@@ -753,13 +909,15 @@ func calcSubscriptionBalanceQuota(priceAmount float64) (int, error) {
 }
 
 // PurchaseSubscriptionWithBalance creates a subscription by deducting the user's wallet quota.
-func PurchaseSubscriptionWithBalance(userId int, planId int) error {
+// seats only applies to team plans (money and quota scale with it).
+func PurchaseSubscriptionWithBalance(userId int, planId int, seats int) error {
 	if userId <= 0 || planId <= 0 {
 		return errors.New("invalid userId or planId")
 	}
 
 	var logPlanTitle string
 	var logMoney float64
+	var logSeats int
 	var chargedQuota int
 	var upgradeGroup string
 	err := DB.Transaction(func(tx *gorm.DB) error {
@@ -777,7 +935,25 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 			return errors.New("该套餐不允许使用余额兑换")
 		}
 
-		requiredQuota, err := calcSubscriptionBalanceQuota(plan.PriceAmount)
+		isTeamPlan := NormalizePlanType(plan.PlanType) == SubscriptionPlanTypeTeam
+		money := plan.PriceAmount
+		if isTeamPlan {
+			if seats < 1 {
+				seats = plan.TeamMinSeats
+			}
+			if seats < 1 {
+				seats = 1
+			}
+			if plan.TeamMinSeats > 1 && seats < plan.TeamMinSeats {
+				return fmt.Errorf("团队套餐至少需要 %d 个席位", plan.TeamMinSeats)
+			}
+			if plan.TeamMaxSeats > 0 && seats > plan.TeamMaxSeats {
+				return fmt.Errorf("团队套餐最多支持 %d 个席位", plan.TeamMaxSeats)
+			}
+			money = plan.PriceAmount * float64(seats)
+		}
+
+		requiredQuota, err := calcSubscriptionBalanceQuota(money)
 		if err != nil {
 			return err
 		}
@@ -796,7 +972,12 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 			}
 		}
 
-		subscription, err := CreateUserSubscriptionFromPlanTx(tx, userId, plan, PaymentMethodBalance)
+		var subscription *UserSubscription
+		if isTeamPlan {
+			subscription, err = CreateTeamSubscriptionFromPlanTx(tx, userId, plan, seats, PaymentMethodBalance)
+		} else {
+			subscription, err = CreateUserSubscriptionFromPlanTx(tx, userId, plan, PaymentMethodBalance)
+		}
 		if err != nil {
 			return err
 		}
@@ -806,7 +987,8 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 		order := &SubscriptionOrder{
 			UserId:          userId,
 			PlanId:          plan.Id,
-			Money:           plan.PriceAmount,
+			Money:           money,
+			Seats:           seats,
 			TradeNo:         tradeNo,
 			PaymentMethod:   PaymentMethodBalance,
 			PaymentProvider: PaymentProviderBalance,
@@ -820,7 +1002,8 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 		}
 
 		logPlanTitle = plan.Title
-		logMoney = plan.PriceAmount
+		logMoney = money
+		logSeats = seats
 		chargedQuota = requiredQuota
 		if subscription.PrevUserGroup != "" {
 			upgradeGroup = strings.TrimSpace(subscription.UpgradeGroup)
@@ -840,6 +1023,9 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 		refreshSubscriptionUserGroupCache(userId, "subscription balance purchase")
 	}
 	msg := fmt.Sprintf("使用余额购买订阅成功，套餐: %s，支付金额: %.2f，扣除额度: %d", logPlanTitle, logMoney, chargedQuota)
+	if logSeats > 1 {
+		msg = fmt.Sprintf("使用余额购买订阅成功，套餐: %s，席位数: %d，支付金额: %.2f，扣除额度: %d", logPlanTitle, logSeats, logMoney, chargedQuota)
+	}
 	RecordLog(userId, LogTypeTopup, msg)
 	return nil
 }
@@ -860,7 +1046,8 @@ func GetAllActiveUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	return buildSubscriptionSummaries(subs), nil
 }
 
-// HasActiveUserSubscription returns whether the user has any active subscription.
+// HasActiveUserSubscription returns whether the user has any active personal
+// subscription (team subscriptions are billed via team tokens only).
 // This is a lightweight existence check to avoid heavy pre-consume transactions.
 func HasActiveUserSubscription(userId int) (bool, error) {
 	if userId <= 0 {
@@ -869,7 +1056,7 @@ func HasActiveUserSubscription(userId int) (bool, error) {
 	now := common.GetTimestamp()
 	var count int64
 	if err := DB.Model(&UserSubscription{}).
-		Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
+		Where("user_id = ? AND team_id = 0 AND status = ? AND end_time > ?", userId, "active", now).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -877,8 +1064,9 @@ func HasActiveUserSubscription(userId int) (bool, error) {
 }
 
 // UserActiveSubscriptionsAllowWalletOverflow returns whether wallet balance may be used
-// after the user's subscription quota is exhausted. A single active subscription that
-// disallows wallet overflow (allow_wallet_overflow = false) blocks the fallback.
+// after the user's personal subscription quota is exhausted. A single active personal
+// subscription that disallows wallet overflow (allow_wallet_overflow = false) blocks
+// the fallback. Team subscriptions do not participate in personal-token billing.
 func UserActiveSubscriptionsAllowWalletOverflow(userId int) (bool, error) {
 	if userId <= 0 {
 		return false, errors.New("invalid userId")
@@ -886,7 +1074,7 @@ func UserActiveSubscriptionsAllowWalletOverflow(userId int) (bool, error) {
 	now := common.GetTimestamp()
 	var strictCount int64
 	if err := DB.Model(&UserSubscription{}).
-		Where("user_id = ? AND status = ? AND end_time > ? AND allow_wallet_overflow = ?",
+		Where("user_id = ? AND team_id = 0 AND status = ? AND end_time > ? AND allow_wallet_overflow = ?",
 			userId, "active", now, false).
 		Count(&strictCount).Error; err != nil {
 		return false, err
@@ -1296,6 +1484,25 @@ func maybeResetUserSubscriptionWithPlanTx(tx *gorm.DB, sub *UserSubscription, pl
 
 // PreConsumeUserSubscription pre-consumes from any active subscription total quota.
 func PreConsumeUserSubscription(requestId string, userId int, modelName string, quotaType int, amount int64) (*SubscriptionPreConsumeResult, error) {
+	return preConsumeSubscriptionScoped(requestId, userId, func(tx *gorm.DB) *gorm.DB {
+		// Personal scope: team subscriptions are never billed for personal tokens.
+		return tx.Where("user_id = ? AND team_id = 0", userId)
+	}, amount)
+}
+
+// PreConsumeTeamSubscription pre-consumes from the team's shared subscription
+// pool. userId is the requesting member (recorded for traceability); team
+// subscriptions are matched by team scope regardless of who purchased them.
+func PreConsumeTeamSubscription(requestId string, teamId int, userId int, amount int64) (*SubscriptionPreConsumeResult, error) {
+	if teamId <= 0 {
+		return nil, errors.New("invalid teamId")
+	}
+	return preConsumeSubscriptionScoped(requestId, userId, func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("team_id = ?", teamId)
+	}, amount)
+}
+
+func preConsumeSubscriptionScoped(requestId string, userId int, scope func(tx *gorm.DB) *gorm.DB, amount int64) (*SubscriptionPreConsumeResult, error) {
 	if userId <= 0 {
 		return nil, errors.New("invalid userId")
 	}
@@ -1332,8 +1539,8 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 		}
 
 		var subs []UserSubscription
-		if err := lockForUpdate(tx).
-			Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
+		if err := lockForUpdate(scope(tx)).
+			Where("status = ? AND end_time > ?", "active", now).
 			Order("end_time asc, id asc").
 			Find(&subs).Error; err != nil {
 			return errors.New("no active subscription")

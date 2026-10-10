@@ -84,6 +84,9 @@ type RelayInfo struct {
 	TokenId           int
 	TokenKey          string
 	TokenGroup        string
+	// TokenTeamId > 0 marks a team-scoped token: billing draws exclusively
+	// from the team's subscription pool / team wallet, never personal quota.
+	TokenTeamId       int
 	UserId            int
 	UsingGroup        string // 使用的分组，当auto跨分组重试时，会变动
 	UserGroup         string // 用户所在分组
@@ -624,6 +627,8 @@ func genBaseRelayInfo(c *gin.Context, request dto.Request) *RelayInfo {
 		TokenKey:       common.GetContextKeyString(c, constant.ContextKeyTokenKey),
 		TokenUnlimited: common.GetContextKeyBool(c, constant.ContextKeyTokenUnlimited),
 		TokenGroup:     tokenGroup,
+		// TokenTeamId scopes billing to the token's team (0 = personal token).
+		TokenTeamId: c.GetInt("team_id"),
 
 		isFirstResponse: true,
 		RelayMode:       relayconstant.Path2RelayMode(c.Request.URL.Path),

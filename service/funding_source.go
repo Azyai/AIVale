@@ -32,6 +32,9 @@ type FundingSource interface {
 // 使 wallet_first 等计费偏好可以回退到订阅。
 var ErrInsufficientWalletQuota = errors.New("wallet quota insufficient")
 
+// ErrInsufficientTeamQuota 团队钱包原子预扣失败（余额不足），未发生任何扣减。
+var ErrInsufficientTeamQuota = errors.New("team quota insufficient")
+
 type WalletFunding struct {
 	userId   int
 	consumed int // 实际预扣的用户额度
@@ -74,12 +77,61 @@ func (w *WalletFunding) Refund() error {
 }
 
 // ---------------------------------------------------------------------------
+// TeamWalletFunding — 团队钱包资金来源实现
+// ---------------------------------------------------------------------------
+
+// TeamWalletFunding mirrors WalletFunding against the team's shared wallet.
+// Semantics are identical: atomic reserve, unconditional settle (postpay
+// debt may go negative), non-retryable refund.
+type TeamWalletFunding struct {
+	teamId   int
+	consumed int
+}
+
+func (w *TeamWalletFunding) Source() string { return BillingSourceTeamWallet }
+
+func (w *TeamWalletFunding) PreConsume(amount int) error {
+	if amount <= 0 {
+		return nil
+	}
+	reserved, err := model.TryReserveTeamQuota(w.teamId, int64(amount))
+	if err != nil {
+		return err
+	}
+	if !reserved {
+		return ErrInsufficientTeamQuota
+	}
+	w.consumed = amount
+	return nil
+}
+
+func (w *TeamWalletFunding) Settle(delta int) error {
+	if delta == 0 {
+		return nil
+	}
+	if delta > 0 {
+		return model.DecreaseTeamQuota(w.teamId, delta)
+	}
+	return model.IncreaseTeamQuota(w.teamId, int64(-delta))
+}
+
+func (w *TeamWalletFunding) Refund() error {
+	if w.consumed <= 0 {
+		return nil
+	}
+	return model.IncreaseTeamQuota(w.teamId, int64(w.consumed))
+}
+
+// ---------------------------------------------------------------------------
 // SubscriptionFunding — 订阅资金来源实现
 // ---------------------------------------------------------------------------
 
 type SubscriptionFunding struct {
 	requestId      string
 	userId         int
+	// teamId > 0 bills the team's shared subscription pool instead of the
+	// user's personal subscriptions
+	teamId         int
 	modelName      string
 	amount         int64 // 预扣的订阅额度（subConsume）
 	subscriptionId int
@@ -95,7 +147,13 @@ func (s *SubscriptionFunding) Source() string { return BillingSourceSubscription
 
 func (s *SubscriptionFunding) PreConsume(_ int) error {
 	// amount 参数被忽略，使用内部 s.amount（已在构造时根据 preConsumedQuota 计算）
-	res, err := model.PreConsumeUserSubscription(s.requestId, s.userId, s.modelName, 0, s.amount)
+	var res *model.SubscriptionPreConsumeResult
+	var err error
+	if s.teamId > 0 {
+		res, err = model.PreConsumeTeamSubscription(s.requestId, s.teamId, s.userId, s.amount)
+	} else {
+		res, err = model.PreConsumeUserSubscription(s.requestId, s.userId, s.modelName, 0, s.amount)
+	}
 	if err != nil {
 		return err
 	}

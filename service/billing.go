@@ -13,6 +13,9 @@ import (
 const (
 	BillingSourceWallet       = "wallet"
 	BillingSourceSubscription = "subscription"
+	// BillingSourceTeamWallet marks requests billed from a team's shared wallet
+	// via a team-scoped token (distinct from the requester's personal wallet).
+	BillingSourceTeamWallet = "team_wallet"
 )
 
 // PreConsumeBilling 根据用户计费偏好创建 BillingSession 并执行预扣费。

@@ -20,9 +20,12 @@ type TopUp struct {
 	TradeNo         string  `json:"trade_no" gorm:"unique;type:varchar(255);index"`
 	PaymentMethod   string  `json:"payment_method" gorm:"type:varchar(50)"`
 	PaymentProvider string  `json:"payment_provider" gorm:"type:varchar(50);default:''"`
-	CreateTime      int64   `json:"create_time"`
-	CompleteTime    int64   `json:"complete_time"`
-	Status          string  `json:"status"`
+	// TeamId > 0 credits the team wallet instead of the purchaser's personal
+	// wallet on completion (team pay-as-you-go top-up).
+	TeamId     int    `json:"team_id" gorm:"index;default:0"`
+	CreateTime int64  `json:"create_time"`
+	CompleteTime    int64  `json:"complete_time"`
+	Status          string `json:"status"`
 }
 
 const (
@@ -114,6 +117,17 @@ func creditTopUpQuota(tx *gorm.DB, userId int, creditedQuota int, updates map[st
 		return gorm.ErrRecordNotFound
 	}
 	return ErrTopUpQuotaLimitExceeded
+}
+
+
+// applyTopUpCredit routes credited quota to the team wallet when the top-up
+// targets a team (TeamId > 0), otherwise to the personal wallet with the
+// wallet-ceiling predicate. Team wallets have no Redis cache and no ceiling.
+func applyTopUpCredit(tx *gorm.DB, topUp *TopUp, creditedQuota int, updates map[string]any) error {
+	if topUp.TeamId > 0 {
+		return IncreaseTeamQuotaTx(tx, topUp.TeamId, int64(creditedQuota))
+	}
+	return creditTopUpQuota(tx, topUp.UserId, creditedQuota, updates)
 }
 
 func (topUp *TopUp) Update() error {
@@ -214,7 +228,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		if err := tx.Save(topUp).Error; err != nil {
 			return err
 		}
-		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
+		return applyTopUpCredit(tx, topUp, quotaToAdd, nil)
 	})
 	if err != nil {
 		if !errors.Is(err, ErrTopUpNotFound) && !errors.Is(err, ErrPaymentMethodMismatch) && !errors.Is(err, ErrTopUpStatusInvalid) {
@@ -225,7 +239,9 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 	if alreadyDone {
 		return true, nil
 	}
-	syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, "epay topup")
+	if topUp.TeamId == 0 {
+		syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, "epay topup")
+	}
 
 	common.SysLog(fmt.Sprintf("易支付充值成功 trade_no=%s user_id=%d quota_to_add=%d money=%.2f", topUp.TradeNo, topUp.UserId, quotaToAdd, topUp.Money))
 	RecordTopupLog(topUp.UserId, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%f", logger.LogQuota(quotaToAdd), topUp.Money), callerIp, topUp.PaymentMethod, PaymentProviderEpay)
@@ -272,16 +288,20 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 		if err != nil || quota <= 0 {
 			return ErrInvalidTopUpQuota
 		}
-		return creditTopUpQuota(tx, topUp.UserId, quota, map[string]any{
-			"stripe_customer": customerId,
-		})
+		stripeUpdates := map[string]any{}
+		if topUp.TeamId == 0 {
+			stripeUpdates["stripe_customer"] = customerId
+		}
+		return applyTopUpCredit(tx, topUp, quota, stripeUpdates)
 	})
 
 	if err != nil {
 		common.SysError("topup failed: " + err.Error())
 		return errors.New("充值失败，请稍后重试")
 	}
-	syncCreditUserQuotaCache(topUp.UserId, quota, "stripe topup")
+	if topUp.TeamId == 0 {
+		syncCreditUserQuotaCache(topUp.UserId, quota, "stripe topup")
+	}
 
 	RecordTopupLog(topUp.UserId, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%d", logger.FormatQuota(quota), topUp.Amount), callerIp, topUp.PaymentMethod, PaymentMethodStripe)
 
@@ -502,7 +522,7 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 		}
 
 		// 增加用户额度（立即写库，保持一致性）
-		if err := creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil); err != nil {
+		if err := applyTopUpCredit(tx, topUp, quotaToAdd, nil); err != nil {
 			return err
 		}
 
@@ -579,14 +599,16 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 			}
 		}
 
-		return creditTopUpQuota(tx, topUp.UserId, quota, updateFields)
+		return applyTopUpCredit(tx, topUp, quota, updateFields)
 	})
 
 	if err != nil {
 		common.SysError("creem topup failed: " + err.Error())
 		return errors.New("充值失败，请稍后重试")
 	}
-	syncCreditUserQuotaCache(topUp.UserId, quota, "creem topup")
+	if topUp.TeamId == 0 {
+		syncCreditUserQuotaCache(topUp.UserId, quota, "creem topup")
+	}
 
 	RecordTopupLog(topUp.UserId, fmt.Sprintf("使用Creem充值成功，充值额度: %v，支付金额：%.2f", quota, topUp.Money), callerIp, topUp.PaymentMethod, PaymentMethodCreem)
 
@@ -637,14 +659,16 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 			return err
 		}
 
-		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
+		return applyTopUpCredit(tx, topUp, quotaToAdd, nil)
 	})
 
 	if err != nil {
 		common.SysError("waffo topup failed: " + err.Error())
 		return errors.New("充值失败，请稍后重试")
 	}
-	syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, "waffo topup")
+	if topUp.TeamId == 0 {
+		syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, "waffo topup")
+	}
 
 	if quotaToAdd > 0 {
 		RecordTopupLog(topUp.UserId, fmt.Sprintf("Waffo充值成功，充值额度: %v，支付金额: %.2f", logger.FormatQuota(quotaToAdd), topUp.Money), callerIp, topUp.PaymentMethod, PaymentMethodWaffo)
@@ -697,14 +721,16 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 			return err
 		}
 
-		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
+		return applyTopUpCredit(tx, topUp, quotaToAdd, nil)
 	})
 
 	if err != nil {
 		common.SysError("waffo pancake topup failed: " + err.Error())
 		return errors.New("充值失败，请稍后重试")
 	}
-	syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, "waffo pancake topup")
+	if topUp.TeamId == 0 {
+		syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, "waffo pancake topup")
+	}
 
 	if quotaToAdd > 0 {
 		RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("Waffo Pancake充值成功，充值额度: %v，支付金额: %.2f", logger.FormatQuota(quotaToAdd), topUp.Money))
