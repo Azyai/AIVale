@@ -26,6 +26,8 @@ services:
       - SQL_DSN=newapi:newapi123456@tcp(mysql:3306)/new-api?charset=utf8mb4&parseTime=true&loc=Local
       # Redis 连接
       - REDIS_CONN_STRING=redis://:redis123456@redis:6379
+      # 固定会话签名密钥:不设的话每次容器重启都会随机换钥,全部登录态失效(强制重新登录)
+      - SESSION_SECRET=tcUp1cDCuObENY7N4H4DvUHuInhSg8ebB0VWPUcXx_Y
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - BATCH_UPDATE_ENABLED=true
