@@ -7076,6 +7076,10 @@
     "全天候运维值守": "round-the-clock operations",
     "套餐额度": "Plan quota",
     "套餐剩余": "plan remaining",
-    "套餐额度独立于钱包余额（充值金额），仅抵扣套餐内用量。": "Plan quota is separate from your wallet balance (top-up amount) and only covers in-plan usage."
+    "套餐额度独立于钱包余额（充值金额），仅抵扣套餐内用量。": "Plan quota is separate from your wallet balance (top-up amount) and only covers in-plan usage.",
+    "档位等级": "Tier level",
+    "数值越大档位越高。购买校验“仅升不降”：新套餐等级必须高于当前生效套餐才能购买（升级按原价计费并立即替代旧套餐），相同或更低档位会被拒绝。": "Higher value = higher tier. Purchases enforce upgrade-only: the new plan must rank above the current active subscription (full-price upgrade that immediately supersedes the old one); equal or lower tiers are rejected.",
+    "已升级": "Upgraded",
+    "已升级于": "Upgraded at"
   }
 }

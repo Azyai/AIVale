@@ -170,6 +170,12 @@ type SubscriptionPlan struct {
 	// (e.g. Lite/Standard/Pro); empty = standalone card without cycle tabs
 	Tier string `json:"tier" gorm:"type:varchar(64);default:''"`
 
+	// TierLevel orders tiers for the upgrade-only rule: a purchase is allowed
+	// only when the new plan's level is strictly higher than the current
+	// active subscription's; upgrades are full-price (no proration, old quota
+	// is not refunded) and immediately supersede the old subscription.
+	TierLevel int `json:"tier_level" gorm:"type:int;not null;default:0"`
+
 	// Personal vs team plan; team plans are billed per seat
 	PlanType     string `json:"plan_type" gorm:"type:varchar(16);not null;default:'personal'"`
 	TeamMinSeats int    `json:"team_min_seats" gorm:"type:int;not null;default:1"`
@@ -520,6 +526,43 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	return target, nil
 }
 
+// enforceUpgradeAndTerminateTx applies the single-active-subscription
+// upgrade-only rule inside a purchase transaction: the new plan's tier level
+// must be strictly higher than every active subscription in scope; on
+// success the active ones are superseded (terminated immediately, no refund,
+// full-price upgrade). Admin binds bypass this rule at the call sites.
+func enforceUpgradeAndTerminateTx(tx *gorm.DB, scope func(*gorm.DB) *gorm.DB, plan *SubscriptionPlan, now int64) error {
+	var subs []UserSubscription
+	if err := lockForUpdate(scope(tx)).
+		Where("status = ? AND end_time > ?", "active", now).
+		Find(&subs).Error; err != nil {
+		return err
+	}
+	if len(subs) == 0 {
+		return nil
+	}
+	maxLevel := 0
+	for _, sub := range subs {
+		p, err := getSubscriptionPlanByIdTx(tx, sub.PlanId)
+		if err == nil && p.TierLevel > maxLevel {
+			maxLevel = p.TierLevel
+		}
+	}
+	if plan.TierLevel <= maxLevel {
+		return fmt.Errorf("仅支持升级到更高档位套餐，无法购买相同或更低档位（当前最高档位等级 %d）", maxLevel)
+	}
+	for i := range subs {
+		if err := tx.Model(&subs[i]).Updates(map[string]any{
+			"status":     "superseded",
+			"end_time":   now,
+			"updated_at": now,
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *SubscriptionPlan, source string) (*UserSubscription, error) {
 	if tx == nil {
 		return nil, errors.New("tx is nil")
@@ -529,6 +572,14 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	}
 	if userId <= 0 {
 		return nil, errors.New("invalid user id")
+	}
+	// 购买路径执行“单订阅 + 仅升不降”规则；管理员绑定（source=admin）不受限。
+	if source != "admin" {
+		if err := enforceUpgradeAndTerminateTx(tx, func(q *gorm.DB) *gorm.DB {
+			return q.Where("user_id = ? AND team_id = 0", userId)
+		}, plan, GetDBTimestamp()); err != nil {
+			return nil, err
+		}
 	}
 	if plan.MaxPurchasePerUser > 0 {
 		var count int64
@@ -647,6 +698,14 @@ func CreateTeamSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	}
 	team, err := ResolveTeamForSubscriptionTx(tx, userId, fmt.Sprintf("%s的团队", defaultTeamName))
 	if err != nil {
+		return nil, err
+	}
+
+	// 团队购买同样执行“单订阅 + 仅升不降”：新套餐档位必须高于团队现有
+	// 生效订阅，升级按原价计费并立即替代旧订阅。
+	if err := enforceUpgradeAndTerminateTx(tx, func(q *gorm.DB) *gorm.DB {
+		return q.Where("team_id = ?", team.Id)
+	}, plan, GetDBTimestamp()); err != nil {
 		return nil, err
 	}
 
@@ -1080,6 +1139,59 @@ func UserActiveSubscriptionsAllowWalletOverflow(userId int) (bool, error) {
 		return false, err
 	}
 	return strictCount == 0, nil
+}
+
+// PersonalUpgradeState describes the user's active personal subscriptions
+// for the upgrade-only pre-check: whether any is active and the highest tier
+// level among them. Read-only; the authoritative check runs inside the
+// purchase transaction.
+type PersonalUpgradeState struct {
+	HasActive bool
+	MaxTierLevel int
+}
+
+// GetPersonalUpgradeState read-only pre-check for personal plan purchases.
+func GetPersonalUpgradeState(userId int) (*PersonalUpgradeState, error) {
+	if userId <= 0 {
+		return nil, errors.New("invalid userId")
+	}
+	now := common.GetTimestamp()
+	var subs []UserSubscription
+	if err := DB.
+		Where("user_id = ? AND team_id = 0 AND status = ? AND end_time > ?", userId, "active", now).
+		Find(&subs).Error; err != nil {
+		return nil, err
+	}
+	state := &PersonalUpgradeState{HasActive: len(subs) > 0}
+	for _, sub := range subs {
+		plan, err := GetSubscriptionPlanById(sub.PlanId)
+		if err == nil && plan.TierLevel > state.MaxTierLevel {
+			state.MaxTierLevel = plan.TierLevel
+		}
+	}
+	return state, nil
+}
+
+// GetTeamUpgradeState read-only pre-check for team plan purchases.
+func GetTeamUpgradeState(teamId int) (*PersonalUpgradeState, error) {
+	if teamId <= 0 {
+		return nil, errors.New("invalid team id")
+	}
+	now := common.GetTimestamp()
+	var subs []UserSubscription
+	if err := DB.
+		Where("team_id = ? AND status = ? AND end_time > ?", teamId, "active", now).
+		Find(&subs).Error; err != nil {
+		return nil, err
+	}
+	state := &PersonalUpgradeState{HasActive: len(subs) > 0}
+	for _, sub := range subs {
+		plan, err := GetSubscriptionPlanById(sub.PlanId)
+		if err == nil && plan.TierLevel > state.MaxTierLevel {
+			state.MaxTierLevel = plan.TierLevel
+		}
+	}
+	return state, nil
 }
 
 // GetAllUserSubscriptions returns all subscriptions (active and expired) for a user.

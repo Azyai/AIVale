@@ -461,6 +461,7 @@ export function SubscriptionPlansCard({
                   const isActive =
                     subscription?.status === 'active' && !isExpired
                   const nextResetTime = subscription?.next_reset_time ?? 0
+                  const isSuperseded = subscription?.status === 'superseded'
                   let statusBadge = (
                     <StatusBadge
                       label={t('Expired')}
@@ -473,6 +474,14 @@ export function SubscriptionPlansCard({
                       <StatusBadge
                         label={t('Active')}
                         variant='success'
+                        copyable={false}
+                      />
+                    )
+                  } else if (isSuperseded) {
+                    statusBadge = (
+                      <StatusBadge
+                        label={t('已升级')}
+                        variant='info'
                         copyable={false}
                       />
                     )
@@ -489,6 +498,8 @@ export function SubscriptionPlansCard({
                   let endTimeLabel = t('Expired at')
                   if (isActive) {
                     endTimeLabel = t('Until')
+                  } else if (isSuperseded) {
+                    endTimeLabel = t('已升级于')
                   } else if (isCancelled) {
                     endTimeLabel = t('Cancelled at')
                   }

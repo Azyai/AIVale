@@ -394,6 +394,34 @@ export function SubscriptionsMutateDrawer({
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name='tier_level'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('档位等级')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type='number'
+                          min={0}
+                          onChange={(e) =>
+                            field.onChange(
+                              Number.parseInt(e.target.value, 10) || 0
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t(
+                          '数值越大档位越高。购买校验“仅升不降”：新套餐等级必须高于当前生效套餐才能购买（升级按原价计费并立即替代旧套餐），相同或更低档位会被拒绝。'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {planType === 'team' && (

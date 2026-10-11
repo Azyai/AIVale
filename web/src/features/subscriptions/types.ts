@@ -27,6 +27,7 @@ export const subscriptionPlanSchema = z.object({
   title: z.string(),
   subtitle: z.string().optional(),
   tier: z.string().optional().default(''),
+  tier_level: z.number().optional().default(0),
   plan_type: z.enum(['personal', 'team']).optional().default('personal'),
   is_hot: z.boolean().optional().default(false),
   team_min_seats: z.number().optional().default(1),

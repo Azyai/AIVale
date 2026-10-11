@@ -52,7 +52,45 @@ func resolveSubscriptionPurchase(userId int, plan *model.SubscriptionPlan, seats
 	if team, _, err := model.GetUserTeam(userId); err == nil && team != nil && team.OwnerUserId != userId {
 		return 0, 0, "您已是其他团队的成员，请让团队所有者购买或先退出当前团队"
 	}
+	// 单订阅 + 仅升不降的快速预检（支付前失败返回；完成订单时事务内还会权威校验）。
+	upgradeMsg := checkSubscriptionUpgradeAllowed(userId, plan)
+	if upgradeMsg != "" {
+		return 0, 0, upgradeMsg
+	}
 	return seats, plan.PriceAmount * float64(seats), ""
+}
+
+// checkSubscriptionUpgradeAllowed verifies the upgrade-only rule read-only:
+// personal plans compare against the user's active personal subscriptions,
+// team plans against the buyer's owned team subscriptions.
+func checkSubscriptionUpgradeAllowed(userId int, plan *model.SubscriptionPlan) string {
+	var state *model.PersonalUpgradeState
+	var err error
+	if model.NormalizePlanType(plan.PlanType) == model.SubscriptionPlanTypeTeam {
+		team, member, teamErr := model.GetUserTeam(userId)
+		if teamErr != nil || team == nil || member == nil {
+			return "" // 无团队 → 无生效团队订阅，放行
+		}
+		if team.OwnerUserId != userId {
+			return "" // 非本人团队已在上方拦截，此处不重复
+		}
+		state, err = model.GetTeamUpgradeState(team.Id)
+	} else {
+		state, err = model.GetPersonalUpgradeState(userId)
+	}
+	if err != nil {
+		return "查询当前订阅状态失败，请稍后重试"
+	}
+	if state == nil || !state.HasActive {
+		return "" // 无生效订阅，首购放行
+	}
+	if plan.TierLevel <= state.MaxTierLevel {
+		return fmt.Sprintf(
+			"当前已有生效套餐（最高档位等级 %d），仅支持升级到更高档位，无法购买相同或更低档位套餐；升级按原价计费",
+			state.MaxTierLevel,
+		)
+	}
+	return ""
 }
 
 // ---- User APIs ----
