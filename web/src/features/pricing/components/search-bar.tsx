@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Search, X } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -34,6 +34,20 @@ export function SearchBar(props: SearchBarProps) {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+      if (e.key === 'Escape' && document.activeElement === inputRef.current) {
+        inputRef.current?.blur()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div
       className={cn(
@@ -48,7 +62,7 @@ export function SearchBar(props: SearchBarProps) {
         placeholder={props.placeholder || t('Search models...')}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
-        className='placeholder:text-muted-foreground/60 h-full w-full rounded-full bg-transparent pr-10 pl-10 text-sm outline-none'
+        className='placeholder:text-muted-foreground/60 h-full w-full rounded-full bg-transparent pr-14 pl-10 text-sm outline-none'
         aria-label={t('Search models')}
       />
       <div className='absolute right-2.5 flex items-center gap-1'>
@@ -61,7 +75,11 @@ export function SearchBar(props: SearchBarProps) {
           >
             <X className='size-3.5' />
           </button>
-        ) : null}
+        ) : (
+          <kbd className='bg-background/70 text-muted-foreground pointer-events-none hidden rounded-full border px-1.5 py-0.5 font-mono text-[10px] sm:inline-block'>
+            ⌘K
+          </kbd>
+        )}
       </div>
     </div>
   )

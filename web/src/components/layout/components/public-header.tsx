@@ -24,7 +24,6 @@ import { Dialog } from '@/components/dialog'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { NotificationPopover } from '@/components/notification-popover'
 import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -282,8 +281,6 @@ export function PublicHeader(props: PublicHeaderProps) {
               })}
 
               <div className='bg-border/40 mx-2 h-5 w-px' />
-
-              <Search className='h-9 w-44 rounded-full text-sm sm:w-44 lg:w-48 xl:w-56' />
 
               {showLanguageSwitcher && <LanguageSwitcher />}
               {showThemeSwitch && <ThemeSwitch />}
