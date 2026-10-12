@@ -50,6 +50,8 @@ export interface SystemConfig {
   loginPanelMedia?: string
   /** Newline-separated tag labels shown at the bottom of the left panel */
   loginPanelTags?: string
+  /** JSON string array of model names pinned to the pricing featured strip */
+  pricingFeaturedModels?: string
   currency: CurrencyConfig
 }
 

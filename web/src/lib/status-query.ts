@@ -103,6 +103,7 @@ export function mapStatusDataToConfig(
     loginPanelDescription: data.login_panel_description as string | undefined,
     loginPanelMedia: data.login_panel_media as string | undefined,
     loginPanelTags: data.login_panel_tags as string | undefined,
+    pricingFeaturedModels: data.pricing_featured_models as string | undefined,
     currency,
   }
 }

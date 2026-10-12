@@ -152,6 +152,7 @@ export type SiteSettings = {
   LoginPanelDescription: string
   LoginPanelMedia: string
   LoginPanelTags: string
+  PricingFeaturedModels: string
   'general_setting.docs_link': string
   'legal.user_agreement': string
   'legal.privacy_policy': string

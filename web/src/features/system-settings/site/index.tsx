@@ -36,6 +36,7 @@ const defaultSiteSettings: SiteSettings = {
   LoginPanelDescription: '',
   LoginPanelMedia: '',
   LoginPanelTags: '',
+  PricingFeaturedModels: '[]',
   'general_setting.docs_link': '',
   'legal.user_agreement': '',
   'legal.privacy_policy': '',

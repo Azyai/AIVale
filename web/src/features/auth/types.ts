@@ -98,6 +98,7 @@ export interface SystemStatus {
     login_panel_description?: string
     login_panel_media?: string
     login_panel_tags?: string
+    pricing_featured_models?: string
     github_oauth?: boolean
     github_client_id?: string
     discord_oauth?: boolean

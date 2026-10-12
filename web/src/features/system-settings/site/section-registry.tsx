@@ -24,6 +24,7 @@ import {
   serializeSidebarModulesAdmin,
 } from '../maintenance/config'
 import { HeaderNavigationSection } from '../maintenance/header-navigation-section'
+import { FeaturedModelsSection } from '../general/featured-models-section'
 import { LoginBrandingSection } from '../general/login-branding-section'
 import { NoticeSection } from '../maintenance/notice-section'
 import { SidebarModulesSection } from '../maintenance/sidebar-modules-section'
@@ -64,6 +65,17 @@ const SITE_SECTIONS = [
           LoginPanelDescription: settings.LoginPanelDescription,
           LoginPanelMedia: settings.LoginPanelMedia,
           LoginPanelTags: settings.LoginPanelTags,
+        }}
+      />
+    ),
+  },
+  {
+    id: 'featured-models',
+    titleKey: 'Model Square Featured Models',
+    build: (settings: SiteSettings) => (
+      <FeaturedModelsSection
+        defaultValues={{
+          PricingFeaturedModels: settings.PricingFeaturedModels,
         }}
       />
     ),
