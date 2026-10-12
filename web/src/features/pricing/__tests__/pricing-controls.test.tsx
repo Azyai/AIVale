@@ -40,6 +40,9 @@ function toolbarProps(): PricingToolbarProps {
     vendorFilter: 'all',
     groupFilter: 'all',
     tagFilter: 'all',
+    priceRange: undefined,
+    freeOnly: false,
+    searchInput: '',
     onSortChange: vi.fn(),
     onTokenUnitChange: vi.fn(),
     onRechargePriceChange: vi.fn(),
@@ -49,6 +52,10 @@ function toolbarProps(): PricingToolbarProps {
     onVendorChange: vi.fn(),
     onGroupChange: vi.fn(),
     onTagChange: vi.fn(),
+    onPriceRangeChange: vi.fn(),
+    onFreeOnlyChange: vi.fn(),
+    onSearchChange: vi.fn(),
+    onSearchClear: vi.fn(),
     vendors: [],
     groups: ['default', 'premium'],
     groupRatios: { default: 1, premium: 3 },
@@ -143,13 +150,13 @@ describe('pricing controls', () => {
     const props = toolbarProps()
     const user = userEvent.setup()
     const { rerender } = render(<PricingToolbar {...props} />)
-    await user.click(screen.getByRole('button', { name: '/1K' }))
+    await user.click(screen.getByRole('tab', { name: '/1K' }))
     expect(props.onTokenUnitChange).toHaveBeenCalledWith('K')
     rerender(<PricingToolbar {...props} tokenUnit='K' />)
-    const selected = screen.getByRole('button', { name: '/1K' })
-    expect(selected).toHaveAttribute('aria-pressed', 'true')
+    const selected = screen.getByRole('tab', { name: '/1K' })
+    expect(selected).toHaveAttribute('aria-selected', 'true')
     await user.click(selected)
-    expect(selected).toHaveAttribute('aria-pressed', 'true')
+    expect(selected).toHaveAttribute('aria-selected', 'true')
     expect(props.onTokenUnitChange).toHaveBeenCalledTimes(1)
   })
 
@@ -157,15 +164,15 @@ describe('pricing controls', () => {
     const props = toolbarProps()
     const user = userEvent.setup()
     const { rerender } = render(<PricingToolbar {...props} />)
-    await user.click(screen.getByRole('button', { name: 'Recharge' }))
+    await user.click(screen.getByRole('tab', { name: 'Recharge' }))
     expect(props.onRechargePriceChange).toHaveBeenCalledWith(true)
     rerender(<PricingToolbar {...props} showRechargePrice />)
-    expect(screen.getByRole('button', { name: 'Recharge' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('tab', { name: 'Recharge' })).toHaveAttribute(
+      'aria-selected',
       'true'
     )
-    expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('tab', { name: 'Standard' })).toHaveAttribute(
+      'aria-selected',
       'false'
     )
   })
