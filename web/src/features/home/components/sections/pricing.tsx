@@ -23,6 +23,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { PillTabs } from '@/components/pill-tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatQuota } from '@/lib/format'
@@ -63,50 +64,6 @@ function getCycleUnit(cycle: PricingCycle, t: (key: string) => string) {
     default:
       return t('/ 月')
   }
-}
-
-/** Qianwen-style pill segmented control. */
-function PillTabs<T extends string>({
-  options,
-  value,
-  onChange,
-  size = 'md',
-  className,
-}: {
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (v: T) => void
-  size?: 'md' | 'sm'
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'border-border/50 bg-muted/40 inline-flex items-center gap-1 rounded-full border p-1.5',
-        className
-      )}
-    >
-      {options.map((opt) => {
-        const active = opt.value === value
-        return (
-          <button
-            key={opt.value}
-            type='button'
-            className={cn(
-              'cursor-pointer rounded-full font-medium transition-all duration-200',
-              size === 'md' ? 'px-6 py-2 text-[15px]' : 'px-5 py-1.5 text-sm',
-              active
-                ? 'bg-background text-foreground shadow-md ring-primary/20 ring-1'
-                : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
-            )}
-            onClick={() => onChange(opt.value)}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
-  )
 }
 
 export function PricingSection() {
