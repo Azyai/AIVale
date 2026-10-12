@@ -235,7 +235,7 @@ export function PricingSection() {
         </div>
 
         {/* Framed pricing panel: toggles + cards in one outlined box */}
-        <div className='from-primary/8 via-muted/35 to-muted/20 border-border/60 rounded-3xl border bg-gradient-to-br p-4 shadow-xs backdrop-blur-sm sm:p-6 md:p-8'>
+        <div className='from-primary/12 via-muted/40 to-muted/25 rounded-3xl bg-gradient-to-br p-4 shadow-xs backdrop-blur-sm sm:p-6 md:p-8'>
           {/* Plan type tabs with the cycle row stacked below */}
           <div className='mb-8 flex flex-col items-center gap-3'>
             {hasTeamPlans && (

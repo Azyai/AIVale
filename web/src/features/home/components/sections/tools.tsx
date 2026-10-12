@@ -94,7 +94,7 @@ export function ToolsWall() {
           </p>
         </div>
 
-        <div className='from-primary/6 via-muted/25 to-muted/15 border-border/50 marquee-container space-y-5 rounded-3xl border bg-gradient-to-br p-5 md:p-7'>
+        <div className='from-primary/10 via-muted/40 to-muted/25 marquee-container space-y-5 rounded-3xl bg-gradient-to-br p-5 md:p-7'>
           {MARQUEE_ROWS.map((row, i) => (
             <div
               key={i}
