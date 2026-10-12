@@ -60,11 +60,11 @@ export function ProfileDropdown() {
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
-          render={<Button variant='ghost' className='relative size-6 p-0' />}
+          render={<Button variant='ghost' className='relative size-10 p-0' />}
         >
-          <Avatar className='size-6'>
+          <Avatar className='size-10'>
             <AvatarFallback
-              className={`${avatarFallbackClassName} text-[11px]`}
+              className={`${avatarFallbackClassName} text-sm`}
               style={avatarFallbackStyle}
             >
               {avatarFallback}
