@@ -18,3 +18,8 @@ For commercial licensing, please contact support@quantumnous.com
 */
 export { useFilters } from './use-filters'
 export { usePricingData } from './use-pricing-data'
+export {
+  MAX_COMPARE_MODELS,
+  useCompareStore,
+} from './use-compare'
+

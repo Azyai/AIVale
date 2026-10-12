@@ -106,10 +106,13 @@ export function filterByEndpointType(
 }
 
 /**
- * Get model price for sorting
+ * Get model price for sorting and range filtering, in the same base units the
+ * UI displays for the default group: model_ratio * 2 (USD per 1M input tokens)
+ * for token models, model_price for per-request. Dynamic/group-adjusted
+ * prices may differ; this is the list-price basis for coarse filtering.
  */
-function getModelPrice(model: PricingModel): number {
-  return model.quota_type === 0 ? model.model_ratio : model.model_price || 0
+export function getModelBasePrice(model: PricingModel): number {
+  return model.quota_type === 0 ? model.model_ratio * 2 : model.model_price || 0
 }
 
 /**
@@ -128,14 +131,44 @@ export function sortModels(
       )
       break
     case SORT_OPTIONS.PRICE_LOW:
-      sorted.sort((a, b) => getModelPrice(a) - getModelPrice(b))
+      sorted.sort((a, b) => getModelBasePrice(a) - getModelBasePrice(b))
       break
     case SORT_OPTIONS.PRICE_HIGH:
-      sorted.sort((a, b) => getModelPrice(b) - getModelPrice(a))
+      sorted.sort((a, b) => getModelBasePrice(b) - getModelBasePrice(a))
       break
   }
 
   return sorted
+}
+
+/**
+ * Filter models by a [min, max] price range in raw price units.
+ * Undefined bounds are treated as open ends.
+ */
+export function filterByPriceRange(
+  models: PricingModel[],
+  range?: [number, number]
+): PricingModel[] {
+  if (!range) return models
+  const [min, max] = range
+  if ((min == null || min <= 0) && (max == null || !Number.isFinite(max))) {
+    return models
+  }
+  return models.filter((m) => {
+    const price = getModelBasePrice(m)
+    return (min == null || min <= 0 || price >= min - 1e-9) && (max == null || !Number.isFinite(max) || price <= max + 1e-9)
+  })
+}
+
+/**
+ * Filter models to only those usable at zero cost (ratio or price of 0).
+ */
+export function filterByFree(
+  models: PricingModel[],
+  freeOnly: boolean
+): PricingModel[] {
+  if (!freeOnly) return models
+  return models.filter((m) => getModelBasePrice(m) <= 0)
 }
 
 /**
@@ -151,6 +184,8 @@ export function filterAndSortModels(
     endpointType: string
     tag: string
     sortBy: string
+    priceRange?: [number, number]
+    freeOnly?: boolean
   }
 ): PricingModel[] {
   let result = filterBySearch(models, filters.search)
@@ -159,6 +194,8 @@ export function filterAndSortModels(
   result = filterByQuotaType(result, filters.quotaType)
   result = filterByEndpointType(result, filters.endpointType)
   result = filterByTag(result, filters.tag)
+  result = filterByPriceRange(result, filters.priceRange)
+  result = filterByFree(result, filters.freeOnly ?? false)
   result = sortModels(result, filters.sortBy)
 
   return result

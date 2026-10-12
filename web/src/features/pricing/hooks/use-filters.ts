@@ -44,6 +44,9 @@ type FilterState = {
   tokenUnit?: TokenUnit
   view?: ViewMode
   rechargePrice?: boolean
+  priceMin?: number
+  priceMax?: number
+  freeOnly?: boolean
 }
 
 function normalizeViewMode(value: unknown): ViewMode {
@@ -66,6 +69,9 @@ export function useFilters(models: PricingModel[]) {
     tokenUnit: search.tokenUnit,
     view: search.view,
     rechargePrice: search.rechargePrice,
+    priceMin: search.priceMin,
+    priceMax: search.priceMax,
+    freeOnly: search.freeOnly,
   }))
 
   const searchInput = filterState.search || ''
@@ -80,6 +86,20 @@ export function useFilters(models: PricingModel[]) {
     filterState.tokenUnit === 'K' ? 'K' : DEFAULT_TOKEN_UNIT
   const viewMode = normalizeViewMode(filterState.view)
   const showRechargePrice = filterState.rechargePrice === true
+  const freeOnly = filterState.freeOnly === true
+  const priceRange = useMemo<[number, number] | undefined>(
+    () =>
+      filterState.priceMin != null || filterState.priceMax != null
+        ? [
+            filterState.priceMin ?? 0,
+            filterState.priceMax ?? Number.POSITIVE_INFINITY,
+          ]
+        : undefined,
+    [filterState.priceMin, filterState.priceMax]
+  )
+  const priceRangeActive =
+    (filterState.priceMin != null && filterState.priceMin > 0) ||
+    filterState.priceMax != null
 
   const updateFilters = useCallback((updates: Record<string, unknown>) => {
     setFilterState((prev) => {
@@ -140,6 +160,22 @@ export function useFilters(models: PricingModel[]) {
     (v: boolean) => updateFilters({ rechargePrice: v || undefined }),
     [updateFilters]
   )
+  const setPriceRange = useCallback(
+    (range: [number, number] | undefined) => {
+      const min = range?.[0]
+      const max = range?.[1]
+      updateFilters({
+        priceMin: min != null && min > 0 ? min : undefined,
+        priceMax:
+          max != null && Number.isFinite(max) ? max : undefined,
+      })
+    },
+    [updateFilters]
+  )
+  const setFreeOnly = useCallback(
+    (v: boolean) => updateFilters({ freeOnly: v || undefined }),
+    [updateFilters]
+  )
 
   const availableTags = useMemo(() => {
     if (!models || models.length === 0) return []
@@ -157,6 +193,8 @@ export function useFilters(models: PricingModel[]) {
       endpointType: endpointTypeFilter,
       tag: tagFilter,
       sortBy,
+      priceRange,
+      freeOnly,
     })
   }, [
     models,
@@ -167,6 +205,8 @@ export function useFilters(models: PricingModel[]) {
     endpointTypeFilter,
     tagFilter,
     sortBy,
+    priceRange,
+    freeOnly,
   ])
 
   const hasActiveFilters = useMemo(
@@ -175,8 +215,18 @@ export function useFilters(models: PricingModel[]) {
       groupFilter !== FILTER_ALL ||
       quotaTypeFilter !== QUOTA_TYPES.ALL ||
       endpointTypeFilter !== ENDPOINT_TYPES.ALL ||
-      tagFilter !== FILTER_ALL,
-    [vendorFilter, groupFilter, quotaTypeFilter, endpointTypeFilter, tagFilter]
+      tagFilter !== FILTER_ALL ||
+      priceRangeActive ||
+      freeOnly,
+    [
+      vendorFilter,
+      groupFilter,
+      quotaTypeFilter,
+      endpointTypeFilter,
+      tagFilter,
+      priceRangeActive,
+      freeOnly,
+    ]
   )
 
   const activeFilterCount = useMemo(
@@ -185,8 +235,18 @@ export function useFilters(models: PricingModel[]) {
       (groupFilter !== FILTER_ALL ? 1 : 0) +
       (quotaTypeFilter !== QUOTA_TYPES.ALL ? 1 : 0) +
       (endpointTypeFilter !== ENDPOINT_TYPES.ALL ? 1 : 0) +
-      (tagFilter !== FILTER_ALL ? 1 : 0),
-    [vendorFilter, groupFilter, quotaTypeFilter, endpointTypeFilter, tagFilter]
+      (tagFilter !== FILTER_ALL ? 1 : 0) +
+      (priceRangeActive ? 1 : 0) +
+      (freeOnly ? 1 : 0),
+    [
+      vendorFilter,
+      groupFilter,
+      quotaTypeFilter,
+      endpointTypeFilter,
+      tagFilter,
+      priceRangeActive,
+      freeOnly,
+    ]
   )
 
   const clearFilters = useCallback(() => {
@@ -196,6 +256,9 @@ export function useFilters(models: PricingModel[]) {
       quotaType: undefined,
       endpointType: undefined,
       tag: undefined,
+      priceMin: undefined,
+      priceMax: undefined,
+      freeOnly: undefined,
     })
   }, [updateFilters])
 
@@ -214,6 +277,8 @@ export function useFilters(models: PricingModel[]) {
     tokenUnit,
     viewMode,
     showRechargePrice,
+    priceRange,
+    freeOnly,
     setSearchInput,
     setSortBy,
     setVendorFilter,
@@ -224,6 +289,8 @@ export function useFilters(models: PricingModel[]) {
     setTokenUnit,
     setViewMode,
     setShowRechargePrice,
+    setPriceRange,
+    setFreeOnly,
     filteredModels,
     hasActiveFilters,
     activeFilterCount,

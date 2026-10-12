@@ -34,6 +34,9 @@ const pricingSearchSchema = z.object({
   tokenUnit: z.enum(['M', 'K']).optional(),
   view: z.enum(['card', 'table']).optional().catch(undefined),
   rechargePrice: z.boolean().optional(),
+  priceMin: z.number().optional(),
+  priceMax: z.number().optional(),
+  freeOnly: z.boolean().optional(),
 })
 
 export const Route = createFileRoute('/pricing/')({
