@@ -414,7 +414,7 @@ function PlanCard({
   const isTeam = group.planType === 'team'
 
   const benefits = [
-    `${t('Total Quota')}: ${
+    `${isTeam ? t('每人额度') : t('Total Quota')}: ${
       plan.total_amount > 0 ? formatQuota(plan.total_amount) : t('Unlimited')
     }`,
     formatResetPeriod(plan, t) !== t('No Reset')
@@ -510,7 +510,7 @@ function StandalonePlanCard({
 }) {
   const isTeam = plan.plan_type === 'team'
   const benefits = [
-    `${t('Total Quota')}: ${
+    `${isTeam ? t('每人额度') : t('Total Quota')}: ${
       plan.total_amount > 0 ? formatQuota(plan.total_amount) : t('Unlimited')
     }`,
     formatResetPeriod(plan, t) !== t('No Reset')

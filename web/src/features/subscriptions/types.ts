@@ -87,6 +87,7 @@ export const userSubscriptionSchema = z.object({
   id: z.number(),
   user_id: z.number(),
   plan_id: z.number(),
+  team_id: z.number().optional(),
   status: z.string(),
   source: z.string().optional(),
   start_time: z.number(),

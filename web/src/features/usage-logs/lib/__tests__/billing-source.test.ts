@@ -36,6 +36,7 @@ const active: UserSubscriptionRecord[] = [
       id: 7,
       user_id: 3,
       plan_id: 1,
+      team_id: 0,
       status: 'active',
       start_time: 0,
       end_time: 1,

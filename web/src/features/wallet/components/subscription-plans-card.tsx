@@ -516,6 +516,12 @@ export function SubscriptionPlansCard({
                               ? `${planTitle} · ${t('Subscription')} #${subscription?.id}`
                               : `${t('Subscription')} #${subscription?.id}`}
                           </span>
+                          {(subscription?.team_id ?? 0) > 0 && (
+                            <span className='bg-primary/10 text-primary inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium'>
+                              <Users className='mr-0.5 inline size-3' />
+                              {t('团队')}
+                            </span>
+                          )}
                           {statusBadge}
                         </div>
                         {isActive && (
@@ -665,14 +671,16 @@ interface PlanCardSharedProps {
 function PlanBenefitsList({ plan, t }: { plan: SubscriptionPlan; t: PlanCardSharedProps['t'] }) {
   const totalAmount = Number(plan.total_amount || 0)
   const limit = Number(plan.max_purchase_per_user || 0)
+  const isTeam = plan.plan_type === 'team'
+  const quotaLabel = isTeam ? t('每人额度') : t('Total Quota')
   const benefits = [
     `${t('Validity Period')}: ${formatDuration(plan, t)}`,
     formatResetPeriod(plan, t) !== t('No Reset')
       ? `${t('Quota Reset')}: ${formatResetPeriod(plan, t)}`
       : null,
     totalAmount > 0
-      ? `${t('Total Quota')}: ${formatQuota(totalAmount)}`
-      : `${t('Total Quota')}: ${t('Unlimited')}`,
+      ? `${quotaLabel}: ${formatQuota(totalAmount)}`
+      : `${quotaLabel}: ${t('Unlimited')}`,
     limit > 0 ? `${t('Purchase Limit')}: ${limit}` : null,
     plan.upgrade_group ? `${t('Upgrade Group')}: ${plan.upgrade_group}` : null,
   ].filter(Boolean) as string[]

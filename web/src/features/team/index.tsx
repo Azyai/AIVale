@@ -372,11 +372,16 @@ function TeamSubscriptionsCard({ data, t }: { data: TeamSelfData; t: T }) {
   const active = subs.filter(
     (s) => s.status === 'active' && s.end_time > now
   )
+  const memberName = (userId: number) => {
+    const m = (data.members || []).find((x) => x.user_id === userId)
+    return m ? m.display_name || m.username : `User #${userId}`
+  }
+  const seats = active.find((s) => (s.seats ?? 0) > 0)?.seats
 
   return (
     <TitledCard
       title={t('团队订阅')}
-      description={t('团队套餐共享额度池，按席位计费')}
+      description={t('团队套餐按人分配额度，每位成员额度相同；额度用尽后自动使用团队钱包按量付费')}
       icon={<Crown className='h-4 w-4' />}
       iconTone='warning'
       disableHoverEffect
@@ -387,49 +392,56 @@ function TeamSubscriptionsCard({ data, t }: { data: TeamSelfData; t: T }) {
           {t('暂无生效的团队订阅')}
         </p>
       ) : (
-        active.map((sub) => {
-          const total = Number(sub.amount_total || 0)
-          const used = Number(sub.amount_used || 0)
-          const remain = total > 0 ? Math.max(0, total - used) : 0
-          const percent = total > 0 ? Math.round((used / total) * 100) : 0
-          const remainDays = Math.max(
-            0,
-            Math.ceil((sub.end_time - now) / 86400)
-          )
-          return (
-            <div key={sub.id} className='bg-background rounded-md border p-4'>
-              <div className='flex flex-wrap items-center justify-between gap-2 text-sm'>
-                <span className='font-medium'>
-                  {t('订阅')} #{sub.id}
-                </span>
-                <span className='text-muted-foreground'>
-                  {t('{{count}} days remaining', { count: remainDays })}
-                </span>
-              </div>
-              <div className='text-muted-foreground mt-1.5 text-xs'>
-                {t('Total Quota')}:{' '}
-                {total > 0 ? (
-                  <>
-                    {formatQuota(used)}/{formatQuota(total)} ·{' '}
-                    {t('Remaining')} {formatQuota(remain)}
-                  </>
-                ) : (
-                  t('Unlimited')
-                )}
-                {total > 0 && (
-                  <span className='ml-2'>
-                    {t('Used')} {percent}%
+        <>
+          {seats ? (
+            <p className='text-muted-foreground/70 text-xs'>
+              {t('席位数')}: {seats} · {t('每人额度相同')}
+            </p>
+          ) : null}
+          {active.map((sub) => {
+            const total = Number(sub.amount_total || 0)
+            const used = Number(sub.amount_used || 0)
+            const remain = total > 0 ? Math.max(0, total - used) : 0
+            const percent = total > 0 ? Math.round((used / total) * 100) : 0
+            const remainDays = Math.max(
+              0,
+              Math.ceil((sub.end_time - now) / 86400)
+            )
+            return (
+              <div key={sub.id} className='bg-background rounded-md border p-4'>
+                <div className='flex flex-wrap items-center justify-between gap-2 text-sm'>
+                  <span className='font-medium'>
+                    {memberName(sub.user_id)}
                   </span>
-                )}
+                  <span className='text-muted-foreground'>
+                    {t('{{count}} days remaining', { count: remainDays })}
+                  </span>
+                </div>
+                <div className='text-muted-foreground mt-1.5 text-xs'>
+                  {t('每人额度')}:{' '}
+                  {total > 0 ? (
+                    <>
+                      {formatQuota(used)}/{formatQuota(total)} ·{' '}
+                      {t('套餐剩余')} {formatQuota(remain)}
+                    </>
+                  ) : (
+                    t('Unlimited')
+                  )}
+                  {total > 0 && (
+                    <span className='ml-2'>
+                      {t('Used')} {percent}%
+                    </span>
+                  )}
+                </div>
+                {total > 0 && <Progress value={percent} className='mt-2 h-1.5' />}
               </div>
-              {total > 0 && <Progress value={percent} className='mt-2 h-1.5' />}
-            </div>
-          )
-        })
+            )
+          })}
+        </>
       )}
       <div>
         <Button variant='outline' render={<Link to='/wallet' />}>
-          {t('购买/续费团队套餐')}
+          {t('购买/升级团队套餐')}
         </Button>
       </div>
     </TitledCard>

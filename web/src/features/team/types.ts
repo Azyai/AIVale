@@ -46,6 +46,7 @@ export interface TeamSubscriptionInfo {
   user_id: number
   plan_id: number
   team_id: number
+  seats?: number
   amount_total: number
   amount_used: number
   start_time: number
