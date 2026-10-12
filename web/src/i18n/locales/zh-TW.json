@@ -7080,6 +7080,13 @@
     "档位等级": "Tier level",
     "数值越大档位越高。购买校验“仅升不降”：新套餐等级必须高于当前生效套餐才能购买（升级按原价计费并立即替代旧套餐），相同或更低档位会被拒绝。": "Higher value = higher tier. Purchases enforce upgrade-only: the new plan must rank above the current active subscription (full-price upgrade that immediately supersedes the old one); equal or lower tiers are rejected.",
     "已升级": "Upgraded",
-    "已升级于": "Upgraded at"
+    "已升级于": "Upgraded at",
+    "每人额度": "Quota per member",
+    "团队": "Team",
+    "团队套餐按人分配额度，每位成员额度相同；额度用尽后自动使用团队钱包按量付费": "Team plans allocate quota per member — everyone gets the same amount; when exhausted, usage falls back to the team wallet (pay-as-you-go).",
+    "席位数": "Seats",
+    "每人额度相同": "same quota for every member",
+    "购买/升级团队套餐": "Buy / upgrade team plan",
+    "每位成员的额度（按人分配，不随席位数放大）。0 表示不限量。": "Per-member quota (allocated individually, does not scale with seats). 0 means unlimited."
   }
 }
