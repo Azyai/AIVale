@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { TopNavLink } from '../types'
 import { PublicHeader, type PublicHeaderProps } from './public-header'
+import { SearchProvider } from '@/context/search-provider'
 
 type PublicLayoutProps = {
   children: React.ReactNode
@@ -35,24 +36,26 @@ type PublicLayoutProps = {
 export function PublicLayout(props: PublicLayoutProps) {
   return (
     <div className='bg-background text-foreground relative min-h-svh overflow-x-clip'>
-      <PublicHeader
-        navContent={props.navContent}
-        navLinks={props.navLinks}
-        showThemeSwitch={props.showThemeSwitch}
-        showAuthButtons={props.showAuthButtons}
-        showNotifications={props.showNotifications}
-        logo={props.logo}
-        siteName={props.siteName}
-        {...props.headerProps}
-      />
+      <SearchProvider>
+        <PublicHeader
+          navContent={props.navContent}
+          navLinks={props.navLinks}
+          showThemeSwitch={props.showThemeSwitch}
+          showAuthButtons={props.showAuthButtons}
+          showNotifications={props.showNotifications}
+          logo={props.logo}
+          siteName={props.siteName}
+          {...props.headerProps}
+        />
 
-      {props.showMainContainer !== false ? (
-        <main className='container px-4 py-6 pt-24 md:pt-32'>
-          {props.children}
-        </main>
-      ) : (
-        props.children
-      )}
+        {props.showMainContainer !== false ? (
+          <main className='container px-4 py-6 pt-24 md:pt-32'>
+            {props.children}
+          </main>
+        ) : (
+          props.children
+        )}
+      </SearchProvider>
     </div>
   )
 }

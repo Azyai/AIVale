@@ -24,6 +24,7 @@ import { Dialog } from '@/components/dialog'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { NotificationPopover } from '@/components/notification-popover'
 import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -211,17 +212,20 @@ export function PublicHeader(props: PublicHeaderProps) {
           )}
         >
           <nav className='flex h-20 w-full items-center justify-between gap-4 px-5 md:h-28 md:px-8'>
-            {/* Brand — pinned to the far left of the page */}
-            <div className='@container/system-brand flex shrink-0 items-center gap-1'>
+            {/* Brand — pinned to the far left of the page. The wrapper keeps
+                flex-1 (NOT shrink-0): @container/system-brand applies
+                inline-size containment, so a shrink-0 wrapper collapses to
+                zero width and the brand text gets flex-crushed away. */}
+            <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1'>
               <Link
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
-                <div className='flex size-11 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-[4.5rem]'>
+                <div className='flex size-12 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-20'>
                   {logoContent}
                 </div>
                 <span
-                  className='max-w-56 truncate text-xl font-bold tracking-tight md:max-w-xs md:text-[1.875rem]'
+                  className='max-w-56 truncate text-[1.375rem] font-bold tracking-tight md:max-w-xs md:text-[2.125rem]'
                   title={displaySiteName}
                 >
                   {loading ? (
@@ -233,8 +237,8 @@ export function PublicHeader(props: PublicHeaderProps) {
               </Link>
             </div>
 
-            {/* Desktop nav — centered in the space between brand and controls */}
-            <div className='hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex'>
+            {/* Desktop nav + controls — hugging the right edge */}
+            <div className='hidden shrink-0 items-center gap-1 lg:flex'>
               {links.map((link) => {
                 const isActive = pathname === link.href
                 if (link.external) {
@@ -249,7 +253,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                       tabIndex={link.disabled ? -1 : undefined}
                       onClick={(event) => handleNavLinkClick(event, link)}
                       className={cn(
-                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3 py-2.5 text-[15px] transition-colors duration-200',
+                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3 py-3 text-base transition-colors duration-200',
                         link.disabled && 'pointer-events-none opacity-50'
                       )}
                     >
@@ -265,7 +269,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
                     className={cn(
-                      'min-w-0 truncate rounded-lg px-3 py-2.5 text-[15px] transition-colors duration-200',
+                      'min-w-0 truncate rounded-lg px-3 py-3 text-base transition-colors duration-200',
                       isActive
                         ? 'text-primary font-medium'
                         : 'text-muted-foreground hover:text-foreground',
@@ -276,15 +280,10 @@ export function PublicHeader(props: PublicHeaderProps) {
                   </Link>
                 )
               })}
-            </div>
 
-            {/* Desktop controls — hug the right edge */}
-            <div className='hidden shrink-0 items-center gap-1 lg:flex'>
-              {(showLanguageSwitcher ||
-                showThemeSwitch ||
-                showNotifications) && (
-                <div className='bg-border/40 mx-2 h-5 w-px' />
-              )}
+              <div className='bg-border/40 mx-2 h-5 w-px' />
+
+              <Search className='h-9 w-44 rounded-full text-sm sm:w-44 lg:w-48 xl:w-56' />
 
               {showLanguageSwitcher && <LanguageSwitcher />}
               {showThemeSwitch && <ThemeSwitch />}
