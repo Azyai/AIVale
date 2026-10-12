@@ -112,14 +112,14 @@ export function PublicHeader(props: PublicHeaderProps) {
   let authContent = (
     <Button
       size='sm'
-      className='bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-sm font-medium'
+      className='bg-foreground text-background hover:bg-foreground/90 h-11 rounded-full px-6 text-base font-medium'
       render={<Link to='/sign-in' />}
     >
       {t('Sign in')}
     </Button>
   )
   if (isAuthenticated) authContent = <ProfileDropdown />
-  if (loading) authContent = <Skeleton className='h-9 w-20 rounded-full' />
+  if (loading) authContent = <Skeleton className='h-11 w-24 rounded-full' />
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -252,7 +252,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                       tabIndex={link.disabled ? -1 : undefined}
                       onClick={(event) => handleNavLinkClick(event, link)}
                       className={cn(
-                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3 py-3 text-base transition-colors duration-200',
+                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3.5 py-3 text-lg transition-colors duration-200',
                         link.disabled && 'pointer-events-none opacity-50'
                       )}
                     >
@@ -268,7 +268,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
                     className={cn(
-                      'min-w-0 truncate rounded-lg px-3 py-3 text-base transition-colors duration-200',
+                      'min-w-0 truncate rounded-lg px-3.5 py-3 text-lg transition-colors duration-200',
                       isActive
                         ? 'text-primary font-medium'
                         : 'text-muted-foreground hover:text-foreground',
@@ -280,7 +280,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                 )
               })}
 
-              <div className='bg-border/40 mx-2 h-5 w-px' />
+              <div className='bg-border/40 mx-2.5 h-6 w-px' />
 
               {showLanguageSwitcher && <LanguageSwitcher />}
               {showThemeSwitch && <ThemeSwitch />}
@@ -299,7 +299,7 @@ export function PublicHeader(props: PublicHeaderProps) {
 
               {showAuthButtons && (
                 <>
-                  <div className='bg-border/40 mx-1 h-5 w-px' />
+                  <div className='bg-border/40 mx-1.5 h-6 w-px' />
                   {authContent}
                 </>
               )}
@@ -315,27 +315,27 @@ export function PublicHeader(props: PublicHeaderProps) {
                 type='button'
                 variant='ghost'
                 size='icon'
-                className='size-9'
+                className='size-11'
                 onClick={() => setMobileOpen((v) => !v)}
                 aria-label={t('Toggle navigation menu')}
               >
-                <div className='relative size-4'>
+                <div className='relative size-5'>
                   <span
                     className={cn(
                       'absolute inset-x-0 block h-[1.5px] origin-center rounded-full bg-current transition-all duration-300',
-                      mobileOpen ? 'top-[7px] rotate-45' : 'top-[3px]'
+                      mobileOpen ? 'top-[9px] rotate-45' : 'top-[4px]'
                     )}
                   />
                   <span
                     className={cn(
-                      'absolute inset-x-0 top-[7px] block h-[1.5px] rounded-full bg-current transition-all duration-300',
+                      'absolute inset-x-0 top-[9px] block h-[1.5px] rounded-full bg-current transition-all duration-300',
                       mobileOpen ? 'scale-x-0 opacity-0' : 'opacity-100'
                     )}
                   />
                   <span
                     className={cn(
                       'absolute inset-x-0 block h-[1.5px] origin-center rounded-full bg-current transition-all duration-300',
-                      mobileOpen ? 'top-[7px] -rotate-45' : 'top-[11px]'
+                      mobileOpen ? 'top-[9px] -rotate-45' : 'top-[14px]'
                     )}
                   />
                 </div>
