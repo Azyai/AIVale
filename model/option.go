@@ -1,6 +1,8 @@
 package model
 
 import (
+	"encoding/json"
+	"fmt"
 	"maps"
 	"strconv"
 	"strings"
@@ -83,6 +85,7 @@ func InitOptionMap() {
 	common.OptionMap["LoginPanelDescription"] = common.LoginPanelDescription
 	common.OptionMap["LoginPanelMedia"] = common.LoginPanelMedia
 	common.OptionMap["LoginPanelTags"] = common.LoginPanelTags
+	common.OptionMap["PricingFeaturedModels"] = "[]"
 	common.OptionMap["ServerAddress"] = ""
 	common.OptionMap["TaskPublicAddress"] = system_setting.TaskPublicAddress
 	common.OptionMap["WorkerUrl"] = system_setting.WorkerUrl
@@ -245,6 +248,40 @@ func validateOptionValue(key string, value string) error {
 	}
 	if key == "MaxTokenAutoGroups" {
 		return setting.ValidateMaxTokenAutoGroups(value)
+	}
+	if key == "PricingFeaturedModels" {
+		return validatePricingFeaturedModels(value)
+	}
+	return nil
+}
+
+// PricingFeaturedModelsMax is the maximum number of models the pricing page
+// featured strip displays.
+const PricingFeaturedModelsMax = 4
+
+// validatePricingFeaturedModels enforces a JSON array of unique, non-empty
+// model names capped at PricingFeaturedModelsMax entries.
+func validatePricingFeaturedModels(value string) error {
+	var names []string
+	if err := json.Unmarshal([]byte(value), &names); err != nil {
+		return fmt.Errorf("PricingFeaturedModels must be a JSON array of model names")
+	}
+	seen := make(map[string]bool, len(names))
+	for _, name := range names {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
+			return fmt.Errorf("PricingFeaturedModels must not contain empty model names")
+		}
+		if seen[trimmed] {
+			return fmt.Errorf("PricingFeaturedModels contains duplicate model: %s", trimmed)
+		}
+		seen[trimmed] = true
+	}
+	if len(names) > PricingFeaturedModelsMax {
+		return fmt.Errorf(
+			"PricingFeaturedModels allows at most %d models, got %d",
+			PricingFeaturedModelsMax, len(names),
+		)
 	}
 	return nil
 }
