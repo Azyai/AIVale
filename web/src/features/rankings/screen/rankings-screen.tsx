@@ -434,7 +434,7 @@ export function RankingsScreen() {
 
   return (
     <PublicLayout showMainContainer={false}>
-      <div className='pt-16 sm:pt-20'>
+      <div className='pt-20 md:pt-24'>
         <div className='bsc-root' ref={setRootEl}>
           {content}
         </div>

@@ -26,7 +26,7 @@ export function HeroHeading() {
   const { t } = useTranslation()
 
   return (
-    <section className='relative overflow-hidden px-[5%] pt-14 pb-6 md:pt-20 md:pb-8'>
+    <section className='relative overflow-hidden px-[5%] pt-20 pb-6 md:pt-28 md:pb-8'>
       {/* Soft gradient glows */}
       <div
         aria-hidden

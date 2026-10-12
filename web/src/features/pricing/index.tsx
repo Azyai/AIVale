@@ -164,7 +164,7 @@ export function Pricing() {
   if (isLoading) {
     return (
       <PublicLayout showMainContainer={false}>
-        <div className='mx-auto w-full max-w-[1800px] px-[5%] pt-16 pb-8 sm:pt-20 sm:pb-10'>
+        <div className='mx-auto w-full max-w-[1800px] px-[5%] pt-20 pb-8 md:pt-24 sm:pb-10'>
           <LoadingSkeleton viewMode={viewMode} />
         </div>
       </PublicLayout>
@@ -189,7 +189,7 @@ export function Pricing() {
               'linear-gradient(to bottom, black 40%, transparent 100%)',
           }}
         />
-        <PageTransition className='relative mx-auto w-full max-w-[1800px] px-[5%] pt-12 pb-10 sm:pt-16 sm:pb-12'>
+        <PageTransition className='relative mx-auto w-full max-w-[1800px] px-[5%] pt-20 pb-10 md:pt-24 sm:pb-12'>
           <header className='max-w-3xl'>
             <h1 className='text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.1] font-bold tracking-tight'>
               {t('Model Square')}
@@ -242,7 +242,7 @@ export function Pricing() {
               models={models || []}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={clearFilters}
-              className='hover-scrollbar sticky top-20 hidden max-h-[calc(100dvh-6rem)] self-start overflow-y-auto xl:block'
+              className='hover-scrollbar sticky top-24 hidden max-h-[calc(100dvh-7rem)] self-start overflow-y-auto xl:block'
             />
 
             <main className='min-w-0 space-y-5'>
