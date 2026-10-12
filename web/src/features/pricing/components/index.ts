@@ -23,6 +23,9 @@ export { ModelCardGrid } from './model-card-grid'
 export { LoadingSkeleton } from './loading-skeleton'
 export { EmptyState } from './empty-state'
 export { SearchBar } from './search-bar'
+export { FeaturedModels } from './featured-models'
+export { CompareBar } from './compare-bar'
+export { CompareDialog } from './compare-dialog'
 export {
   ModelDetails,
   ModelDetailsContent,
