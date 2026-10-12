@@ -7087,6 +7087,7 @@
     "席位数": "Seats",
     "每人额度相同": "same quota for every member",
     "购买/升级团队套餐": "Buy / upgrade team plan",
-    "每位成员的额度（按人分配，不随席位数放大）。0 表示不限量。": "Per-member quota (allocated individually, does not scale with seats). 0 means unlimited."
+    "每位成员的额度（按人分配，不随席位数放大）。0 表示不限量。": "Per-member quota (allocated individually, does not scale with seats). 0 means unlimited.",
+    "OpenAI 兼容接口——配置一次，所有客户端即用即通。": "OpenAI-compatible endpoint — configure once and every client just works."
   }
 }

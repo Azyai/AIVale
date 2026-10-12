@@ -19,38 +19,107 @@ For commercial licensing, please contact support@quantumnous.com
 import { useTranslation } from 'react-i18next'
 
 import { getLobeIcon } from '@/lib/lobe-icon'
+import { cn } from '@/lib/utils'
 
-import { SUPPORTED_TOOLS } from '../../constants'
+// ~30 platforms split across three marquee rows. Missing icons degrade
+// gracefully to a monogram circle via getLobeIcon's fallback.
+const MARQUEE_ROWS: { icon: string; label: string }[][] = [
+  [
+    { icon: 'CherryStudio', label: 'Cherry Studio' },
+    { icon: 'Cline', label: 'Cline' },
+    { icon: 'Cursor', label: 'Cursor' },
+    { icon: 'Claude', label: 'Claude Code' },
+    { icon: 'OpenAI', label: 'ChatGPT / Codex' },
+    { icon: 'Qwen', label: 'Qwen Code' },
+    { icon: 'DeepSeek', label: 'DeepSeek' },
+    { icon: 'LobeHub', label: 'LobeHub' },
+    { icon: 'Dify', label: 'Dify' },
+    { icon: 'OpenWebUI', label: 'Open WebUI' },
+  ],
+  [
+    { icon: 'Gemini', label: 'Gemini CLI' },
+    { icon: 'Windsurf', label: 'Windsurf' },
+    { icon: 'Trae', label: 'Trae' },
+    { icon: 'Bolt', label: 'Bolt' },
+    { icon: 'Vercel', label: 'Vercel v0' },
+    { icon: 'Copilot', label: 'GitHub Copilot' },
+    { icon: 'Ollama', label: 'Ollama' },
+    { icon: 'FastGPT', label: 'FastGPT' },
+    { icon: 'Coze', label: 'Coze' },
+    { icon: 'HuggingFace', label: 'HuggingFace' },
+  ],
+  [
+    { icon: 'Doubao', label: '豆包' },
+    { icon: 'Kimi', label: 'Kimi' },
+    { icon: 'Zhipu', label: '智谱 GLM' },
+    { icon: 'Wenxin', label: '文心一言' },
+    { icon: 'Moonshot', label: 'Moonshot' },
+    { icon: 'Grok', label: 'Grok' },
+    { icon: 'Mistral', label: 'Mistral' },
+    { icon: 'Meta', label: 'Llama' },
+    { icon: 'Midjourney', label: 'Midjourney' },
+    { icon: 'Suno', label: 'Suno' },
+  ],
+]
 
+function MarqueeItem({ icon, label }: { icon: string; label: string }) {
+  return (
+    <div className='group flex shrink-0 items-center gap-3'>
+      <div className='flex size-8 shrink-0 items-center justify-center opacity-70 transition-opacity duration-300 group-hover:opacity-100'>
+        {getLobeIcon(icon, 30)}
+      </div>
+      <span className='text-muted-foreground/80 group-hover:text-foreground text-[15px] font-medium whitespace-nowrap transition-colors duration-300'>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Siliconflow-style customer/tool wall: three rows of platforms scrolling
+ * horizontally in alternating directions with edge fades; pauses on hover.
+ */
 export function ToolsWall() {
   const { t } = useTranslation()
 
   return (
     <section className='px-[5%] py-12 md:py-16'>
       <div className='mx-auto w-full'>
-        <div className='mb-10 text-center'>
-          <h2 className='text-2xl font-bold tracking-tight md:text-3xl'>
-            {t('Works with the tools you already use')}
+        <div className='mb-8 text-center'>
+          <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
+            {t('兼容你正在使用的工具')}
           </h2>
-          <p className='text-muted-foreground/70 mt-3 text-sm md:text-base'>
-            {t(
-              'OpenAI-compatible endpoint — configure once and every client just works.'
-            )}
+          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+            {t('OpenAI 兼容接口——配置一次，所有客户端即用即通。')}
           </p>
         </div>
 
-        <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-5'>
-          {SUPPORTED_TOOLS.map((tool) => (
+        <div className='marquee-container space-y-5'>
+          {MARQUEE_ROWS.map((row, i) => (
             <div
-              key={tool.label}
-              className='border-border/60 bg-card/60 flex items-center gap-3.5 rounded-2xl border p-5 transition-all duration-300 hover:shadow-sm'
+              key={i}
+              className='overflow-hidden py-1'
+              style={{
+                maskImage:
+                  'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+                WebkitMaskImage:
+                  'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+              }}
             >
-              <div className='flex size-10 shrink-0 items-center justify-center'>
-                {getLobeIcon(tool.icon, 30)}
+              <div
+                className={cn(
+                  'flex w-max gap-12 pr-12',
+                  i % 2 === 0 ? 'animate-marquee-left' : 'animate-marquee-right'
+                )}
+              >
+                {row.map((item) => (
+                  <MarqueeItem key={item.label} {...item} />
+                ))}
+                {/* Duplicate set for the seamless infinite loop */}
+                {row.map((item) => (
+                  <MarqueeItem key={`dup-${item.label}`} {...item} />
+                ))}
               </div>
-              <span className='truncate text-[15px] font-medium'>
-                {tool.label}
-              </span>
             </div>
           ))}
         </div>
