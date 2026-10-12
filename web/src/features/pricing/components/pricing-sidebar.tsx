@@ -17,16 +17,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { ChevronDown, RotateCcw } from 'lucide-react'
-import { memo, useMemo, type ReactNode } from 'react'
+import { memo, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { Slider } from '@/components/ui/slider'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -38,7 +39,7 @@ import {
   getQuotaTypeLabels,
 } from '../constants'
 import { hasTaskUsageSchema } from '../lib/dynamic-price'
-import { parseTags } from '../lib/filters'
+import { getModelBasePrice, parseTags } from '../lib/filters'
 import type { PricingModel, PricingVendor } from '../types'
 
 type FilterOption = {
@@ -54,6 +55,7 @@ type FilterSectionProps = {
   value: string
   options: FilterOption[]
   onChange: (value: string) => void
+  children?: ReactNode
 }
 
 export interface PricingSidebarProps {
@@ -67,6 +69,10 @@ export interface PricingSidebarProps {
   onVendorChange: (value: string) => void
   onGroupChange: (value: string) => void
   onTagChange: (value: string) => void
+  priceRange?: [number, number]
+  onPriceRangeChange: (range: [number, number] | undefined) => void
+  freeOnly: boolean
+  onFreeOnlyChange: (freeOnly: boolean) => void
   vendors: PricingVendor[]
   groups: string[]
   groupRatios?: Record<string, number>
@@ -77,6 +83,9 @@ export interface PricingSidebarProps {
   className?: string
 }
 
+/** Number of list rows before a section collapses behind "show more". */
+const COLLAPSED_ROWS = 8
+
 function formatGroupRatio(ratio: number | undefined): string | undefined {
   if (ratio == null) return undefined
   const formatted = Number.isInteger(ratio)
@@ -85,38 +94,47 @@ function formatGroupRatio(ratio: number | undefined): string | undefined {
   return `x${formatted}`
 }
 
-function FilterChip(props: {
+/** Compact Qianwen-style list row replacing the old chip clusters. */
+function FilterRow(props: {
   option: FilterOption
   active: boolean
   onClick: () => void
 }) {
   return (
-    <Button
+    <button
       type='button'
-      variant={props.active ? 'secondary' : 'outline'}
-      size='sm'
-      onClick={props.onClick}
       aria-pressed={props.active}
-      className='h-auto max-w-full gap-1.5 px-2 py-1 text-xs'
       title={props.option.label}
+      onClick={props.onClick}
+      className={cn(
+        'flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-left text-sm transition-colors',
+        props.active
+          ? 'bg-primary/10 text-primary font-medium'
+          : 'text-foreground/80 hover:bg-muted/60 hover:text-foreground'
+      )}
     >
       {props.option.icon && (
-        <span className='shrink-0'>{props.option.icon}</span>
-      )}
-      <span className='truncate'>{props.option.label}</span>
-      {(props.option.suffix || props.option.count != null) && (
-        <span
-          className={cn(
-            'rounded-md px-1.5 py-0.5 text-[12px]',
-            props.active
-              ? 'bg-background text-foreground'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          {props.option.suffix ?? props.option.count}
+        <span className='flex size-4 shrink-0 items-center justify-center'>
+          {props.option.icon}
         </span>
       )}
-    </Button>
+      <span className='min-w-0 flex-1 truncate'>{props.option.label}</span>
+      {props.option.suffix && (
+        <span className='text-muted-foreground shrink-0 text-xs tabular-nums'>
+          {props.option.suffix}
+        </span>
+      )}
+      {props.option.count != null && (
+        <span
+          className={cn(
+            'ml-auto shrink-0 text-xs tabular-nums',
+            props.active ? 'text-primary/70' : 'text-muted-foreground'
+          )}
+        >
+          {props.option.count}
+        </span>
+      )}
+    </button>
   )
 }
 
@@ -124,24 +142,152 @@ function FilterSection(props: FilterSectionProps) {
   return (
     <Collapsible
       defaultOpen
-      className='border-border/70 border-b pb-3 last:border-b-0'
+      className='border-border/60 border-b pb-2 last:border-b-0'
     >
       <CollapsibleTrigger className='group flex w-full items-center justify-between py-2.5 text-left'>
-        <span className='text-foreground text-sm font-semibold'>
+        <span className='text-foreground text-[13px] font-semibold tracking-wide'>
           {props.title}
         </span>
         <ChevronDown className='text-muted-foreground size-4 transition-transform group-data-[panel-open]:rotate-180' />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className='flex flex-wrap gap-1.5'>
+        <div className='flex flex-col gap-0.5 pb-1'>
           {props.options.map((option) => (
-            <FilterChip
+            <FilterRow
               key={option.value}
               option={option}
               active={props.value === option.value}
               onClick={() => props.onChange(option.value)}
             />
           ))}
+          {props.children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+/** Long lists (tags) collapse behind a "show more" toggle row. */
+function ExpandableRows(props: {
+  options: FilterOption[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+  const collapsed = props.options.slice(0, COLLAPSED_ROWS)
+  const hidden = props.options.length - collapsed.length
+  const rows = expanded ? props.options : collapsed
+
+  return (
+    <>
+      {rows.map((option) => (
+        <FilterRow
+          key={option.value}
+          option={option}
+          active={props.value === option.value}
+          onClick={() => props.onChange(option.value)}
+        />
+      ))}
+      {hidden > 0 && (
+        <button
+          type='button'
+          onClick={() => setExpanded((v) => !v)}
+          className='text-muted-foreground hover:text-foreground h-8 w-full cursor-pointer rounded-lg px-2.5 text-left text-xs transition-colors'
+        >
+          {expanded
+            ? t('Show less')
+            : t('Show {{count}} more', { count: hidden })}
+        </button>
+      )}
+    </>
+  )
+}
+
+/**
+ * Dual-thumb price range filter. Prices span several orders of magnitude, so
+ * the slider position maps through a sqrt scale: t -> domainMax * t^2. This
+ * keeps the low-price region usable while still anchoring zero.
+ */
+function PriceRangeSection(props: {
+  models: PricingModel[]
+  range?: [number, number]
+  onChange: (range: [number, number] | undefined) => void
+}) {
+  const { t } = useTranslation()
+
+  const domainMax = useMemo(() => {
+    let max = 0
+    for (const model of props.models) {
+      max = Math.max(max, getModelBasePrice(model))
+    }
+    return max
+  }, [props.models])
+
+  const current = props.range ?? [0, domainMax]
+  const [currentMin, currentMaxRaw] = current
+  // An open upper bound (Infinity) only arrives via hand-crafted URLs; clamp
+  // it for display so the label never renders "Infinity".
+  const currentMax = Number.isFinite(currentMaxRaw) ? currentMaxRaw : domainMax
+
+  const priceToT = (price: number) =>
+    domainMax > 0 ? Math.sqrt(Math.min(Math.max(price / domainMax, 0), 1)) : 0
+
+  const sliderValue: [number, number] = [
+    priceToT(currentMin),
+    priceToT(currentMax),
+  ]
+
+  const formatLabel = (price: number) =>
+    formatBillingCurrencyFromUSD(price, {
+      showSymbol: true,
+      digitsLarge: 2,
+      digitsSmall: 2,
+      abbreviate: false,
+    })
+
+  const handleValueChange = (nextValue: number | readonly number[]) => {
+    const values = Array.isArray(nextValue) ? nextValue : [nextValue]
+    const [tMin, tMax] = [values[0] ?? 0, values[1] ?? 1]
+    if (tMin <= 0.005 && tMax >= 0.995) {
+      props.onChange(undefined)
+      return
+    }
+    const min = Math.floor(domainMax * tMin * tMin * 1000) / 1000
+    const max = Math.ceil(domainMax * tMax * tMax * 1000) / 1000
+    props.onChange([Math.max(0, min), Math.max(min, max)])
+  }
+
+  return (
+    <Collapsible
+      defaultOpen
+      className='border-border/60 border-b pb-2 last:border-b-0'
+    >
+      <CollapsibleTrigger className='group flex w-full items-center justify-between py-2.5 text-left'>
+        <span className='text-foreground text-[13px] font-semibold tracking-wide'>
+          {t('Price Range')}
+        </span>
+        <ChevronDown className='text-muted-foreground size-4 transition-transform group-data-[panel-open]:rotate-180' />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className='flex flex-col gap-2.5 px-2.5 pt-1 pb-2'>
+          <div className='flex items-baseline justify-between text-xs tabular-nums'>
+            <span className='text-foreground font-mono font-medium'>
+              {formatLabel(currentMin)}
+            </span>
+            <span className='text-muted-foreground font-mono'>
+              {formatLabel(currentMax)}
+            </span>
+          </div>
+          <Slider
+            min={0}
+            max={1}
+            step={0.01}
+            value={sliderValue}
+            disabled={domainMax <= 0}
+            onValueChange={handleValueChange}
+            aria-label={t('Price Range')}
+          />
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -157,6 +303,7 @@ export const PricingSidebar = memo(function PricingSidebar(
     const tags = new Map<string, number>()
     const endpoints = new Map<string, number>()
     const quotas = { token: 0, request: 0, task: 0 }
+    const free = { free: 0 }
     for (const model of props.models) {
       if (model.vendor_name) {
         vendors.set(
@@ -172,6 +319,9 @@ export const PricingSidebar = memo(function PricingSidebar(
       for (const endpoint of new Set(model.supported_endpoint_types ?? [])) {
         endpoints.set(endpoint, (endpoints.get(endpoint) ?? 0) + 1)
       }
+      if (getModelBasePrice(model) <= 0) {
+        free.free++
+      }
       if (hasTaskUsageSchema(model)) {
         quotas.task++
       } else if (model.quota_type === 0) {
@@ -180,7 +330,7 @@ export const PricingSidebar = memo(function PricingSidebar(
         quotas.request++
       }
     }
-    return { vendors, tags, endpoints, quotas }
+    return { vendors, tags, endpoints, quotas, free }
   }, [props.models])
   const quotaTypeLabels = getQuotaTypeLabels(t)
   const endpointTypeLabels = getEndpointTypeLabels(t)
@@ -236,18 +386,16 @@ export const PricingSidebar = memo(function PricingSidebar(
     },
   ]
 
-  const tagOptions: FilterOption[] = [
-    {
-      value: FILTER_ALL,
-      label: t('All Tags'),
-      count: props.models.length,
-    },
-    ...props.tags.map((tag) => ({
-      value: tag,
-      label: tag,
-      count: counts.tags.get(tag.toLowerCase()) ?? 0,
-    })),
-  ]
+  const tagAllOption: FilterOption = {
+    value: FILTER_ALL,
+    label: t('All Tags'),
+    count: props.models.length,
+  }
+  const tagOptions: FilterOption[] = props.tags.map((tag) => ({
+    value: tag,
+    label: tag,
+    count: counts.tags.get(tag.toLowerCase()) ?? 0,
+  }))
 
   const endpointOptions: FilterOption[] = [
     {
@@ -265,42 +413,61 @@ export const PricingSidebar = memo(function PricingSidebar(
   ]
 
   return (
-    <aside className={cn('bg-card rounded-xl border p-3', props.className)}>
-      <div className='mb-2.5 flex items-center justify-between gap-2'>
+    <aside className={cn('bg-card rounded-2xl border p-3', props.className)}>
+      <div className='mb-2 flex items-center justify-between gap-2'>
         <div>
           <h2 className='text-foreground text-sm font-bold'>{t('Filter')}</h2>
           <p className='text-muted-foreground mt-1 text-xs'>
             {t('Refine models by provider, group, type, and tags.')}
           </p>
         </div>
-        <Button
+        <button
           type='button'
-          variant='ghost'
-          size='sm'
           onClick={props.onClearFilters}
           disabled={!props.hasActiveFilters}
-          className='h-7 gap-1.5 px-2 text-xs'
+          title={t('Reset')}
+          className='text-muted-foreground hover:text-foreground hover:bg-muted/60 enabled:cursor-pointer flex size-7 items-center justify-center rounded-full transition-colors disabled:opacity-40'
         >
           <RotateCcw className='size-3.5' />
-          {t('Reset')}
-        </Button>
+        </button>
       </div>
 
-      {props.hasActiveFilters && (
-        <Badge variant='secondary' className='mb-3'>
-          {t('Filters active')}
-        </Badge>
-      )}
-
       <div className='space-y-1'>
+        <PriceRangeSection
+          models={props.models}
+          range={props.priceRange}
+          onChange={props.onPriceRangeChange}
+        />
+
+        <div className='border-border/60 border-b pb-2 last:border-b-0'>
+          <div className='flex h-8 items-center gap-2.5 py-2.5 pl-1'>
+            <Checkbox
+              id='pricing-free-only'
+              checked={props.freeOnly}
+              onCheckedChange={(checked) =>
+                props.onFreeOnlyChange(checked === true)
+              }
+            />
+            <label
+              htmlFor='pricing-free-only'
+              className='text-foreground/80 cursor-pointer text-sm select-none'
+            >
+              {t('Free models')}
+            </label>
+            <span className='text-muted-foreground ml-auto pr-2 text-xs tabular-nums'>
+              {counts.free.free}
+            </span>
+          </div>
+        </div>
+
         <FilterSection
-          title={t('Groups')}
-          value={props.groupFilter}
-          options={groupOptions}
-          onChange={props.onGroupChange}
+          title={t('Pricing Type')}
+          value={props.quotaTypeFilter}
+          options={quotaOptions}
+          onChange={props.onQuotaTypeChange}
         />
         <FilterSection
-          title={t('All Vendors')}
+          title={t('Vendors')}
           value={props.vendorFilter}
           options={vendorOptions}
           onChange={props.onVendorChange}
@@ -308,14 +475,20 @@ export const PricingSidebar = memo(function PricingSidebar(
         <FilterSection
           title={t('Model Tags')}
           value={props.tagFilter}
-          options={tagOptions}
+          options={[tagAllOption]}
           onChange={props.onTagChange}
-        />
+        >
+          <ExpandableRows
+            options={tagOptions}
+            value={props.tagFilter}
+            onChange={props.onTagChange}
+          />
+        </FilterSection>
         <FilterSection
-          title={t('Pricing Type')}
-          value={props.quotaTypeFilter}
-          options={quotaOptions}
-          onChange={props.onQuotaTypeChange}
+          title={t('Groups')}
+          value={props.groupFilter}
+          options={groupOptions}
+          onChange={props.onGroupChange}
         />
         <FilterSection
           title={t('Endpoint Type')}
