@@ -64,7 +64,7 @@ const MARQUEE_ROWS: { icon: string; label: string }[][] = [
 
 function MarqueeItem({ icon, label }: { icon: string; label: string }) {
   return (
-    <div className='group flex shrink-0 items-center gap-3'>
+    <div className='group border-border/60 bg-card/60 flex shrink-0 items-center gap-3 rounded-xl border px-5 py-3 shadow-xs backdrop-blur-sm transition-all duration-300 hover:border-border hover:shadow-md'>
       <div className='flex size-8 shrink-0 items-center justify-center opacity-70 transition-opacity duration-300 group-hover:opacity-100'>
         {getLobeIcon(icon, 30)}
       </div>
@@ -94,7 +94,7 @@ export function ToolsWall() {
           </p>
         </div>
 
-        <div className='marquee-container space-y-5'>
+        <div className='from-primary/6 via-muted/25 to-muted/15 border-border/50 marquee-container space-y-5 rounded-3xl border bg-gradient-to-br p-5 md:p-7'>
           {MARQUEE_ROWS.map((row, i) => (
             <div
               key={i}
