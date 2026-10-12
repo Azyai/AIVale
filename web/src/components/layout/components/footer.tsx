@@ -284,7 +284,7 @@ export function Footer(props: FooterProps) {
                 rel='noopener noreferrer'
                 className='hover:text-foreground/60 transition-colors'
               >
-                {t('New API')}
+                {t('GitHub')}
               </a>{' '}
               {t(NEW_API_FOOTER_ATTRIBUTION_KEY)}
             </span>
