@@ -16,7 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import './auth-layout.css'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -85,14 +84,14 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className='flex h-svh max-w-none'>
       {/* Brand panel: hidden below lg, mirrors the split login screen layout.
-          The admin-uploaded media renders as one large rounded glass card
+          The admin-uploaded media renders as one large borderless rounded card
           (~90% of the panel, inset 5%) acting as the background layer. The
           content column shares the same inset and keeps a fixed 32-40px
           padding inside the card, so text never hugs the card or screen
           edges and the gap scales proportionally at large resolutions. */}
       <div className='relative hidden w-[62%] flex-col lg:flex'>
         {mediaUrl && (
-          <div className='ring-1 ring-white/40 absolute inset-[5%] z-0 overflow-hidden rounded-3xl shadow-[0_12px_48px_rgba(0,0,0,0.10)]'>
+          <div className='absolute inset-[5%] z-0 overflow-hidden rounded-3xl shadow-[0_12px_48px_rgba(0,0,0,0.10)]'>
             {isVideoMediaUrl(mediaUrl) ? (
               <video
                 src={mediaUrl}
@@ -109,7 +108,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
                 className='h-full w-full object-cover'
               />
             )}
-            <div className='auth-glass-ring absolute inset-0 backdrop-blur-md backdrop-saturate-150' />
           </div>
         )}
         <div className='absolute inset-[5%] flex flex-col gap-8 p-8 xl:p-10'>
