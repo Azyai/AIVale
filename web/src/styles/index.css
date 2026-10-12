@@ -108,6 +108,10 @@ For commercial licensing, please contact support@quantumnous.com
   }
   html {
     @apply overflow-x-hidden font-sans;
+    /* Pages alternate between scrollable (home/pricing) and exactly-viewport
+     * (rankings screen); a stable gutter stops centered content from jumping
+     * sideways when the scrollbar appears or disappears between pages. */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar min-h-svh w-full;

@@ -74,7 +74,7 @@ export function Rankings() {
               'linear-gradient(to bottom, black 40%, transparent 100%)',
           }}
         />
-        <PageTransition className='relative mx-auto w-full max-w-[1280px] space-y-8 px-3 pt-20 pb-10 sm:px-6 sm:pb-12 md:pt-24 xl:px-8'>
+        <PageTransition className='relative mx-auto w-full max-w-[1280px] space-y-8 px-3 pt-24 pb-10 sm:px-6 sm:pb-12 md:pt-32 xl:px-8'>
           <RankingsHero period={period} onPeriodChange={handlePeriodChange} />
 
           {rankingsQuery.isLoading ? (

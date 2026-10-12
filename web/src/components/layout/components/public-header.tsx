@@ -199,7 +199,9 @@ export function PublicHeader(props: PublicHeaderProps) {
   return (
     <>
       {/* Full-width pinned top bar (qianwen models style): stays fixed with a
-          blurred backdrop; a hairline border fades in after scrolling. */}
+          blurred backdrop; a hairline border fades in after scrolling. The
+          brand anchors to the far left, links center in the remaining space,
+          controls hug the right edge. */}
       <header className='pointer-events-none fixed inset-x-0 top-0 z-50'>
         <div
           className={cn(
@@ -208,22 +210,22 @@ export function PublicHeader(props: PublicHeaderProps) {
               'bg-background/90 border-b shadow-[0_1px_16px_-8px_rgba(0,0,0,0.15)]'
           )}
         >
-          <nav className='mx-auto flex h-16 w-full max-w-[1800px] items-center justify-between gap-2 px-[5%] md:h-20'>
-            {/* Logo */}
-            <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1 lg:min-w-36'>
+          <nav className='flex h-20 w-full items-center justify-between gap-4 px-5 md:h-28 md:px-8'>
+            {/* Brand — pinned to the far left of the page */}
+            <div className='@container/system-brand flex shrink-0 items-center gap-1'>
               <Link
                 to={homeUrl}
-                className='group flex min-w-0 items-center gap-3'
+                className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
-                <div className='flex size-9 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
+                <div className='flex size-11 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-[4.5rem]'>
                   {logoContent}
                 </div>
                 <span
-                  className='max-w-48 truncate text-[15px] font-semibold tracking-tight'
+                  className='max-w-56 truncate text-xl font-bold tracking-tight md:max-w-xs md:text-[1.875rem]'
                   title={displaySiteName}
                 >
                   {loading ? (
-                    <Skeleton className='h-4 w-16' />
+                    <Skeleton className='h-6 w-28' />
                   ) : (
                     displaySiteName
                   )}
@@ -231,8 +233,8 @@ export function PublicHeader(props: PublicHeaderProps) {
               </Link>
             </div>
 
-            {/* Desktop nav */}
-            <div className='hidden min-w-0 items-center gap-1 lg:flex'>
+            {/* Desktop nav — centered in the space between brand and controls */}
+            <div className='hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex'>
               {links.map((link) => {
                 const isActive = pathname === link.href
                 if (link.external) {
@@ -247,7 +249,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                       tabIndex={link.disabled ? -1 : undefined}
                       onClick={(event) => handleNavLinkClick(event, link)}
                       className={cn(
-                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3 py-2 text-[15px] transition-colors duration-200',
+                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3 py-2.5 text-[15px] transition-colors duration-200',
                         link.disabled && 'pointer-events-none opacity-50'
                       )}
                     >
@@ -263,7 +265,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
                     className={cn(
-                      'min-w-0 truncate rounded-lg px-3 py-2 text-[15px] transition-colors duration-200',
+                      'min-w-0 truncate rounded-lg px-3 py-2.5 text-[15px] transition-colors duration-200',
                       isActive
                         ? 'text-primary font-medium'
                         : 'text-muted-foreground hover:text-foreground',
@@ -274,11 +276,14 @@ export function PublicHeader(props: PublicHeaderProps) {
                   </Link>
                 )
               })}
+            </div>
 
+            {/* Desktop controls — hug the right edge */}
+            <div className='hidden shrink-0 items-center gap-1 lg:flex'>
               {(showLanguageSwitcher ||
                 showThemeSwitch ||
                 showNotifications) && (
-                <div className='bg-border/40 mx-2 h-4 w-px' />
+                <div className='bg-border/40 mx-2 h-5 w-px' />
               )}
 
               {showLanguageSwitcher && <LanguageSwitcher />}
@@ -298,7 +303,7 @@ export function PublicHeader(props: PublicHeaderProps) {
 
               {showAuthButtons && (
                 <>
-                  <div className='bg-border/40 mx-1 h-4 w-px' />
+                  <div className='bg-border/40 mx-1 h-5 w-px' />
                   {authContent}
                 </>
               )}
