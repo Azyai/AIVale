@@ -293,10 +293,13 @@ type UserSubscription struct {
 	UserId int `json:"user_id" gorm:"index;index:idx_user_sub_active,priority:1"`
 	PlanId int `json:"plan_id" gorm:"index"`
 
-	// TeamId > 0 marks a team subscription: UserId is the purchaser (owner)
-	// and the shared quota pool is billed for every team token request.
+	// TeamId > 0 marks a team subscription. Quota is PER-MEMBER: the purchase
+	// creates one row per member (UserId = that member, AmountTotal = the
+	// plan's per-person quota), billed only for that member's team tokens.
+	// Seats records the purchase's seat cap for join-time allocation.
 	// 0 = personal subscription billed only for the owner's personal tokens.
-	TeamId int `json:"team_id" gorm:"index;default:0"`
+	TeamId int  `json:"team_id" gorm:"index;default:0"`
+	Seats   int  `json:"seats" gorm:"type:int;default:0"`
 
 	AmountTotal int64 `json:"amount_total" gorm:"type:bigint;not null;default:0"`
 	AmountUsed  int64 `json:"amount_used" gorm:"type:bigint;not null;default:0"`
@@ -725,34 +728,47 @@ func CreateTeamSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	if plan.AllowWalletOverflow != nil {
 		allowWalletOverflow = *plan.AllowWalletOverflow
 	}
-	totalAmount := plan.TotalAmount
-	if totalAmount > 0 {
-		// Unlimited plans (0) stay unlimited regardless of seats.
-		totalAmount = totalAmount * int64(seats)
-	}
-	sub := &UserSubscription{
-		UserId:              userId,
-		PlanId:              plan.Id,
-		TeamId:              team.Id,
-		AmountTotal:         totalAmount,
-		AmountUsed:          0,
-		StartTime:           now.Unix(),
-		EndTime:             endUnix,
-		Status:              "active",
-		Source:              source,
-		LastResetTime:       lastReset,
-		NextResetTime:       nextReset,
-		UpgradeGroup:        "", // team plans never change user groups
-		PrevUserGroup:       "",
-		DowngradeGroup:      "",
-		AllowWalletOverflow: allowWalletOverflow,
-		CreatedAt:           common.GetTimestamp(),
-		UpdatedAt:           common.GetTimestamp(),
-	}
-	if err := tx.Create(sub).Error; err != nil {
+
+	// 额度按人分配：为当前每一位成员创建独立额度行（每人额度 = 套餐额度，
+	// 不随席位数放大；席位用于限制团队人数与中途加入分配）。
+	// 注意：必须用 tx 查询成员，避免事务内引用全局 DB 连接造成死锁。
+	var memberRows []TeamMember
+	if err := tx.Where("team_id = ?", team.Id).Find(&memberRows).Error; err != nil {
 		return nil, err
 	}
-	return sub, nil
+	if seats > 0 && len(memberRows) > seats {
+		return nil, fmt.Errorf("团队当前成员数（%d）超过购买席位数（%d），请先移除多余成员", len(memberRows), seats)
+	}
+	var first *UserSubscription
+	for _, m := range memberRows {
+		sub := &UserSubscription{
+			UserId:              m.UserId,
+			PlanId:              plan.Id,
+			TeamId:              team.Id,
+			Seats:               seats,
+			AmountTotal:         plan.TotalAmount,
+			AmountUsed:          0,
+			StartTime:           now.Unix(),
+			EndTime:             endUnix,
+			Status:              "active",
+			Source:              source,
+			LastResetTime:       lastReset,
+			NextResetTime:       nextReset,
+			UpgradeGroup:        "", // team plans never change user groups
+			PrevUserGroup:       "",
+			DowngradeGroup:      "",
+			AllowWalletOverflow: allowWalletOverflow,
+			CreatedAt:           common.GetTimestamp(),
+			UpdatedAt:           common.GetTimestamp(),
+		}
+		if err := tx.Create(sub).Error; err != nil {
+			return nil, err
+		}
+		if first == nil {
+			first = sub
+		}
+	}
+	return first, nil
 }
 
 func refreshSubscriptionUserGroupCache(userId int, operation string) {
@@ -1602,15 +1618,14 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 	}, amount)
 }
 
-// PreConsumeTeamSubscription pre-consumes from the team's shared subscription
-// pool. userId is the requesting member (recorded for traceability); team
-// subscriptions are matched by team scope regardless of who purchased them.
+// PreConsumeTeamSubscription pre-consumes from the requesting member's own
+// team quota row (per-member allocation: team_id + user_id scope).
 func PreConsumeTeamSubscription(requestId string, teamId int, userId int, amount int64) (*SubscriptionPreConsumeResult, error) {
 	if teamId <= 0 {
 		return nil, errors.New("invalid teamId")
 	}
 	return preConsumeSubscriptionScoped(requestId, userId, func(tx *gorm.DB) *gorm.DB {
-		return tx.Where("team_id = ?", teamId)
+		return tx.Where("team_id = ? AND user_id = ?", teamId, userId)
 	}, amount)
 }
 

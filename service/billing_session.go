@@ -575,7 +575,7 @@ func newTeamBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, pre
 		return session, nil
 	}
 
-	hasSub, err := model.HasActiveTeamSubscription(teamId)
+	hasSub, err := model.HasActiveTeamSubscription(teamId, relayInfo.UserId)
 	if err != nil {
 		return nil, types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
 	}
@@ -588,7 +588,7 @@ func newTeamBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, pre
 	}
 	if apiErr.GetErrorCode() == types.ErrorCodeInsufficientUserQuota {
 		// 团队订阅额度不足：仅当团队订阅允许钱包溢出时回退团队钱包
-		allowOverflow, overflowErr := model.TeamActiveSubscriptionsAllowWalletOverflow(teamId)
+		allowOverflow, overflowErr := model.TeamActiveSubscriptionsAllowWalletOverflow(teamId, relayInfo.UserId)
 		if overflowErr != nil {
 			return nil, types.NewError(overflowErr, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
 		}

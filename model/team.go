@@ -226,6 +226,88 @@ func RegenerateTeamInviteCode(teamId int, ownerId int) (string, error) {
 	return code, nil
 }
 
+// teamActiveSubTemplateTx returns the latest active team subscription row
+// (template for per-member allocation), or nil when the team has none.
+func teamActiveSubTemplateTx(tx *gorm.DB, teamId int, now int64) (*UserSubscription, error) {
+	var tmpl UserSubscription
+	err := tx.Where("team_id = ? AND status = ? AND end_time > ?", teamId, "active", now).
+		Order("end_time desc, id desc").First(&tmpl).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &tmpl, nil
+}
+
+// teamSeatsAvailableTx reports whether one more member may join: the seat cap
+// comes from the active team subscription (0 = unlimited); teams without an
+// active subscription accept joins freely.
+func teamSeatsAvailableTx(tx *gorm.DB, teamId int, now int64) (bool, error) {
+	tmpl, err := teamActiveSubTemplateTx(tx, teamId, now)
+	if err != nil || tmpl == nil {
+		return true, err
+	}
+	if tmpl.Seats <= 0 {
+		return true, nil
+	}
+	var count int64
+	if err := tx.Model(&TeamMember{}).Where("team_id = ?", teamId).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count < int64(tmpl.Seats), nil
+}
+
+// allocateTeamQuotaOnJoinTx creates the joining member's own quota row by
+// copying the team's active subscription window and per-person quota.
+func allocateTeamQuotaOnJoinTx(tx *gorm.DB, teamId int, userId int, now int64) error {
+	tmpl, err := teamActiveSubTemplateTx(tx, teamId, now)
+	if err != nil || tmpl == nil {
+		return err
+	}
+	// 已有该成员的生效行则不重复分配
+	var count int64
+	if err := tx.Model(&UserSubscription{}).
+		Where("team_id = ? AND user_id = ? AND status = ?", teamId, userId, "active").
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	sub := &UserSubscription{
+		UserId:              userId,
+		PlanId:              tmpl.PlanId,
+		TeamId:              teamId,
+		Seats:               tmpl.Seats,
+		AmountTotal:         tmpl.AmountTotal,
+		AmountUsed:          0,
+		StartTime:           now,
+		EndTime:             tmpl.EndTime,
+		Status:              "active",
+		Source:              "join",
+		LastResetTime:       tmpl.LastResetTime,
+		NextResetTime:       tmpl.NextResetTime,
+		AllowWalletOverflow: tmpl.AllowWalletOverflow,
+		CreatedAt:           now,
+		UpdatedAt:           now,
+	}
+	return tx.Create(sub).Error
+}
+
+// terminateTeamQuotaOnLeaveTx ends the member's active team quota rows
+// (per-member allocation ends with membership).
+func terminateTeamQuotaOnLeaveTx(tx *gorm.DB, teamId int, userId int, now int64) error {
+	return tx.Model(&UserSubscription{}).
+		Where("team_id = ? AND user_id = ? AND status = ?", teamId, userId, "active").
+		Updates(map[string]any{
+			"status":     "cancelled",
+			"end_time":   now,
+			"updated_at": now,
+		}).Error
+}
+
 // JoinTeamByInviteCode adds the user to the team referenced by the code.
 // One team per user; owners cannot join another team without leaving first.
 func JoinTeamByInviteCode(userId int, code string) (*Team, error) {
@@ -248,13 +330,25 @@ func JoinTeamByInviteCode(userId int, code string) (*Team, error) {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
+		now := common.GetTimestamp()
+		available, availErr := teamSeatsAvailableTx(tx, team.Id, now)
+		if availErr != nil {
+			return availErr
+		}
+		if !available {
+			return errors.New("团队席位已满，无法加入")
+		}
 		member := &TeamMember{
 			TeamId:   team.Id,
 			UserId:   userId,
 			Role:     TeamRoleMember,
-			JoinedAt: common.GetTimestamp(),
+			JoinedAt: now,
 		}
-		return tx.Create(member).Error
+		if err := tx.Create(member).Error; err != nil {
+			return err
+		}
+		// 团队有生效订阅时，为新人分配与成员相同的按人额度
+		return allocateTeamQuotaOnJoinTx(tx, team.Id, userId, now)
 	})
 	if err != nil {
 		return nil, err
@@ -262,8 +356,9 @@ func JoinTeamByInviteCode(userId int, code string) (*Team, error) {
 	return team, nil
 }
 
-// LeaveTeam removes the user's membership and disables their team tokens.
-// Team owners cannot leave (transfer ownership or dissolve the team first).
+// LeaveTeam removes the user's membership, ends their per-member team quota
+// rows, and disables their team tokens. Team owners cannot leave (transfer
+// ownership or dissolve the team first).
 func LeaveTeam(userId int) error {
 	return DB.Transaction(func(tx *gorm.DB) error {
 		var member TeamMember
@@ -274,6 +369,10 @@ func LeaveTeam(userId int) error {
 			return errors.New("团队所有者不能退出团队")
 		}
 		if err := tx.Where("id = ?", member.Id).Delete(&TeamMember{}).Error; err != nil {
+			return err
+		}
+		now := common.GetTimestamp()
+		if err := terminateTeamQuotaOnLeaveTx(tx, member.TeamId, userId, now); err != nil {
 			return err
 		}
 		return disableTeamTokensTx(tx, member.TeamId, userId)
@@ -295,6 +394,10 @@ func RemoveTeamMember(teamId int, ownerId int, memberUserId int) error {
 			return errors.New("无权操作该团队")
 		}
 		if err := tx.Where("id = ?", member.Id).Delete(&TeamMember{}).Error; err != nil {
+			return err
+		}
+		now := common.GetTimestamp()
+		if err := terminateTeamQuotaOnLeaveTx(tx, teamId, memberUserId, now); err != nil {
 			return err
 		}
 		return disableTeamTokensTx(tx, teamId, memberUserId)
@@ -418,33 +521,34 @@ func GetActiveTeamSubscriptions(teamId int) ([]UserSubscription, error) {
 	return subs, err
 }
 
-// HasActiveTeamSubscription reports whether the team has any active subscription.
-func HasActiveTeamSubscription(teamId int) (bool, error) {
-	if teamId <= 0 {
-		return false, errors.New("invalid team id")
+// HasActiveTeamSubscription reports whether the requesting member has an
+// active team quota row (per-member allocation).
+func HasActiveTeamSubscription(teamId int, userId int) (bool, error) {
+	if teamId <= 0 || userId <= 0 {
+		return false, errors.New("invalid team id or userId")
 	}
 	now := common.GetTimestamp()
 	var count int64
 	if err := DB.Model(&UserSubscription{}).
-		Where("team_id = ? AND status = ? AND end_time > ?", teamId, "active", now).
+		Where("team_id = ? AND user_id = ? AND status = ? AND end_time > ?", teamId, userId, "active", now).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-// TeamActiveSubscriptionsAllowWalletOverflow reports whether team wallet may
-// be used after the team subscription quota is exhausted. A single active
-// team subscription that disallows overflow blocks the fallback.
-func TeamActiveSubscriptionsAllowWalletOverflow(teamId int) (bool, error) {
-	if teamId <= 0 {
-		return false, errors.New("invalid team id")
+// TeamActiveSubscriptionsAllowWalletOverflow reports whether the team wallet
+// (team pay-as-you-go) may be used after the member's team quota is
+// exhausted. A member row that disallows overflow blocks the fallback.
+func TeamActiveSubscriptionsAllowWalletOverflow(teamId int, userId int) (bool, error) {
+	if teamId <= 0 || userId <= 0 {
+		return false, errors.New("invalid team id or userId")
 	}
 	now := common.GetTimestamp()
 	var strictCount int64
 	if err := DB.Model(&UserSubscription{}).
-		Where("team_id = ? AND status = ? AND end_time > ? AND allow_wallet_overflow = ?",
-			teamId, "active", now, false).
+		Where("team_id = ? AND user_id = ? AND status = ? AND end_time > ? AND allow_wallet_overflow = ?",
+			teamId, userId, "active", now, false).
 		Count(&strictCount).Error; err != nil {
 		return false, err
 	}
