@@ -16,19 +16,24 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ChevronRight } from 'lucide-react'
+import { ArrowRight, Scale } from 'lucide-react'
 import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { CopyButton } from '@/components/copy-button'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
 import { DEFAULT_TOKEN_UNIT } from '../constants'
 import { useBillingTime } from '../hooks/use-billing-time'
+import {
+  MAX_COMPARE_MODELS,
+  useCompareStore,
+} from '../hooks/use-compare'
 import {
   getCardExamplePrice,
   getDynamicDisplayGroupRatio,
@@ -55,6 +60,12 @@ export interface ModelCardProps {
   perf?: ModelPerfBadgeData
 }
 
+function isFreeModel(model: PricingModel): boolean {
+  return model.quota_type === 0
+    ? model.model_ratio === 0
+    : (model.model_price ?? 0) === 0
+}
+
 export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const { t, i18n } = useTranslation()
   const tokenUnit = props.tokenUnit ?? DEFAULT_TOKEN_UNIT
@@ -72,6 +83,23 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const isUnconfiguredTaskUsage = isUnconfiguredTaskUsageModel(props.model)
   const billingTime = useBillingTime(props.model.billing_expr)
   const currency = useSystemConfigStore((state) => state.config.currency)
+  const freeModel = isFreeModel(props.model)
+
+  const compareSelected = useCompareStore((state) =>
+    state.selected.includes(props.model.model_name)
+  )
+  const toggleCompare = useCompareStore((state) => state.toggle)
+
+  const handleCompareClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const accepted = toggleCompare(props.model.model_name)
+    if (!accepted) {
+      toast.info(t('You can compare up to {{count}} models', {
+        count: MAX_COMPARE_MODELS,
+      }))
+    }
+  }
+
   const dynamicPriceOptions = useMemo(
     () => ({
       now: billingTime === undefined ? undefined : new Date(billingTime),
@@ -254,64 +282,103 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   }
 
   return (
-    <Card className='hover:ring-foreground/20 h-full min-w-0 gap-3 transition-colors'>
-      <CardHeader className='flex flex-row items-start gap-3'>
-        <div
-          aria-hidden
-          className='bg-muted/50 flex size-10 shrink-0 items-center justify-center rounded-lg'
-        >
-          {modelIcon || (
-            <span className='text-muted-foreground text-sm font-bold'>
-              {initial}
-            </span>
-          )}
-        </div>
-        <div className='min-w-0 flex-1'>
-          <h3
-            className='line-clamp-2 font-mono text-[15px] leading-snug font-semibold [overflow-wrap:anywhere]'
-            title={props.model.model_name}
+    <Card
+      onClick={() => props.onClick(props.model.model_name || '')}
+      className='group hover:ring-foreground/20 hover:shadow-lg hover:-translate-y-1.5 relative h-full min-w-0 cursor-pointer gap-0 overflow-hidden rounded-2xl py-0 transition-all duration-300'
+    >
+      <div className='flex flex-col gap-3 p-4 sm:p-5'>
+        <div className='flex items-start gap-3'>
+          <div
+            aria-hidden
+            className='bg-muted/50 flex size-10 shrink-0 items-center justify-center rounded-lg'
           >
-            {props.model.model_name}
-          </h3>
-          {props.model.vendor_name && (
-            <p
-              className='text-muted-foreground mt-1 truncate text-xs'
-              title={props.model.vendor_name}
-            >
-              {props.model.vendor_name}
-            </p>
-          )}
-        </div>
-        <CopyButton
-          value={props.model.model_name}
-          tooltip={t('Copy model name')}
-          className='size-7'
-          iconClassName='size-3.5'
-        />
-      </CardHeader>
-      <CardContent className='flex flex-1 flex-col gap-3'>
-        <div className='flex min-w-0 flex-col gap-1.5'>
-          <p className='text-muted-foreground line-clamp-2 text-[13px] leading-5 break-words'>
-            {props.model.description || t('No description available.')}
-          </p>
-          {tags.length > 0 && (
-            <div
-              role='group'
-              aria-label={t('Tags')}
-              className='text-muted-foreground flex min-w-0 items-baseline gap-1.5 text-xs'
-            >
-              <span className='shrink-0'>{t('Tags')}</span>
-              <span className='truncate' title={tags.join(', ')}>
-                {tags.slice(0, 2).join(', ')}
+            {modelIcon || (
+              <span className='text-muted-foreground text-sm font-bold'>
+                {initial}
               </span>
-              {tags.length > 2 && (
-                <span className='shrink-0' title={tags.slice(2).join(', ')}>
-                  +{tags.length - 2}
+            )}
+          </div>
+          <div className='min-w-0 flex-1'>
+            <h3
+              className='line-clamp-2 font-mono text-[15px] leading-snug font-semibold [overflow-wrap:anywhere]'
+              title={props.model.model_name}
+            >
+              {props.model.model_name}
+            </h3>
+            <div className='mt-1 flex min-h-4 items-center gap-1.5'>
+              {freeModel ? (
+                <span className='rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400'>
+                  {t('Free to use')}
                 </span>
+              ) : (
+                props.model.vendor_name && (
+                  <p
+                    className='text-muted-foreground truncate text-xs'
+                    title={props.model.vendor_name}
+                  >
+                    {props.model.vendor_name}
+                  </p>
+                )
               )}
             </div>
-          )}
+          </div>
+          <div
+            className='flex shrink-0 items-center gap-1.5'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CopyButton
+              value={props.model.model_name}
+              tooltip={t('Copy model name')}
+              className='size-7'
+              iconClassName='size-3.5'
+            />
+            <button
+              type='button'
+              aria-pressed={compareSelected}
+              aria-label={t('Add to compare')}
+              title={t('Add to compare')}
+              onClick={handleCompareClick}
+              className={cn(
+                'flex size-7 cursor-pointer items-center justify-center rounded-full transition-all duration-200',
+                compareSelected
+                  ? 'bg-primary/10 text-primary ring-primary/30 ring-1'
+                  : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
+            >
+              <Scale aria-hidden className='size-3.5' />
+            </button>
+          </div>
         </div>
+
+        <p className='text-muted-foreground line-clamp-2 min-h-10 text-[13px] leading-5 break-words'>
+          {props.model.description || t('No description available.')}
+        </p>
+
+        {tags.length > 0 && (
+          <div
+            role='group'
+            aria-label={t('Tags')}
+            className='flex min-h-5 min-w-0 flex-wrap items-center gap-1'
+          >
+            {tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className='bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-medium'
+              >
+                {tag}
+              </span>
+            ))}
+            {tags.length > 2 && (
+              <span
+                className='text-muted-foreground text-[11px]'
+                title={tags.slice(2).join(', ')}
+              >
+                +{tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+
         <div
           role='group'
           aria-label={t('Pricing')}
@@ -327,10 +394,11 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
                 ` · ${t('Not configured for some providers')}`}
             </span>
           )}
-          <div className='grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-x-3 gap-y-2'>
+          <div className='grid min-h-12 grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-x-3 gap-y-2'>
             {priceSummary}
           </div>
         </div>
+
         {(groups.length > 0 || endpoints.length > 0) && (
           <dl
             className={cn(
@@ -380,22 +448,26 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
             )}
           </dl>
         )}
-      </CardContent>
-      <CardFooter className='mt-auto border-0 bg-transparent pt-0'>
-        <ModelPerfBadge
-          perf={props.perf}
-          className='border-border/60 border-t pt-2'
+
+        <ModelPerfBadge perf={props.perf} />
+      </div>
+
+      {/* Details CTA: static footer row on touch, hover-revealed band on sm+. */}
+      <div
+        className='bg-gradient-to-t from-card via-card/95 to-card/0 border-border/60 flex items-center justify-end gap-2 border-t px-4 py-2.5 transition-all duration-300 sm:pointer-events-none sm:absolute sm:inset-x-0 sm:bottom-0 sm:translate-y-2 sm:border-transparent sm:pt-10 sm:pb-4 sm:opacity-0 sm:invisible sm:group-hover:pointer-events-auto sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:group-hover:visible'
+      >
+        <Button
+          size='sm'
+          onClick={(e) => {
+            e.stopPropagation()
+            props.onClick(props.model.model_name || '')
+          }}
+          className='text-primary bg-primary/10 hover:bg-primary/15 h-8 rounded-full px-3.5 text-xs font-medium'
         >
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => props.onClick(props.model.model_name || '')}
-          >
-            {t('Details')}
-            <ChevronRight aria-hidden className='size-3.5' />
-          </Button>
-        </ModelPerfBadge>
-      </CardFooter>
+          {t('Details')}
+          <ArrowRight aria-hidden className='size-3.5' />
+        </Button>
+      </div>
     </Card>
   )
 })
