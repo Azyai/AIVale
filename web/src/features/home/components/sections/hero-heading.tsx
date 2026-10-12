@@ -57,9 +57,7 @@ export function HeroHeading() {
         </h1>
 
         <p className='text-muted-foreground mx-auto mt-5 max-w-3xl text-lg leading-relaxed md:text-xl'>
-          {t(
-            '个人版与团队版均支持月付 / 季付 / 年付订阅与按量付费，一个 API Key 调用全部主流模型。'
-          )}
+          {t('价格不变，权益加码。一站式覆盖模型调用！')}
         </p>
 
       </div>
