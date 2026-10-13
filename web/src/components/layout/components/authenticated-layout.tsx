@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { AnimatedOutlet } from '@/components/page-transition'
 import { SkipToMain } from '@/components/skip-to-main'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { getCookie } from '@/lib/cookies'
@@ -50,7 +50,14 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
                 'peer-data-[variant=inset]:h-[calc(100svh-var(--app-header-height,0px)-(var(--spacing)*4))]'
               )}
             >
-              {props.children ?? <AnimatedOutlet />}
+              {/* Sidebar toggle lives at the top of the body area so the top
+                  bar stays identical across public and console pages. */}
+              <div className='flex h-11 shrink-0 items-center border-border/40 border-b px-4 md:px-6'>
+                <SidebarTrigger variant='ghost' className='size-9' />
+              </div>
+              <div className='flex min-h-0 flex-1 flex-col'>
+                {props.children ?? <AnimatedOutlet />}
+              </div>
             </SidebarInset>
           </div>
         </SidebarProvider>

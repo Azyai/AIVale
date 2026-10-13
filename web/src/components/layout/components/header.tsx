@@ -19,9 +19,18 @@ For commercial licensing, please contact support@quantumnous.com
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 
-type HeaderProps = React.HTMLAttributes<HTMLElement>
+type HeaderProps = React.HTMLAttributes<HTMLElement> & {
+  /** Show the sidebar trigger (console body owns it since the top bar went
+   *  uniform across public and console pages). */
+  showSidebarTrigger?: boolean
+}
 
-export function Header({ className, children, ...props }: HeaderProps) {
+export function Header({
+  className,
+  children,
+  showSidebarTrigger = true,
+  ...props
+}: HeaderProps) {
   return (
     <header
       className={cn(
@@ -32,7 +41,7 @@ export function Header({ className, children, ...props }: HeaderProps) {
       {...props}
     >
       <div className='flex h-full items-center gap-1.5 px-5 sm:gap-2 md:px-8'>
-        <SidebarTrigger variant='ghost' className='size-11' />
+        {showSidebarTrigger && <SidebarTrigger variant='ghost' className='size-11' />}
         {children}
       </div>
     </header>
