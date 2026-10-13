@@ -109,7 +109,7 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
               href={href}
               target='_blank'
               rel='noopener noreferrer'
-              className={`hover:text-primary text-sm font-medium transition-colors ${isActive ? '' : 'text-muted-foreground'}`}
+              className={`hover:text-primary text-lg font-medium transition-colors ${isActive ? '' : 'text-muted-foreground'}`}
             >
               {title}
             </a>
@@ -118,7 +118,7 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
               key={`${title}-${href}`}
               to={href}
               disabled={disabled}
-              className={`hover:text-primary text-sm font-medium transition-colors ${isActive ? '' : 'text-muted-foreground'}`}
+              className={`hover:text-primary text-lg font-medium transition-colors ${isActive ? '' : 'text-muted-foreground'}`}
             >
               {title}
             </Link>

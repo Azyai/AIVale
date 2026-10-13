@@ -96,8 +96,8 @@ For commercial licensing, please contact support@quantumnous.com
 :root {
   --radius: 1rem;
   /* Console top bar height, kept in lockstep with the public header
-   * (h-18 = 72px below md, h-26 = 104px from md up). */
-  --app-header-height: 4.5rem;
+   * (h-16 = 64px below md, h-24 = 96px from md up). */
+  --app-header-height: 4rem;
   /* Static build-channel fallback consumed when JS hasn't booted yet. */
   --app-rev: '2k6e8r7p';
   /* Currently active body font. The font axis swaps this between
@@ -184,7 +184,7 @@ For commercial licensing, please contact support@quantumnous.com
  * h-28 (112px) from md up. */
 @media (min-width: 768px) {
   :root {
-    --app-header-height: 6.5rem;
+    --app-header-height: 6rem;
   }
 }
 

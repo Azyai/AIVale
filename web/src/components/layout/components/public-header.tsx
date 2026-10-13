@@ -210,7 +210,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               'bg-background/90 border-b shadow-[0_1px_16px_-8px_rgba(0,0,0,0.15)]'
           )}
         >
-          <nav className='flex h-18 w-full items-center justify-between gap-4 px-5 md:h-26 md:px-8'>
+          <nav className='flex h-16 w-full items-center justify-between gap-4 px-5 md:h-24 md:px-8'>
             {/* Brand — pinned to the far left of the page. The wrapper keeps
                 flex-1 (NOT shrink-0): @container/system-brand applies
                 inline-size containment, so a shrink-0 wrapper collapses to
@@ -220,11 +220,11 @@ export function PublicHeader(props: PublicHeaderProps) {
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
-                <div className='flex size-11 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-[4.5rem]'>
+                <div className='flex size-10 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-16'>
                   {logoContent}
                 </div>
                 <span
-                  className='max-w-56 truncate text-xl font-bold tracking-tight md:max-w-xs md:text-[1.875rem]'
+                  className='max-w-56 truncate text-lg font-bold tracking-tight md:max-w-xs md:text-[1.625rem]'
                   title={displaySiteName}
                 >
                   {loading ? (
