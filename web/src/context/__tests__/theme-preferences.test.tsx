@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -26,14 +26,16 @@ import {
 } from '@/context/theme-customization-provider'
 import { ThemeProvider, useTheme } from '@/context/theme-provider'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
+import { DEFAULT_SITE_THEME } from '@/lib/theme-customization'
+import { useSystemConfigStore } from '@/stores/system-config-store'
 
 const savedPreferences = {
   'newapi:theme:v1:mode': 'dark',
-  'newapi:theme:v1:preset': 'rose-garden',
-  'newapi:theme:v1:font': 'serif',
-  'newapi:theme:v1:radius': 'lg',
-  'newapi:theme:v1:scale': 'sm',
-  'newapi:theme:v1:content-layout': 'centered',
+  'newapi:theme:v2:preset': 'rose-garden',
+  'newapi:theme:v2:font': 'serif',
+  'newapi:theme:v2:radius': 'lg',
+  'newapi:theme:v2:scale': 'sm',
+  'newapi:theme:v2:content-layout': 'centered',
 }
 
 function ThemeControls() {
@@ -81,6 +83,11 @@ function ThemeFixture() {
 
 beforeEach(() => {
   localStorage.clear()
+  // Reset the site-wide theme defaults between tests: the in-memory store
+  // survives across tests in this file, unlike localStorage.
+  useSystemConfigStore.getState().setConfig({
+    themeDefaults: { ...DEFAULT_SITE_THEME },
+  })
 })
 
 afterEach(() => {
@@ -216,6 +223,79 @@ describe('theme preference persistence', () => {
 
     expect(screen.getByLabelText('Theme mode')).toHaveTextContent('system')
     expect(document.body).not.toHaveAttribute('data-theme-preset')
+  })
+
+  it('applies site-wide theme defaults when there is no personal preference', () => {
+    useSystemConfigStore.getState().setConfig({
+      themeDefaults: {
+        mode: 'dark',
+        preset: 'aurora-violet',
+        font: 'serif',
+        radius: 'lg',
+        scale: 'sm',
+        contentLayout: 'centered',
+      },
+    })
+
+    render(<ThemeFixture />)
+
+    expect(screen.getByLabelText('Theme mode')).toHaveTextContent('dark')
+    expect(document.documentElement).toHaveClass('dark')
+    expect(document.body).toHaveAttribute('data-theme-preset', 'aurora-violet')
+    expect(document.body).toHaveAttribute('data-theme-font', 'serif')
+    expect(document.body).toHaveAttribute('data-theme-radius', 'lg')
+    expect(document.body).toHaveAttribute('data-theme-scale', 'sm')
+    expect(document.body).toHaveAttribute(
+      'data-theme-content-layout',
+      'centered'
+    )
+    // Site defaults never write personal preferences.
+    for (const key of Object.keys(savedPreferences)) {
+      expect(localStorage.getItem(key)).toBeNull()
+    }
+  })
+
+  it('follows site-wide default changes live until a personal preference exists', async () => {
+    render(<ThemeFixture />)
+
+    await act(async () => {
+      useSystemConfigStore.getState().setConfig({
+        themeDefaults: {
+          ...DEFAULT_SITE_THEME,
+          mode: 'dark',
+          preset: 'aurora-violet',
+          contentLayout: 'centered',
+        },
+      })
+    })
+
+    expect(screen.getByLabelText('Theme mode')).toHaveTextContent('dark')
+    expect(document.body).toHaveAttribute('data-theme-preset', 'aurora-violet')
+    expect(document.body).toHaveAttribute(
+      'data-theme-content-layout',
+      'centered'
+    )
+
+    // Once the visitor personalizes (theme switch still exists), later site
+    // changes no longer override their picks.
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Customize' }))
+
+    await act(async () => {
+      useSystemConfigStore.getState().setConfig({
+        themeDefaults: {
+          ...DEFAULT_SITE_THEME,
+          mode: 'light',
+          preset: 'lake-view',
+        },
+      })
+    })
+
+    expect(screen.getByLabelText('Theme mode')).toHaveTextContent('dark')
+    expect(document.body).toHaveAttribute('data-theme-preset', 'rose-garden')
+    // contentLayout matched the site default at customization time, so no
+    // personal preference was written for it — it keeps following the site.
+    expect(document.body).toHaveAttribute('data-theme-content-layout', 'full')
   })
 
   it('preserves saved theme preferences during frontend cache initialization', () => {
