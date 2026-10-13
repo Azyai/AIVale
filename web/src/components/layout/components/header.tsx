@@ -34,7 +34,7 @@ export function Header({
   return (
     <header
       className={cn(
-        'bg-background/70 border-border/60 backdrop-blur-xl border-b',
+        'bg-background/70 border-border/60 backdrop-blur-xl border-b dark:border-white/15 dark:bg-white/5',
         'sticky top-0 z-40 h-[var(--app-header-height,4.5rem)] w-full shrink-0',
         className
       )}

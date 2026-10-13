@@ -804,3 +804,183 @@ For commercial licensing, please contact support@quantumnous.com
     display: none;
   }
 }
+
+/* Night-only atmosphere. Day mode keeps the original solid canvas. */
+.tech-atmosphere {
+  display: none;
+}
+
+.dark .tech-atmosphere {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #07091a;
+  background-image:
+    radial-gradient(ellipse 48% 42% at 10% 10%, rgba(64, 112, 255, 0.55), transparent 66%),
+    radial-gradient(ellipse 52% 48% at 90% 4%, rgba(147, 51, 234, 0.5), transparent 64%),
+    radial-gradient(ellipse 42% 46% at 70% 86%, rgba(14, 165, 233, 0.36), transparent 70%),
+    radial-gradient(ellipse 34% 32% at 20% 92%, rgba(109, 40, 217, 0.34), transparent 72%),
+    linear-gradient(122deg, transparent 16%, rgba(80, 130, 255, 0.2) 46%, rgba(180, 80, 255, 0.26) 64%, transparent 82%),
+    linear-gradient(rgba(148, 176, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 176, 255, 0.08) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, auto, 64px 64px, 64px 64px;
+}
+
+html.dark {
+  background-color: #07091a;
+}
+
+.dark body {
+  background-color: transparent;
+}
+
+/* Night-only frosted sidebar shell. Day mode ignores this class. */
+.dark .tech-glass-panel {
+  border-radius: 1.75rem;
+  background: linear-gradient(
+    180deg,
+    rgba(148, 176, 255, 0.16) 0%,
+    rgba(20, 24, 48, 0.28) 46%,
+    rgba(12, 16, 36, 0.22) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+}
+
+.dark {
+  --primary: oklch(0.8 0.15 268);
+  --info: oklch(0.8 0.13 250);
+  --sidebar-primary: oklch(0.8 0.14 272);
+  --sidebar-accent-foreground: oklch(0.9 0.08 275);
+  --background: rgba(12, 16, 36, 0.32);
+  --card: rgba(255, 255, 255, 0.1);
+  --muted: rgba(255, 255, 255, 0.08);
+  --secondary: rgba(255, 255, 255, 0.07);
+  --table-header: rgba(255, 255, 255, 0.04);
+  --table-header-hover: rgba(255, 255, 255, 0.07);
+  --table-row: transparent;
+}
+
+/* Sidebar rows: hover stays a light frost. The selected row keeps a blue-violet edge glow. */
+.dark [data-sidebar='menu-button']:hover,
+.dark [data-sidebar='menu-sub-button']:hover {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.12) 72%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px) saturate(1.45);
+  -webkit-backdrop-filter: blur(16px) saturate(1.45);
+  border-radius: 0.85rem;
+}
+
+.dark [data-sidebar='menu-button'][data-active],
+.dark [data-sidebar='menu-button'][data-active]:hover,
+.dark [data-sidebar='menu-sub-button'][data-active],
+.dark [data-sidebar='menu-sub-button'][data-active]:hover {
+  overflow: visible;
+  color: oklch(0.92 0.06 275);
+  background: linear-gradient(
+    90deg,
+    rgba(18, 16, 40, 0.35) 0%,
+    rgba(72, 56, 160, 0.32) 58%,
+    rgba(110, 70, 230, 0.66) 84%,
+    rgba(96, 150, 255, 0.95) 100%
+  );
+  border: 1px solid rgba(186, 170, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset -16px 0 20px rgba(150, 90, 255, 0.8),
+    0 0 18px rgba(110, 70, 255, 0.6),
+    0 0 32px rgba(70, 120, 255, 0.4);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border-radius: 0.85rem;
+}
+
+.dark [data-sidebar='menu-button'][data-active] svg,
+.dark [data-sidebar='menu-sub-button'][data-active] svg {
+  color: oklch(0.88 0.13 275);
+  filter: drop-shadow(0 0 6px rgba(150, 120, 255, 0.85));
+}
+
+/* Large panels and homepage blocks: frosted sheets with a light edge. */
+.dark [data-slot='sidebar-inset'],
+.dark [data-slot='card'],
+.dark .bg-card,
+.dark .bg-card\/50,
+.dark .bg-card\/60,
+.dark .bg-card\/80 {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(34px) saturate(1.7);
+  -webkit-backdrop-filter: blur(34px) saturate(1.7);
+}
+
+/* Toolbars, chips, and section bars sit a step more transparent. */
+.dark [data-slot='tabs-list'],
+.dark .bg-background,
+.dark .bg-background\/60,
+.dark .bg-background\/70,
+.dark .bg-background\/90,
+.dark .bg-background\/95,
+.dark .bg-background\/98,
+.dark .bg-muted,
+.dark .bg-muted\/20,
+.dark .bg-muted\/25,
+.dark .bg-muted\/30,
+.dark .bg-muted\/35,
+.dark .bg-muted\/40,
+.dark .bg-muted\/50,
+.dark .bg-muted\/60 {
+  background-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+}
+
+/* Table chrome stays glassy, with the header more transparent than the body. */
+.dark [data-slot='table-header'],
+.dark [data-slot='table-footer'] {
+  background-color: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.dark [data-slot='table-row'] {
+  background-color: transparent;
+}
+
+.dark [data-slot='table-row']:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .text-primary,
+.dark .text-blue-500,
+.dark .text-violet-500,
+.dark .text-purple-500,
+.dark .text-indigo-500 {
+  color: oklch(0.84 0.13 272);
+  text-shadow: 0 0 12px rgba(140, 110, 255, 0.55);
+}
+
+.dark .text-primary svg,
+.dark svg.text-primary,
+.dark .text-blue-500 svg,
+.dark .text-violet-500 svg {
+  filter: drop-shadow(0 0 6px rgba(140, 110, 255, 0.75));
+}
