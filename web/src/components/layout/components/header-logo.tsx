@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import nightLogo from '@/assets/logo-night.png'
 import { cn } from '@/lib/utils'
 
 interface HeaderLogoProps {
@@ -38,14 +39,21 @@ export function HeaderLogo({
   className,
 }: HeaderLogoProps) {
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={cn(
-        'h-6 w-6 rounded-full transition-opacity duration-200',
-        !loading && logoLoaded ? 'opacity-100' : 'opacity-0',
-        className
-      )}
-    />
+    <>
+      <img
+        src={src}
+        alt={alt}
+        className={cn(
+          'h-6 w-6 rounded-full transition-opacity duration-200 dark:hidden',
+          !loading && logoLoaded ? 'opacity-100' : 'opacity-0',
+          className
+        )}
+      />
+      <img
+        src={nightLogo}
+        alt={alt}
+        className='hidden size-full object-contain dark:block'
+      />
+    </>
   )
 }

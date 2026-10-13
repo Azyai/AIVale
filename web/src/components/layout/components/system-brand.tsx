@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import nightLogo from '@/assets/logo-night.png'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -69,7 +70,12 @@ export function SystemBrand(props: SystemBrandProps) {
           <img
             src={logo}
             alt={t('Logo')}
-            className='size-full rounded-lg object-cover'
+            className='size-full rounded-lg object-cover dark:hidden'
+          />
+          <img
+            src={nightLogo}
+            alt={t('Logo')}
+            className='hidden size-full object-contain dark:block'
           />
         </div>
         <span className='max-w-56 truncate text-base font-semibold tracking-tight md:max-w-xs md:text-[1.375rem]'>

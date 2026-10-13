@@ -92,9 +92,12 @@ function RootComponent() {
 
   return (
     <ThemeCustomizationProvider>
-      <NavigationProgress />
-      <Outlet />
-      <Toaster closeButton duration={5000} position='top-center' richColors />
+      <div className='relative z-10'>
+        <div className='tech-atmosphere' aria-hidden />
+        <NavigationProgress />
+        <Outlet />
+        <Toaster closeButton duration={5000} position='top-center' richColors />
+      </div>
     </ThemeCustomizationProvider>
   )
 }
