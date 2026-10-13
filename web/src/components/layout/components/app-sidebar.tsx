@@ -64,6 +64,21 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
+      <div className='px-2 pt-2'>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={toggleSidebar}
+              tooltip={t('Toggle Sidebar')}
+              aria-label={t('Toggle Sidebar')}
+            >
+              <PanelLeft />
+              <span>{t('Toggle Sidebar')}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
+
       {view && <SidebarViewHeader view={view} />}
 
       <SidebarContent className='py-2'>
@@ -86,18 +101,6 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className='px-2 pb-2'>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={toggleSidebar}
-              tooltip={t('Toggle Sidebar')}
-              aria-label={t('Toggle Sidebar')}
-            >
-              <PanelLeft />
-              <span>{t('Toggle Sidebar')}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <ConfigDrawer />
       </SidebarFooter>
 

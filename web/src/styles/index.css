@@ -196,6 +196,29 @@ For commercial licensing, please contact support@quantumnous.com
   max-width: 1280px;
 }
 
+/* Sidebar icon-collapse. The Tailwind group-data-[collapsible=icon] width
+ * utilities never settle when combined with width transitions in Chromium
+ * (attribute-driven selector changes + transition-[width] freeze the current
+ * value in both directions), so disable those transitions outright: the
+ * sidebar snaps between widths and every text label next to an icon hides. */
+[data-slot='sidebar-gap'],
+[data-slot='sidebar-container'] {
+  transition: none !important;
+}
+
+[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-gap'] {
+  width: calc(var(--sidebar-width-icon) + 1rem) !important;
+}
+
+[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-container'] {
+  width: calc(var(--sidebar-width-icon) + 1rem + 2px) !important;
+}
+
+[data-slot='sidebar'][data-collapsible='icon'] [data-sidebar='menu-button'] > span,
+[data-slot='sidebar'][data-collapsible='icon'] [data-sidebar='group-label'] {
+  display: none !important;
+}
+
 @utility max-w-container-lg {
   max-width: 1536px;
 }
