@@ -16,7 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import {
+  parseSiteThemeDefaults,
+  serializeSiteThemeDefaults,
+} from '@/lib/theme-customization'
 import { SystemInfoSection } from '../general/system-info-section'
+import { ThemeDefaultsSection } from '../general/theme-defaults-section'
 import {
   parseHeaderNavModules,
   parseSidebarModulesAdmin,
@@ -54,6 +59,19 @@ const SITE_SECTIONS = [
         }}
       />
     ),
+  },
+  {
+    id: 'theme-defaults',
+    titleKey: 'Theme Settings',
+    build: (settings: SiteSettings) => {
+      const themeConfig = parseSiteThemeDefaults(settings.ThemeDefaults)
+      return (
+        <ThemeDefaultsSection
+          config={themeConfig}
+          initialSerialized={serializeSiteThemeDefaults(themeConfig)}
+        />
+      )
+    },
   },
   {
     id: 'login-branding',

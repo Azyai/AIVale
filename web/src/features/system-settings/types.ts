@@ -153,6 +153,8 @@ export type SiteSettings = {
   LoginPanelMedia: string
   LoginPanelTags: string
   PricingFeaturedModels: string
+  /** JSON blob of the site-wide theme defaults (see lib/theme-customization) */
+  ThemeDefaults: string
   'general_setting.docs_link': string
   'legal.user_agreement': string
   'legal.privacy_policy': string
