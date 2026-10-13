@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -86,6 +87,7 @@ func InitOptionMap() {
 	common.OptionMap["LoginPanelMedia"] = common.LoginPanelMedia
 	common.OptionMap["LoginPanelTags"] = common.LoginPanelTags
 	common.OptionMap["PricingFeaturedModels"] = "[]"
+	common.OptionMap["ThemeDefaults"] = DefaultThemeDefaultsJSON
 	common.OptionMap["ServerAddress"] = ""
 	common.OptionMap["TaskPublicAddress"] = system_setting.TaskPublicAddress
 	common.OptionMap["WorkerUrl"] = system_setting.WorkerUrl
@@ -252,6 +254,9 @@ func validateOptionValue(key string, value string) error {
 	if key == "PricingFeaturedModels" {
 		return validatePricingFeaturedModels(value)
 	}
+	if key == "ThemeDefaults" {
+		return validateThemeDefaults(value)
+	}
 	return nil
 }
 
@@ -282,6 +287,43 @@ func validatePricingFeaturedModels(value string) error {
 			"PricingFeaturedModels allows at most %d models, got %d",
 			PricingFeaturedModelsMax, len(names),
 		)
+	}
+	return nil
+}
+
+// DefaultThemeDefaultsJSON is the seeded site-wide theme configuration used
+// until the admin customizes it. Field values mirror the enum defaults of the
+// frontend theme providers (web/src/lib/theme-customization.ts).
+const DefaultThemeDefaultsJSON = `{"mode":"system","preset":"default","font":"default","radius":"default","scale":"default","contentLayout":"full"}`
+
+// themeDefaultsAllowedValues mirrors the option enums accepted by the
+// frontend theme system. Keep both lists in sync when adding a preset.
+var themeDefaultsAllowedValues = map[string][]string{
+	"mode":          {"system", "light", "dark"},
+	"preset":        {"default", "anthropic", "simple-large", "underground", "rose-garden", "lake-view", "sunset-glow", "forest-whisper", "ocean-breeze", "lavender-dream", "aurora-violet"},
+	"font":          {"default", "sans", "serif"},
+	"radius":        {"default", "none", "sm", "md", "lg", "xl"},
+	"scale":         {"default", "sm", "lg", "xl"},
+	"contentLayout": {"full", "centered"},
+}
+
+// validateThemeDefaults enforces the JSON shape of the ThemeDefaults option.
+// Missing fields are tolerated and fall back to frontend defaults; unknown
+// fields and values outside the enums are rejected.
+func validateThemeDefaults(value string) error {
+	var raw map[string]string
+	if err := json.Unmarshal([]byte(value), &raw); err != nil {
+		return fmt.Errorf("ThemeDefaults must be a JSON object")
+	}
+	for field, allowed := range themeDefaultsAllowedValues {
+		if v, ok := raw[field]; ok && v != "" && !slices.Contains(allowed, v) {
+			return fmt.Errorf("ThemeDefaults.%s must be one of: %s", field, strings.Join(allowed, ", "))
+		}
+	}
+	for field := range raw {
+		if _, ok := themeDefaultsAllowedValues[field]; !ok {
+			return fmt.Errorf("ThemeDefaults contains unknown field: %s", field)
+		}
 	}
 	return nil
 }
