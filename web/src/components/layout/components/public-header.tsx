@@ -220,11 +220,11 @@ export function PublicHeader(props: PublicHeaderProps) {
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
-                <div className='flex size-10 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-16'>
+                <div className='flex size-9 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-14'>
                   {logoContent}
                 </div>
                 <span
-                  className='max-w-56 truncate text-lg font-bold tracking-tight md:max-w-xs md:text-[1.625rem]'
+                  className='max-w-56 truncate text-base font-bold tracking-tight md:max-w-xs md:text-[1.375rem]'
                   title={displaySiteName}
                 >
                   {loading ? (
