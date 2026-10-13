@@ -50,9 +50,9 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
                 'peer-data-[variant=inset]:h-[calc(100svh-var(--app-header-height,0px)-(var(--spacing)*4))]'
               )}
             >
-              {/* Sidebar toggle lives at the top of the body area so the top
-                  bar stays identical across public and console pages. */}
-              <div className='flex h-11 shrink-0 items-center border-border/40 border-b px-4 md:px-6'>
+              {/* Mobile-only sidebar entry (desktop toggles from inside
+                  the sidebar footer); keeps the top bar uniform sitewide. */}
+              <div className='flex h-11 shrink-0 items-center border-border/40 border-b px-4 md:hidden'>
                 <SidebarTrigger variant='ghost' className='size-9' />
               </div>
               <div className='flex min-h-0 flex-1 flex-col'>

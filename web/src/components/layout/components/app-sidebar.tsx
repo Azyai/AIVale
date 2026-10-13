@@ -16,9 +16,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { PanelLeft } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarRail } from '@/components/ui/sidebar'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+  useSidebar,
+} from '@/components/ui/sidebar'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { useLayout } from '@/context/layout-provider'
 import { useSidebarView } from '@/hooks/use-sidebar-view'
@@ -45,7 +56,9 @@ import { SidebarViewHeader } from './sidebar-view-header'
  * in the registry; this component requires no changes.
  */
 export function AppSidebar() {
+  const { t } = useTranslation()
   const { collapsible, variant } = useLayout()
+  const { toggleSidebar } = useSidebar()
   const { key, view, navGroups } = useSidebarView()
   const shouldReduce = useReducedMotion()
 
@@ -73,6 +86,18 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className='px-2 pb-2'>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={toggleSidebar}
+              tooltip={t('Toggle Sidebar')}
+              aria-label={t('Toggle Sidebar')}
+            >
+              <PanelLeft />
+              <span>{t('Toggle Sidebar')}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <ConfigDrawer />
       </SidebarFooter>
 
