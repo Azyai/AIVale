@@ -20,6 +20,7 @@ import { queryOptions, type QueryClient } from '@tanstack/react-query'
 
 import { getStatus } from '@/lib/api'
 import { DEFAULT_SYSTEM_NAME, DEFAULT_LOGO } from '@/lib/constants'
+import { parseSiteThemeDefaults } from '@/lib/theme-customization'
 import {
   useSystemConfigStore,
   type CurrencyConfig,
@@ -104,6 +105,7 @@ export function mapStatusDataToConfig(
     loginPanelMedia: data.login_panel_media as string | undefined,
     loginPanelTags: data.login_panel_tags as string | undefined,
     pricingFeaturedModels: data.pricing_featured_models as string | undefined,
+    themeDefaults: parseSiteThemeDefaults(data.theme_defaults),
     currency,
   }
 }

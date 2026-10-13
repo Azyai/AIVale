@@ -20,6 +20,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { DEFAULT_SYSTEM_NAME, DEFAULT_LOGO } from '@/lib/constants'
+import {
+  DEFAULT_SITE_THEME,
+  type SiteThemeDefaults,
+} from '@/lib/theme-customization'
 
 export type CurrencyDisplayType = 'USD' | 'CNY' | 'TOKENS' | 'CUSTOM'
 
@@ -52,6 +56,8 @@ export interface SystemConfig {
   loginPanelTags?: string
   /** JSON string array of model names pinned to the pricing featured strip */
   pricingFeaturedModels?: string
+  /** Site-wide theme defaults (系统设置 → 站点与品牌 → 主题设置) */
+  themeDefaults?: SiteThemeDefaults
   currency: CurrencyConfig
 }
 
@@ -84,6 +90,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
         systemName: DEFAULT_SYSTEM_NAME,
         logo: DEFAULT_LOGO,
         currency: { ...DEFAULT_CURRENCY_CONFIG },
+        themeDefaults: { ...DEFAULT_SITE_THEME },
       },
       loading: true,
       loadedLogoUrl: DEFAULT_LOGO,
@@ -119,3 +126,20 @@ export const getLogo = () => useSystemConfigStore.getState().config.logo
 
 export const getFooterHtml = () =>
   useSystemConfigStore.getState().config.footerHtml
+
+/**
+ * Site theme defaults with a stable fallback for persisted snapshots that
+ * predate the field (themeDefaults is optional on SystemConfig).
+ */
+export const getSiteThemeDefaults = (): SiteThemeDefaults =>
+  useSystemConfigStore.getState().config.themeDefaults ?? DEFAULT_SITE_THEME
+
+/**
+ * Hook variant of {@link getSiteThemeDefaults} for components that must
+ * re-render when the admin updates the site theme.
+ */
+export function useSiteThemeDefaults(): SiteThemeDefaults {
+  return useSystemConfigStore(
+    (state) => state.config.themeDefaults ?? DEFAULT_SITE_THEME
+  )
+}

@@ -42,9 +42,11 @@ import {
 } from '@/lib/theme-customization'
 import {
   readThemePreference,
+  hasThemePreference,
   THEME_STORAGE_KEYS,
   writeThemePreference,
 } from '@/lib/theme-storage'
+import { useSiteThemeDefaults } from '@/stores/system-config-store'
 
 function applyAttribute(name: string, value: string | null) {
   if (typeof document === 'undefined') return
@@ -89,39 +91,53 @@ const ThemeCustomizationContext =
 export function ThemeCustomizationProvider(props: {
   children: React.ReactNode
 }) {
+  // Site-wide defaults from 系统设置 → 站点与品牌 → 主题设置; they act as the
+  // fallback for every axis the visitor has not personalized.
+  const siteTheme = useSiteThemeDefaults()
+  const defaults = useMemo<ThemeCustomization>(
+    () => ({
+      preset: siteTheme.preset,
+      font: siteTheme.font,
+      radius: siteTheme.radius,
+      scale: siteTheme.scale,
+      contentLayout: siteTheme.contentLayout,
+    }),
+    [siteTheme]
+  )
+
   const [preset, _setPreset] = useState<ThemePreset>(() =>
     readThemePreference<ThemePreset>(
       THEME_STORAGE_KEYS.preset,
       THEME_PRESET_VALUES,
-      DEFAULT_THEME_CUSTOMIZATION.preset
+      defaults.preset
     )
   )
   const [font, _setFont] = useState<ThemeFont>(() =>
     readThemePreference<ThemeFont>(
       THEME_STORAGE_KEYS.font,
       THEME_FONT_VALUES,
-      DEFAULT_THEME_CUSTOMIZATION.font
+      defaults.font
     )
   )
   const [radius, _setRadius] = useState<ThemeRadius>(() =>
     readThemePreference<ThemeRadius>(
       THEME_STORAGE_KEYS.radius,
       THEME_RADIUS_VALUES,
-      DEFAULT_THEME_CUSTOMIZATION.radius
+      defaults.radius
     )
   )
   const [scale, _setScale] = useState<ThemeScale>(() =>
     readThemePreference<ThemeScale>(
       THEME_STORAGE_KEYS.scale,
       THEME_SCALE_VALUES,
-      DEFAULT_THEME_CUSTOMIZATION.scale
+      defaults.scale
     )
   )
   const [contentLayout, _setContentLayout] = useState<ContentLayout>(() =>
     readThemePreference<ContentLayout>(
       THEME_STORAGE_KEYS.contentLayout,
       CONTENT_LAYOUT_VALUES,
-      DEFAULT_THEME_CUSTOMIZATION.contentLayout
+      defaults.contentLayout
     )
   )
 
@@ -162,57 +178,92 @@ export function ThemeCustomizationProvider(props: {
     applyAttribute('data-theme-content-layout', contentLayout)
   }, [contentLayout])
 
-  const setPreset = useCallback((value: ThemePreset) => {
-    _setPreset(value)
-    writeThemePreference(
-      THEME_STORAGE_KEYS.preset,
-      value === DEFAULT_THEME_CUSTOMIZATION.preset ? null : value
-    )
-  }, [])
+  // Follow site-wide default changes (admin saves in system settings) for
+  // axes the visitor has not personalized.
+  useEffect(() => {
+    if (!hasThemePreference(THEME_STORAGE_KEYS.preset)) {
+      _setPreset(defaults.preset)
+    }
+    if (!hasThemePreference(THEME_STORAGE_KEYS.font)) {
+      _setFont(defaults.font)
+    }
+    if (!hasThemePreference(THEME_STORAGE_KEYS.radius)) {
+      _setRadius(defaults.radius)
+    }
+    if (!hasThemePreference(THEME_STORAGE_KEYS.scale)) {
+      _setScale(defaults.scale)
+    }
+    if (!hasThemePreference(THEME_STORAGE_KEYS.contentLayout)) {
+      _setContentLayout(defaults.contentLayout)
+    }
+  }, [defaults])
 
-  const setFont = useCallback((value: ThemeFont) => {
-    _setFont(value)
-    writeThemePreference(
-      THEME_STORAGE_KEYS.font,
-      value === DEFAULT_THEME_CUSTOMIZATION.font ? null : value
-    )
-  }, [])
+  const setPreset = useCallback(
+    (value: ThemePreset) => {
+      _setPreset(value)
+      writeThemePreference(
+        THEME_STORAGE_KEYS.preset,
+        value === defaults.preset ? null : value
+      )
+    },
+    [defaults.preset]
+  )
 
-  const setRadius = useCallback((value: ThemeRadius) => {
-    _setRadius(value)
-    writeThemePreference(
-      THEME_STORAGE_KEYS.radius,
-      value === DEFAULT_THEME_CUSTOMIZATION.radius ? null : value
-    )
-  }, [])
+  const setFont = useCallback(
+    (value: ThemeFont) => {
+      _setFont(value)
+      writeThemePreference(
+        THEME_STORAGE_KEYS.font,
+        value === defaults.font ? null : value
+      )
+    },
+    [defaults.font]
+  )
 
-  const setScale = useCallback((value: ThemeScale) => {
-    _setScale(value)
-    writeThemePreference(
-      THEME_STORAGE_KEYS.scale,
-      value === DEFAULT_THEME_CUSTOMIZATION.scale ? null : value
-    )
-  }, [])
+  const setRadius = useCallback(
+    (value: ThemeRadius) => {
+      _setRadius(value)
+      writeThemePreference(
+        THEME_STORAGE_KEYS.radius,
+        value === defaults.radius ? null : value
+      )
+    },
+    [defaults.radius]
+  )
 
-  const setContentLayout = useCallback((value: ContentLayout) => {
-    _setContentLayout(value)
-    writeThemePreference(
-      THEME_STORAGE_KEYS.contentLayout,
-      value === DEFAULT_THEME_CUSTOMIZATION.contentLayout ? null : value
-    )
-  }, [])
+  const setScale = useCallback(
+    (value: ThemeScale) => {
+      _setScale(value)
+      writeThemePreference(
+        THEME_STORAGE_KEYS.scale,
+        value === defaults.scale ? null : value
+      )
+    },
+    [defaults.scale]
+  )
+
+  const setContentLayout = useCallback(
+    (value: ContentLayout) => {
+      _setContentLayout(value)
+      writeThemePreference(
+        THEME_STORAGE_KEYS.contentLayout,
+        value === defaults.contentLayout ? null : value
+      )
+    },
+    [defaults.contentLayout]
+  )
 
   const resetCustomization = useCallback(() => {
-    setPreset(DEFAULT_THEME_CUSTOMIZATION.preset)
-    setFont(DEFAULT_THEME_CUSTOMIZATION.font)
-    setRadius(DEFAULT_THEME_CUSTOMIZATION.radius)
-    setScale(DEFAULT_THEME_CUSTOMIZATION.scale)
-    setContentLayout(DEFAULT_THEME_CUSTOMIZATION.contentLayout)
-  }, [setPreset, setFont, setRadius, setScale, setContentLayout])
+    setPreset(defaults.preset)
+    setFont(defaults.font)
+    setRadius(defaults.radius)
+    setScale(defaults.scale)
+    setContentLayout(defaults.contentLayout)
+  }, [defaults, setPreset, setFont, setRadius, setScale, setContentLayout])
 
   const value = useMemo<ThemeCustomizationContextType>(
     () => ({
-      defaults: DEFAULT_THEME_CUSTOMIZATION,
+      defaults,
       customization: { preset, font, radius, scale, contentLayout },
       setPreset,
       setFont,
@@ -222,6 +273,7 @@ export function ThemeCustomizationProvider(props: {
       resetCustomization,
     }),
     [
+      defaults,
       preset,
       font,
       radius,

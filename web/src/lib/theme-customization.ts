@@ -194,3 +194,105 @@ export function resolveThemeFont(
   }
   return font
 }
+
+export type ThemeMode = 'dark' | 'light' | 'system'
+
+export const THEME_MODE_VALUES: ReadonlySet<ThemeMode> = new Set([
+  'dark',
+  'light',
+  'system',
+])
+
+/**
+ * Site-wide theme defaults (系统设置 → 站点与品牌 → 主题设置).
+ *
+ * Stored server-side as the `ThemeDefaults` option (JSON) and served via
+ * `/api/status` as `theme_defaults`. They are the fallback for every visitor
+ * without a personal preference; personal localStorage preferences keep
+ * winning where a control still exists (mode).
+ */
+export type SiteThemeDefaults = ThemeCustomization & {
+  mode: ThemeMode
+}
+
+export const DEFAULT_SITE_THEME: SiteThemeDefaults = {
+  mode: 'system',
+  ...DEFAULT_THEME_CUSTOMIZATION,
+}
+
+function pickAllowedValue<T extends string>(
+  value: unknown,
+  allowed: ReadonlySet<T>,
+  fallback: T
+): T {
+  return typeof value === 'string' && allowed.has(value as T)
+    ? (value as T)
+    : fallback
+}
+
+/**
+ * Parse and normalize a raw `theme_defaults` payload. Accepts the JSON string
+ * straight from the option map (or an already-decoded object); anything
+ * malformed or partial falls back per axis.
+ */
+export function parseSiteThemeDefaults(raw: unknown): SiteThemeDefaults {
+  let source: Record<string, unknown> | null = null
+  if (typeof raw === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      source =
+        typeof parsed === 'object' && parsed !== null
+          ? (parsed as Record<string, unknown>)
+          : null
+    } catch {
+      source = null
+    }
+  } else if (typeof raw === 'object' && raw !== null) {
+    source = raw as Record<string, unknown>
+  }
+  if (!source) return { ...DEFAULT_SITE_THEME }
+
+  return {
+    mode: pickAllowedValue(
+      source.mode,
+      THEME_MODE_VALUES,
+      DEFAULT_SITE_THEME.mode
+    ),
+    preset: pickAllowedValue(
+      source.preset,
+      THEME_PRESET_VALUES,
+      DEFAULT_SITE_THEME.preset
+    ),
+    font: pickAllowedValue(source.font, THEME_FONT_VALUES, DEFAULT_SITE_THEME.font),
+    radius: pickAllowedValue(
+      source.radius,
+      THEME_RADIUS_VALUES,
+      DEFAULT_SITE_THEME.radius
+    ),
+    scale: pickAllowedValue(
+      source.scale,
+      THEME_SCALE_VALUES,
+      DEFAULT_SITE_THEME.scale
+    ),
+    contentLayout: pickAllowedValue(
+      source.contentLayout,
+      CONTENT_LAYOUT_VALUES,
+      DEFAULT_SITE_THEME.contentLayout
+    ),
+  }
+}
+
+/**
+ * Serialize site theme defaults to the canonical JSON stored in the
+ * `ThemeDefaults` option. Field order matches the seed in model/option.go.
+ */
+export function serializeSiteThemeDefaults(value: SiteThemeDefaults): string {
+  return JSON.stringify({
+    mode: value.mode,
+    preset: value.preset,
+    font: value.font,
+    radius: value.radius,
+    scale: value.scale,
+    contentLayout: value.contentLayout,
+  })
+}

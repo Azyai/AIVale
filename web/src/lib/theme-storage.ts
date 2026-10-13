@@ -17,13 +17,36 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 export const THEME_STORAGE_KEYS = {
+  // Personal light/dark choice (theme switch + command menu). Kept on v1 so
+  // existing preferences survive the site-default rollout.
   mode: 'newapi:theme:v1:mode',
-  preset: 'newapi:theme:v1:preset',
-  font: 'newapi:theme:v1:font',
-  radius: 'newapi:theme:v1:radius',
-  scale: 'newapi:theme:v1:scale',
-  contentLayout: 'newapi:theme:v1:content-layout',
+  // Personalization axes bumped to v2 when the theme settings drawer was
+  // removed: v1 entries were personal picks made in the removed drawer, and
+  // the admin-configured site defaults should now win for everyone.
+  preset: 'newapi:theme:v2:preset',
+  font: 'newapi:theme:v2:font',
+  radius: 'newapi:theme:v2:radius',
+  scale: 'newapi:theme:v2:scale',
+  contentLayout: 'newapi:theme:v2:content-layout',
 } as const
+
+/**
+ * Whether a personal preference exists for `key`. Providers use this to know
+ * when a freshly loaded site default (from /api/status) may replace the
+ * boot-time fallback: personal preference wins, otherwise the site default is
+ * followed live.
+ */
+export function hasThemePreference(key: string): boolean {
+  if (typeof window === 'undefined') return false
+
+  try {
+    return window.localStorage.getItem(key) !== null
+  } catch {
+    // Unreadable storage behaves like no preference (readThemePreference
+    // also falls back), so let the site default through.
+    return false
+  }
+}
 
 export function readThemePreference<T extends string>(
   key: string,
