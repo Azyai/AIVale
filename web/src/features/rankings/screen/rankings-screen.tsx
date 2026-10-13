@@ -28,12 +28,20 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useStatus } from '@/hooks/use-status'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
 import { getRankings } from '../api'
 import { formatTokens } from '../lib/format'
 import type {
+  ModelHistorySeries,
   ModelRanking,
   RankingMover,
   RankingPeriod,
@@ -161,6 +169,80 @@ function MoversMarquee(props: { rows: MoverRow[] }) {
   )
 }
 
+type BoardId =
+  | 'monitor'
+  | 'models'
+  | 'users'
+  | 'vendors'
+  | 'trend'
+  | 'movers'
+  | 'concentration'
+
+function trendSnapshot(history: ModelHistorySeries | undefined) {
+  const buckets = new Map<string, number>()
+  for (const point of history?.points ?? []) {
+    buckets.set(point.label, (buckets.get(point.label) ?? 0) + point.tokens)
+  }
+  const labels = [...buckets.keys()]
+  const latest = labels.length ? (buckets.get(labels[labels.length - 1]) ?? 0) : 0
+  const previous =
+    labels.length > 1 ? (buckets.get(labels[labels.length - 2]) ?? 0) : 0
+  const growth = previous > 0 ? ((latest - previous) / previous) * 100 : 0
+  return {
+    latest,
+    growth,
+    label: labels[labels.length - 1] ?? '',
+    topModel: history?.models[0]?.name ?? '',
+  }
+}
+
+function BoardButton(props: {
+  open: boolean
+  title: string
+  hint: string
+  action: string
+  onClick: () => void
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <button
+      type='button'
+      data-slot='card'
+      data-open={props.open ? 'true' : undefined}
+      className={`rank-board bg-card text-card-foreground border-border flex h-full min-h-56 flex-col gap-3 rounded-xl border p-4 ${props.className ?? ''}`}
+      onClick={props.onClick}
+    >
+      <div className='flex items-start justify-between gap-3'>
+        <div className='min-w-0'>
+          <div className='text-sm font-semibold'>{props.title}</div>
+          <div className='text-muted-foreground mt-0.5 text-xs'>{props.hint}</div>
+        </div>
+        <span className='text-primary shrink-0 text-xs font-medium'>
+          {props.action}
+        </span>
+      </div>
+      <div className='flex min-h-0 flex-1 flex-col justify-center gap-2.5'>
+        {props.children}
+      </div>
+    </button>
+  )
+}
+
+function SummaryRow(props: { mark: string; name: string; value: string }) {
+  return (
+    <div className='flex min-w-0 items-center gap-2 text-sm'>
+      <span className='text-primary w-8 shrink-0 font-semibold tabular-nums'>
+        {props.mark}
+      </span>
+      <span className='min-w-0 flex-1 truncate'>{props.name}</span>
+      <span className='text-muted-foreground shrink-0 tabular-nums'>
+        {props.value}
+      </span>
+    </div>
+  )
+}
+
 function KpiCard(props: {
   label: string
   value: number
@@ -234,34 +316,8 @@ export function RankingsScreen() {
     navigate({ search: { period: next } })
   }
 
-  // The root fills the viewport below the fixed site header (height set from
-  // JS); panels and charts then lay out fluidly inside it — no fixed stage
-  // and no transform scaling, so text never distorts. Charts follow their
-  // containers via ResizeObserver (use-echart). Embedded webviews may lay
-  // out at 0×0 and pause rAF/RO while not rendering, so a short interval
-  // poll (timers still fire on hidden pages) guarantees the first apply.
-  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (!rootEl) return
-    const apply = () => {
-      const docTop = rootEl.getBoundingClientRect().top + window.scrollY
-      const h = Math.max(480, window.innerHeight - docTop)
-      rootEl.style.height = `${h}px`
-    }
-    apply()
-    window.addEventListener('resize', apply)
-    let timer = 0
-    let attempts = 0
-    const poll = () => {
-      apply()
-      if (attempts++ > 60) window.clearInterval(timer)
-    }
-    timer = window.setInterval(poll, 400)
-    return () => {
-      window.removeEventListener('resize', apply)
-      window.clearInterval(timer)
-    }
-  }, [rootEl])
+  const [openBoard, setOpenBoard] = useState<BoardId | null>(null)
+  const trend = trendSnapshot(snapshot?.models_history)
 
   const systemName = status?.system_name || 'New API'
   const periodLabel = t(
@@ -296,149 +352,349 @@ export function RankingsScreen() {
       </div>
     )
   } else {
+    const detail = boardDetail({
+      id: openBoard,
+      t,
+      periodLabel,
+      loading: query.isFetching,
+      theme: screenTheme,
+      models,
+      users,
+      vendors,
+      history: snapshot?.models_history,
+      moverRows,
+      modelTop10Share,
+      userTop10Share,
+      topVendorShare,
+    })
     content = (
-      <div className='bsc-screen'>
-              <header className='bsc-header'>
-                <h1 className='bsc-title'>{t('Usage Data Monitor')}</h1>
-                <div className='bsc-header-right'>
-                  <div
-                    role='tablist'
-                    aria-label={t('Period')}
-                    className='bsc-periods'
-                  >
-                    {PERIODS.map((p) => (
-                      <button
-                        key={p.id}
-                        type='button'
-                        role='tab'
-                        aria-selected={p.id === period}
-                        className='bsc-period-btn'
-                        onClick={() => handlePeriodChange(p.id)}
-                      >
-                      {t(p.labelKey)}
-                    </button>
-                  ))}
-                </div>
-                <div className='bsc-clock'>{clock()}</div>
-              </div>
+      <div className='space-y-4'>
+        <header className='flex flex-wrap items-center justify-between gap-3'>
+          <h1 className='text-xl font-semibold tracking-tight'>
+            {t('Usage Data Monitor')}
+          </h1>
+          <div className='flex flex-wrap items-center gap-3'>
+            <div role='tablist' aria-label={t('Period')} className='bsc-periods'>
+              {PERIODS.map((p) => (
+                <button
+                  key={p.id}
+                  type='button'
+                  role='tab'
+                  aria-selected={p.id === period}
+                  className='bsc-period-btn'
+                  onClick={() => handlePeriodChange(p.id)}
+                >
+                  {t(p.labelKey)}
+                </button>
+              ))}
+            </div>
+            <div className='bsc-clock'>{clock()}</div>
+          </div>
         </header>
 
-        <main className='bsc-layout'>
-          <div className='bsc-col bsc-col-side'>
-            <section className='bsc-panel bsc-corner-b bsc-panel-rank'>
-              <div className='bsc-panel-title'>
-                {t('Model Rankings')}
-                <small>
-                  {periodLabel} · tokens
-                </small>
-              </div>
-              <ModelRankChart
-                loading={query.isFetching}
-                theme={screenTheme}
-                rows={models.slice(0, 10)}
-              />
-            </section>
-            <section className='bsc-panel bsc-corner-b bsc-panel-fixed'>
-              <div className='bsc-panel-title'>
-                {t('Vendor Share')}
-                <small>{periodLabel}</small>
-              </div>
-              <VendorShareChart
-                loading={query.isFetching}
-                theme={screenTheme}
-                rows={vendors}
-              />
-            </section>
+        <button
+          type='button'
+          data-slot='card'
+          data-open={openBoard === 'monitor' ? 'true' : undefined}
+          className='rank-monitor bg-card text-card-foreground border-border rounded-xl border p-4'
+          onClick={() => setOpenBoard('monitor')}
+        >
+          <div className='mb-3 flex items-center justify-between gap-3'>
+            <div className='text-sm font-semibold'>{t('Full Monitor')}</div>
+            <span className='text-primary text-xs font-medium'>
+              {t('View details')}
+            </span>
           </div>
-
-          <div className='bsc-col bsc-col-mid'>
-            <section className='bsc-panel bsc-corner-b bsc-kpi-row'>
-              <KpiCard
-                label={t('Total Tokens')}
-                value={totalTokens}
-                format={formatTokens}
-              />
-              <KpiCard
-                label={t('Active Models')}
-                value={models.length}
-                format={(v) => Math.round(v).toLocaleString()}
-              />
-              <KpiCard
-                label={t('Listed Users')}
-                value={users.length}
-                format={(v) => Math.round(v).toLocaleString()}
-              />
-              <KpiCard
-                label={t('Active Vendors')}
-                value={vendors.length}
-                format={(v) => Math.round(v).toLocaleString()}
-              />
-              <KpiCard
-                label={t('Top Model Share')}
-                value={models[0] ? models[0].share * 100 : 0}
-                format={(v) => `${v.toFixed(1)}%`}
-                sub={models[0]?.model_name}
-              />
-            </section>
-
-            <section className='bsc-panel bsc-corner-b bsc-panel-rank'>
-              <div className='bsc-panel-title'>
-                {t('Token Trend')}
-                <small>{periodLabel}</small>
-              </div>
-              <TokenTrendChart
-                loading={query.isFetching}
-                theme={screenTheme}
-                history={snapshot?.models_history}
-              />
-            </section>
-
-            <section className='bsc-panel bsc-corner-b bsc-log-panel'>
-              <div className='bsc-panel-title'>{t('Rank Movements')}</div>
-              <MoversMarquee rows={moverRows} />
-            </section>
+          <div className='grid grid-cols-2 gap-3 md:grid-cols-5'>
+            <KpiCard
+              label={t('Total Tokens')}
+              value={totalTokens}
+              format={formatTokens}
+            />
+            <KpiCard
+              label={t('Active Models')}
+              value={models.length}
+              format={(v) => Math.round(v).toLocaleString()}
+            />
+            <KpiCard
+              label={t('Listed Users')}
+              value={users.length}
+              format={(v) => Math.round(v).toLocaleString()}
+            />
+            <KpiCard
+              label={t('Active Vendors')}
+              value={vendors.length}
+              format={(v) => Math.round(v).toLocaleString()}
+            />
+            <KpiCard
+              label={t('Top Model Share')}
+              value={models[0] ? models[0].share * 100 : 0}
+              format={(v) => `${v.toFixed(1)}%`}
+              sub={models[0]?.model_name}
+            />
           </div>
+        </button>
 
-          <div className='bsc-col bsc-col-side'>
-            <section className='bsc-panel bsc-corner-b bsc-panel-rank'>
-              <div className='bsc-panel-title'>
-                {t('User Rankings')}
-                <small>
-                  {periodLabel} · tokens
-                </small>
-              </div>
-              <UserRankChart
-                loading={query.isFetching}
-                theme={screenTheme}
-                rows={users.slice(0, 10)}
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
+          <BoardButton
+            open={openBoard === 'models'}
+            title={t('Model Rankings')}
+            hint={`${periodLabel} · tokens`}
+            action={t('View details')}
+            onClick={() => setOpenBoard('models')}
+          >
+            {models.slice(0, 3).map((row) => (
+              <SummaryRow
+                key={row.model_name}
+                mark={`#${row.rank}`}
+                name={row.model_name}
+                value={formatTokens(row.total_tokens)}
               />
-            </section>
-            <section className='bsc-panel bsc-corner-b bsc-panel-fixed'>
-              <div className='bsc-panel-title'>
-                {t('Concentration')}
-                <small>{periodLabel}</small>
-              </div>
-              <ConcentrationGauges
-                loading={query.isFetching}
-                theme={screenTheme}
-                modelTop10={modelTop10Share}
-                userTop10={userTop10Share}
-                topVendor={topVendorShare}
+            ))}
+            {models.length === 0 ? <EmptyHint label={t('No data')} /> : null}
+          </BoardButton>
+          <BoardButton
+            open={openBoard === 'users'}
+            title={t('User Rankings')}
+            hint={`${periodLabel} · tokens`}
+            action={t('View details')}
+            onClick={() => setOpenBoard('users')}
+          >
+            {users.slice(0, 3).map((row) => (
+              <SummaryRow
+                key={row.user_id}
+                mark={`#${row.rank}`}
+                name={row.username}
+                value={formatTokens(row.total_tokens)}
               />
-            </section>
-          </div>
-        </main>
+            ))}
+            {users.length === 0 ? <EmptyHint label={t('No data')} /> : null}
+          </BoardButton>
+          <BoardButton
+            open={openBoard === 'vendors'}
+            title={t('Vendor Share')}
+            hint={periodLabel}
+            action={t('View details')}
+            onClick={() => setOpenBoard('vendors')}
+          >
+            {vendors.slice(0, 3).map((row) => (
+              <SummaryRow
+                key={row.vendor}
+                mark={`#${row.rank}`}
+                name={row.vendor}
+                value={`${(row.share * 100).toFixed(1)}%`}
+              />
+            ))}
+            {vendors.length === 0 ? <EmptyHint label={t('No data')} /> : null}
+          </BoardButton>
+          <BoardButton
+            open={openBoard === 'trend'}
+            title={t('Token Trend')}
+            hint={trend.label || periodLabel}
+            action={t('View details')}
+            onClick={() => setOpenBoard('trend')}
+          >
+            <div className='text-primary text-3xl font-semibold tabular-nums'>
+              {formatTokens(trend.latest)}
+            </div>
+            <div className='text-muted-foreground text-sm'>
+              {trend.growth >= 0 ? '+' : ''}
+              {trend.growth.toFixed(1)}%
+              {trend.topModel ? ` · ${trend.topModel}` : ''}
+            </div>
+          </BoardButton>
+          <BoardButton
+            open={openBoard === 'movers'}
+            title={t('Rank Movements')}
+            hint={periodLabel}
+            action={t('View details')}
+            onClick={() => setOpenBoard('movers')}
+          >
+            {moverRows.slice(0, 3).map((row) => (
+              <SummaryRow
+                key={`${row.model}:${row.current}`}
+                mark={`#${row.current}`}
+                name={row.model}
+                value={`${row.growth >= 0 ? '+' : ''}${row.growth.toFixed(1)}%`}
+              />
+            ))}
+            {moverRows.length === 0 ? <EmptyHint label={t('No data')} /> : null}
+          </BoardButton>
+          <BoardButton
+            open={openBoard === 'concentration'}
+            title={t('Concentration')}
+            hint={periodLabel}
+            action={t('View details')}
+            onClick={() => setOpenBoard('concentration')}
+          >
+            <SummaryRow
+              mark=''
+              name={t('Top 10 Model Concentration')}
+              value={`${modelTop10Share.toFixed(1)}%`}
+            />
+            <SummaryRow
+              mark=''
+              name={t('Top 10 User Concentration')}
+              value={`${userTop10Share.toFixed(1)}%`}
+            />
+            <SummaryRow
+              mark=''
+              name={t('Top Vendor Share')}
+              value={`${topVendorShare.toFixed(1)}%`}
+            />
+          </BoardButton>
+        </div>
+
+        <Dialog
+          open={openBoard != null}
+          onOpenChange={(open) => {
+            if (!open) setOpenBoard(null)
+          }}
+        >
+          <DialogContent className='rank-board-dialog sm:max-w-5xl'>
+            <DialogHeader>
+              <DialogTitle>{detail.title}</DialogTitle>
+              <DialogDescription>{detail.description}</DialogDescription>
+            </DialogHeader>
+            {openBoard === 'monitor' ? (
+              <div className='grid grid-cols-2 gap-3 md:grid-cols-5'>
+                <KpiCard
+                  label={t('Total Tokens')}
+                  value={totalTokens}
+                  format={formatTokens}
+                />
+                <KpiCard
+                  label={t('Active Models')}
+                  value={models.length}
+                  format={(v) => Math.round(v).toLocaleString()}
+                />
+                <KpiCard
+                  label={t('Listed Users')}
+                  value={users.length}
+                  format={(v) => Math.round(v).toLocaleString()}
+                />
+                <KpiCard
+                  label={t('Active Vendors')}
+                  value={vendors.length}
+                  format={(v) => Math.round(v).toLocaleString()}
+                />
+                <KpiCard
+                  label={t('Top Model Share')}
+                  value={models[0] ? models[0].share * 100 : 0}
+                  format={(v) => `${v.toFixed(1)}%`}
+                  sub={models[0]?.model_name}
+                />
+              </div>
+            ) : openBoard ? (
+              <div className='rank-chart-frame'>{detail.body}</div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
 
   return (
     <PublicLayout showMainContainer={false}>
-      <div className='pt-24 md:pt-32'>
-        <div className='bsc-root' ref={setRootEl}>
-          {content}
-        </div>
+      <div className='mx-auto w-full max-w-[1280px] px-4 pt-24 pb-12 md:px-6 md:pt-32'>
+        {content}
       </div>
     </PublicLayout>
   )
+}
+
+function EmptyHint(props: { label: string }) {
+  return (
+    <div className='text-muted-foreground text-sm'>{props.label}</div>
+  )
+}
+
+function boardDetail(props: {
+  id: BoardId | null
+  t: (key: string) => string
+  periodLabel: string
+  loading: boolean
+  theme: ReturnType<typeof useScreenTheme>
+  models: ModelRanking[]
+  users: UserRanking[]
+  vendors: VendorRanking[]
+  history: ModelHistorySeries | undefined
+  moverRows: MoverRow[]
+  modelTop10Share: number
+  userTop10Share: number
+  topVendorShare: number
+}) {
+  const { t } = props
+  if (props.id === 'users') {
+    return {
+      title: t('User Rankings'),
+      description: props.periodLabel,
+      body: (
+        <UserRankChart
+          loading={props.loading}
+          theme={props.theme}
+          rows={props.users.slice(0, 10)}
+        />
+      ),
+    }
+  }
+  if (props.id === 'vendors') {
+    return {
+      title: t('Vendor Share'),
+      description: props.periodLabel,
+      body: (
+        <VendorShareChart
+          loading={props.loading}
+          theme={props.theme}
+          rows={props.vendors}
+        />
+      ),
+    }
+  }
+  if (props.id === 'trend') {
+    return {
+      title: t('Token Trend'),
+      description: props.periodLabel,
+      body: (
+        <TokenTrendChart
+          loading={props.loading}
+          theme={props.theme}
+          history={props.history}
+        />
+      ),
+    }
+  }
+  if (props.id === 'movers') {
+    return {
+      title: t('Rank Movements'),
+      description: props.periodLabel,
+      body: <MoversMarquee rows={props.moverRows} />,
+    }
+  }
+  if (props.id === 'concentration') {
+    return {
+      title: t('Concentration'),
+      description: props.periodLabel,
+      body: (
+        <ConcentrationGauges
+          loading={props.loading}
+          theme={props.theme}
+          modelTop10={props.modelTop10Share}
+          userTop10={props.userTop10Share}
+          topVendor={props.topVendorShare}
+        />
+      ),
+    }
+  }
+  return {
+    title: props.id === 'monitor' ? t('Full Monitor') : t('Model Rankings'),
+    description: props.periodLabel,
+    body: (
+      <ModelRankChart
+        loading={props.loading}
+        theme={props.theme}
+        rows={props.models.slice(0, 10)}
+      />
+    ),
+  }
 }

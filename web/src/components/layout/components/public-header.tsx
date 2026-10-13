@@ -205,9 +205,9 @@ export function PublicHeader(props: PublicHeaderProps) {
       <header className='pointer-events-none fixed inset-x-0 top-0 z-50'>
         <div
           className={cn(
-            'pointer-events-auto bg-background/70 border-border/60 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300',
+            'pointer-events-auto bg-background/70 border-border/60 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300 dark:border-white/15 dark:bg-white/5',
             scrolled &&
-              'bg-background/90 border-b shadow-[0_1px_16px_-8px_rgba(0,0,0,0.15)]'
+              'bg-background/90 border-b shadow-[0_1px_16px_-8px_rgba(0,0,0,0.15)] dark:bg-white/10'
           )}
         >
           <nav className='flex h-16 w-full items-center justify-between gap-4 px-5 md:h-24 md:px-8'>
