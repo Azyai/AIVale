@@ -108,12 +108,17 @@ export function AppHeader({
       ) : null}
 
       {rightContent ?? (
-        <div className='ms-auto flex shrink-0 items-center gap-1 sm:gap-2'>
+        <div className='ms-auto flex shrink-0 items-center gap-1'>
           {showTopNav && (
-            <div className='me-1 hidden lg:block'>
+            <div className='hidden lg:block'>
               <TopNav links={links} />
             </div>
           )}
+
+          <div className='bg-border/40 mx-2.5 h-6 w-px' />
+
+          <LanguageSwitcher />
+          <ThemeSwitch />
           {showNotifications && (
             <NotificationPopover
               open={notifications.popoverOpen}
@@ -126,9 +131,13 @@ export function AppHeader({
               loading={notifications.loading}
             />
           )}
-          <LanguageSwitcher />
-          <ThemeSwitch />
-          {showProfileDropdown && <ProfileDropdown />}
+
+          {showProfileDropdown && (
+            <>
+              <div className='bg-border/40 mx-1.5 h-6 w-px' />
+              <ProfileDropdown />
+            </>
+          )}
         </div>
       )}
     </Header>
