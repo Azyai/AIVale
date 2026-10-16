@@ -36,6 +36,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useStatus } from '@/hooks/use-status'
+import { DEFAULT_SYSTEM_NAME } from '@/lib/constants'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
 import { getRankings } from '../api'
@@ -319,7 +320,7 @@ export function RankingsScreen() {
   const [openBoard, setOpenBoard] = useState<BoardId | null>(null)
   const trend = trendSnapshot(snapshot?.models_history)
 
-  const systemName = status?.system_name || 'New API'
+  const systemName = status?.system_name || DEFAULT_SYSTEM_NAME
   const periodLabel = t(
     PERIODS.find((p) => p.id === period)?.labelKey ?? 'Week'
   )

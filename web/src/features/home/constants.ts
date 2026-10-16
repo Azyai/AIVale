@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 /**
  * Landing page constants — copy is i18n-driven; keys resolve through
- * locales with zh as the primary brand language (京西智谷).
+ * locales with zh as the primary brand language (京西智库).
  */
 
 // Layout - Main base classes

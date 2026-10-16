@@ -26,7 +26,7 @@ import {
 
 const defaultSiteSettings: SiteSettings = {
   Notice: '',
-  SystemName: 'New API',
+  SystemName: '京西智库',
   Logo: '',
   Footer: '',
   About: '',

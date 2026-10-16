@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
+import { DEFAULT_SYSTEM_NAME } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 interface FooterLink {
@@ -153,7 +154,8 @@ export function Footer(props: FooterProps) {
   const { t } = useTranslation()
   const { systemName, footerHtml, demoSiteEnabled } = useSystemConfig()
 
-  const displayName = systemName || props.name || 'New API'
+  const displayName =
+    systemName || props.name || DEFAULT_SYSTEM_NAME
   const isDemoSiteMode = Boolean(demoSiteEnabled)
   const currentYear = new Date().getFullYear()
 
@@ -264,7 +266,7 @@ export function Footer(props: FooterProps) {
           </div>
         )}
 
-        {/* Single slim copyright row: 京西智谷 attribution at normal size,
+        {/* Single slim copyright row: 京西智库 attribution at normal size,
             New API attribution deliberately tiny. */}
         <div
           className={cn(

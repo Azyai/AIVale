@@ -87,7 +87,7 @@ function ModelChipsBoard() {
 function TrustBoard() {
   const { t } = useTranslation()
   const items = [
-    { icon: Building2, big: t('国资背景'), small: t('京西智谷产业生态底座') },
+    { icon: Building2, big: t('国资背景'), small: t('京西智库产业生态底座') },
     { icon: Lock, big: t('私有化部署'), small: t('数据不出企业内网') },
     { icon: Headset, big: t('本地团队'), small: t('原厂技术支持护航') },
     { icon: ShieldCheck, big: t('SLA 99.9%'), small: t('全天候运维值守') },
@@ -189,7 +189,7 @@ export function SellingPoints() {
     {
       title: t('国企背书，安全可靠'),
       description: t(
-        '京西智谷国资背景平台，企业级数据安全与合规保障；支持私有化部署，本地技术团队全程护航。'
+        '京西智库国资背景平台，企业级数据安全与合规保障；支持私有化部署，本地技术团队全程护航。'
       ),
       tint: 'from-violet-500/10 via-violet-500/5 to-transparent',
       visual: <TrustBoard />,
@@ -214,7 +214,7 @@ export function SellingPoints() {
       <div className='mx-auto w-full'>
         <div className='mb-8 text-center'>
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
-            {t('为什么选择京西智谷')}
+            {t('为什么选择京西智库')}
           </h2>
           <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
             {t('统一网关接入全模态模型，成本完全可控——为个人与团队而生。')}

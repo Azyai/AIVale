@@ -22,7 +22,7 @@ import { Footer } from '@/components/layout/components/footer'
 import { FAQ, HeroHeading, PricingSection, SellingPoints, ToolsWall } from './components'
 
 /**
- * Marketing landing page (京西智谷), qianwen Token-Plan style: compact hero →
+ * Marketing landing page (京西智库), qianwen Token-Plan style: compact hero →
  * selling points → pricing → tools → FAQ. Plan cards are driven live by the
  * public plans API.
  */

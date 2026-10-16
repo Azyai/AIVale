@@ -46,7 +46,7 @@ export function HeroHeading() {
             <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60' />
             <span className='relative inline-flex size-2 rounded-full' />
           </span>
-          {t('京西智谷 · 企业级 AI 服务平台')}
+          {t('京西智库 · 企业级 AI 服务平台')}
         </div>
 
         <h1 className='text-[clamp(2.75rem,6vw,3.75rem)] leading-[1.1] font-bold tracking-tight'>
