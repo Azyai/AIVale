@@ -24,6 +24,13 @@ For commercial licensing, please contact support@quantumnous.com
 export const DEFAULT_SYSTEM_NAME = '京西智库'
 export const DEFAULT_LOGO = '/logo.png'
 
+/**
+ * Whether the system logo image is rendered in the UI. The logo pipeline
+ * (option storage, admin setting, /api/status field) stays fully intact;
+ * flip this to true to re-enable display.
+ */
+export const SHOW_SYSTEM_LOGO = false
+
 // LocalStorage Keys
 export const STORAGE_KEYS = {
   SYSTEM_NAME: 'system_name',

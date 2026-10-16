@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { useTopNavLinks } from '@/hooks/use-top-nav-links'
+import { SHOW_SYSTEM_LOGO } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -220,9 +221,11 @@ export function PublicHeader(props: PublicHeaderProps) {
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
-                <div className='flex size-9 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-14'>
-                  {logoContent}
-                </div>
+                {SHOW_SYSTEM_LOGO && (
+                  <div className='flex size-9 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-14'>
+                    {logoContent}
+                  </div>
+                )}
                 <span
                   className='max-w-56 truncate text-base font-bold tracking-tight md:max-w-xs md:text-[1.375rem]'
                   title={displaySiteName}
