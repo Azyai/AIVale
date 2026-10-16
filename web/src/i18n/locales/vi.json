@@ -7114,6 +7114,23 @@
     "重命名团队": "Rename team",
     "重磅升级": "Major upgrade",
     "，": ", ",
-    "，and ": " và "
+    "，and ": " và ",
+    "集中管理您的访问凭证，用于模型调用身份鉴权": "Quản lý tập trung thông tin đăng nhập dùng để xác thực các lượt gọi mô hình",
+    "订阅 Token Plan": "Đăng ký Token Plan",
+    "查看全部": "Xem tất cả",
+    "{{days}} 天后到期": "Hết hạn sau {{days}} ngày",
+    "到期时间": "Thời điểm hết hạn",
+    "订阅套餐": "Gói thuê bao",
+    "Token Plan 是订阅制计费服务，订阅后享更优单价与专属额度池，适合稳定高频调用。": "Token Plan là dịch vụ tính phí theo thuê bao: đơn giá tốt hơn và pool hạn mức riêng, phù hợp lưu lượng ổn định tần suất cao.",
+    "按量付费": "Trả theo mức dùng",
+    "展示按量付费模式的访问凭证，用于模型调用身份鉴权": "Thông tin đăng nhập cho chế độ trả theo mức dùng",
+    "按量付费 Base URL": "URL gốc (trả theo mức dùng)",
+    "OpenAI 兼容": "Tương thích OpenAI",
+    "搜索 API Key 名称": "Tìm tên API Key",
+    "创建 API Key": "Tạo API Key",
+    "描述": "Mô tả",
+    "查看费用": "Xem chi phí",
+    "第 {{page}} / {{totalPages}} 页": "Trang {{page}} / {{totalPages}}",
+    "Toggle status": "Bật/tắt trạng thái"
   }
 }

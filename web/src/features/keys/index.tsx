@@ -18,26 +18,38 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useTranslation } from 'react-i18next'
 
-import { SectionPageLayout } from '@/components/layout'
-
+import { ApiKeysBaseUrl } from './components/api-keys-base-url'
 import { ApiKeysDialogs } from './components/api-keys-dialogs'
-import { ApiKeysPrimaryButtons } from './components/api-keys-primary-buttons'
 import { ApiKeysProvider } from './components/api-keys-provider'
 import { ApiKeysTable } from './components/api-keys-table'
+import { TokenPlanSection } from './components/token-plan-section'
 
 export function ApiKeys() {
   const { t } = useTranslation()
+
   return (
     <ApiKeysProvider>
-      <SectionPageLayout fixedContent>
-        <SectionPageLayout.Title>{t('API Keys')}</SectionPageLayout.Title>
-        <SectionPageLayout.Actions>
-          <ApiKeysPrimaryButtons />
-        </SectionPageLayout.Actions>
-        <SectionPageLayout.Content>
+      <div className='mx-auto w-full max-w-[1116px] space-y-10 px-4 py-8 sm:px-6'>
+        {/* 页头 */}
+        <header className='space-y-2'>
+          <h1 className='text-2xl font-semibold tracking-tight'>
+            {t('API Keys')}
+          </h1>
+          <p className='text-muted-foreground text-sm'>
+            {t('集中管理您的访问凭证，用于模型调用身份鉴权')}
+          </p>
+        </header>
+
+        {/* Token Plan 区块 */}
+        <TokenPlanSection />
+
+        {/* 按量付费区块（无标题，直接 Base URL + 密钥列表） */}
+        <section className='space-y-6'>
+          <ApiKeysBaseUrl />
+
           <ApiKeysTable />
-        </SectionPageLayout.Content>
-      </SectionPageLayout>
+        </section>
+      </div>
 
       <ApiKeysDialogs />
     </ApiKeysProvider>

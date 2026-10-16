@@ -25,11 +25,6 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import {
   act,
   cleanup,
   render,
@@ -45,6 +40,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import zh from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
+import { getCurrencyDisplay } from '@/lib/currency'
 import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
@@ -52,7 +48,6 @@ import {
 
 import { apiKeySchema, type ApiKey } from '../../types'
 import { ApiKeyQuotaCell } from '../api-key-quota-cell'
-import { useApiKeysColumns } from '../api-keys-columns'
 import { ApiKeysProvider } from '../api-keys-provider'
 import { ApiKeysTable } from '../api-keys-table'
 
@@ -80,40 +75,21 @@ await i18n.init({
 const clients: QueryClient[] = []
 
 function QuotaTable(props: { apiKey: ApiKey }) {
-  const columns = useApiKeysColumns(now).filter(
-    (column) => column.id === 'quota'
-  )
-  const table = useReactTable({
-    columns,
-    data: [props.apiKey],
-    getCoreRowModel: getCoreRowModel(),
-  })
+  const { meta: currency } = getCurrencyDisplay()
+  const quotaUnit = currency.kind === 'tokens' ? 'Tokens' : currency.symbol
   return (
     <table>
       <thead>
-        {table.getHeaderGroups().map((group) => (
-          <tr key={group.id}>
-            {group.headers.map((header) => (
-              <th key={header.id}>
-                {flexRender(
-                  header.column.columnDef.header,
-                  header.getContext()
-                )}
-              </th>
-            ))}
-          </tr>
-        ))}
+        <tr>
+          <th>{`Quota (${quotaUnit})`}</th>
+        </tr>
       </thead>
       <tbody>
-        {table.getRowModel().rows.map((row) => (
-          <tr key={row.id}>
-            {row.getVisibleCells().map((cell) => (
-              <td key={cell.id}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </td>
-            ))}
-          </tr>
-        ))}
+        <tr>
+          <td className='max-w-45'>
+            <ApiKeyQuotaCell apiKey={props.apiKey} now={now} />
+          </td>
+        </tr>
       </tbody>
     </table>
   )
@@ -349,75 +325,61 @@ async function renderKeysPage(status = 1, overrides: Partial<ApiKey> = {}) {
   return { post, put }
 }
 
-it('combines creation and last use while keeping expiry, models and IP restrictions separate', async () => {
+it('renders the qianwen-style table columns with name, creation time and spend entry', async () => {
   await renderKeysPage()
-  for (const name of ['Name', 'API Key', 'Group', 'Models', 'IP Restriction']) {
+  for (const name of [
+    'ID',
+    'API Key',
+    '描述',
+    'Created',
+    'Cost',
+    'Status',
+    'Actions',
+  ]) {
     expect(screen.getByRole('columnheader', { name })).toBeInTheDocument()
   }
-  expect(screen.getByRole('columnheader', { name: 'Time' })).toBeInTheDocument()
+  expect(screen.getByRole('cell', { name: /production/ })).toBeInTheDocument()
+  expect(screen.getByText('创建 API Key')).toBeInTheDocument()
   expect(
-    screen.getByRole('columnheader', { name: 'Expires' })
+    screen.getByRole('button', { name: 'Toggle status' })
   ).toBeInTheDocument()
-  const timeCell = screen.getByRole('cell', { name: /Created.*Last Used/ })
-  expect(within(timeCell).getByText('Last Used')).toBeInTheDocument()
-  const quotaHeader = screen.getByRole('columnheader', { name: 'Quota ($)' })
-  const quotaTrigger = screen.getByRole('button', {
-    name: /Remaining 80; Remaining percentage 40%; Used amount 120/,
-  })
-  expect(quotaHeader).not.toHaveClass('pr-8')
-  expect(quotaTrigger.closest('td')).not.toHaveClass('pr-8')
-})
-
-it('restores dates hidden by the old default and preserves unrelated column preferences', async () => {
-  localStorage.setItem(
-    'api-keys:column-visibility',
-    JSON.stringify({
-      created_time: false,
-      accessed_time: false,
-      expired_time: false,
-      model_limits: false,
-    })
-  )
-  await renderKeysPage()
-  expect(screen.getByRole('columnheader', { name: 'Time' })).toBeInTheDocument()
-  expect(
-    screen.getByRole('columnheader', { name: 'Expires' })
-  ).toBeInTheDocument()
-  expect(
-    screen.queryByRole('columnheader', { name: 'Models' })
-  ).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
 })
 
 it.each([
-  [1, 'Disable', 2, 'Disabled'],
-  [2, 'Enable', 1, 'Enabled'],
+  [1, 2],
+  [2, 1],
 ])(
-  'keeps status %s toggling at its original row button without fetching a full key',
-  async (status, action, nextStatus, nextLabel) => {
+  'toggles status from %s to %s with the row switch without fetching a full key',
+  async (status, nextStatus) => {
     const { post, put } = await renderKeysPage(status)
     const user = userEvent.setup()
-    const button = screen.getByRole('button', { name: action })
-    act(() => button.focus())
-    await user.keyboard('{Enter}')
+    const switchEl = screen.getByRole('switch')
+    await user.click(switchEl)
     await waitFor(() =>
       expect(put).toHaveBeenCalledWith('/api/token/?status_only=true', {
         id: 7,
         status: nextStatus,
       })
     )
-    await screen.findByText(nextLabel)
+    await waitFor(() =>
+      expect(screen.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        String(nextStatus === 1)
+      )
+    )
     expect(post).not.toHaveBeenCalled()
   }
 )
 
-it('keeps expired status when the server refuses reactivation', async () => {
-  const { put, post } = await renderKeysPage(3)
-  put.mockResolvedValue({ data: { success: false, message: 'Token expired' } })
-  await userEvent.click(screen.getByRole('button', { name: 'Enable' }))
-  await screen.findByText('Token expired')
+it('renders terminal statuses as badges instead of switches', async () => {
+  await renderKeysPage(3)
   expect(screen.getByText('Expired')).toBeInTheDocument()
-  expect(screen.queryByText('Enabled')).not.toBeInTheDocument()
-  expect(post).not.toHaveBeenCalled()
+  expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Toggle status' })
+  ).not.toBeInTheDocument()
 })
 
 it.each([true, false])(

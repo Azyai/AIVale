@@ -7114,6 +7114,23 @@
     "重命名团队": "Rename team",
     "重磅升级": "Major upgrade",
     "，": ", ",
-    "，and ": " et "
+    "，and ": " et ",
+    "集中管理您的访问凭证，用于模型调用身份鉴权": "Gérez vos identifiants d accès pour authentifier les appels de modèles",
+    "订阅 Token Plan": "S abonner à Token Plan",
+    "查看全部": "Tout voir",
+    "{{days}} 天后到期": "Expire dans {{days}} jours",
+    "到期时间": "Expire le",
+    "订阅套餐": "Forfait d abonnement",
+    "Token Plan 是订阅制计费服务，订阅后享更优单价与专属额度池，适合稳定高频调用。": "Token Plan est un service de facturation par abonnement : meilleurs prix unitaires et pool de quotas dédié pour un usage stable et intensif.",
+    "按量付费": "Paiement à l usage",
+    "展示按量付费模式的访问凭证，用于模型调用身份鉴权": "Identifiants d accès pour les appels de modèles en paiement à l usage",
+    "按量付费 Base URL": "URL de base (paiement à l usage)",
+    "OpenAI 兼容": "Compatible OpenAI",
+    "搜索 API Key 名称": "Rechercher un nom de clé API",
+    "创建 API Key": "Créer une clé API",
+    "描述": "Description",
+    "查看费用": "Voir les dépenses",
+    "第 {{page}} / {{totalPages}} 页": "Page {{page}} sur {{totalPages}}",
+    "Toggle status": "Basculer l état"
   }
 }
