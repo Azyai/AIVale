@@ -39,9 +39,12 @@ export function useEChart() {
     const chart = echarts.init(container)
     chartRef.current = chart
     const pending = pendingOptionRef.current
-    if (pending) chart.setOption(pending, { notMerge: true })
+    if (pending) chart.setOption(pending, { replaceMerge: ['series'] })
     const observer = new ResizeObserver(() => {
-      chart.resize()
+      // Dispose can race this callback (dialog close / option swap removes
+      // the container after the observer fired); resize() on a disposed
+      // chart throws inside the animation frame loop.
+      if (!chart.isDisposed()) chart.resize()
     })
     observer.observe(container)
     return () => {
@@ -53,7 +56,7 @@ export function useEChart() {
 
   const setOption = useCallback((option: EChartsOption) => {
     pendingOptionRef.current = option
-    chartRef.current?.setOption(option, { notMerge: true })
+    chartRef.current?.setOption(option, { replaceMerge: ['series'] })
   }, [])
 
   return { setContainer, setOption, chartRef }

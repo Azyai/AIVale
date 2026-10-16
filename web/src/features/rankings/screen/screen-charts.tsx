@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
@@ -95,6 +95,13 @@ function NoData() {
   return <div className='bsc-chart-placeholder'>{t('No data')}</div>
 }
 
+/** Stable serialization of rank rows for effect deps: `[{name, tokens}]`
+ * keyed by content, so parent re-renders (the 1s clock) that recreate the
+ * array do not replay setOption and interrupt running chart animations. */
+function serializeRows(rows: Array<{ name: string; tokens: number }>) {
+  return JSON.stringify(rows)
+}
+
 /** Left / right columns: Top-N horizontal ranking bars (skill recipe 2). */
 function RankBarChart(props: {
   loading: boolean
@@ -104,6 +111,14 @@ function RankBarChart(props: {
 }) {
   const { setContainer, setOption } = useEChart()
   const empty = props.rows.length === 0
+  // Rows arrive as a fresh array every parent render; memoize on the
+  // serialized content so the option effect below only re-runs when the
+  // underlying data actually changed.
+  const rowsKey = serializeRows(props.rows)
+  const rows = useMemo(
+    () => JSON.parse(rowsKey) as Array<{ name: string; tokens: number }>,
+    [rowsKey]
+  )
 
   useEffect(() => {
     if (empty) return
@@ -127,7 +142,7 @@ function RankBarChart(props: {
       yAxis: {
         type: 'category',
         inverse: true,
-        data: props.rows.map((r) => r.name),
+        data: rows.map((r) => r.name),
         axisLine: axisLine(props.theme),
         axisTick: { show: false },
         axisLabel: {
@@ -154,12 +169,12 @@ function RankBarChart(props: {
             borderRadius: 5,
             color: horizontalGradient(props.barColor, 1, 0.06),
           },
-          data: props.rows.map((r) => r.tokens),
+          data: rows.map((r) => r.tokens),
         },
       ],
     }
     setOption(option)
-  }, [empty, props.rows, props.theme, props.barColor, setOption])
+  }, [empty, rows, props.theme, props.barColor, setOption])
 
   if (!props.loading && empty) return <NoData />
   return <div ref={setContainer} className='bsc-chart' />
@@ -210,11 +225,24 @@ export function VendorShareChart(props: {
   const { t } = useTranslation()
   const { setContainer, setOption, chartRef } = useEChart()
   const empty = props.rows.length === 0
+  // Content-keyed rows (fresh array identities from per-second parent
+  // re-renders must not replay setOption; see RankBarChart). Normalized to
+  // {name, tokens} so the parsed shape matches what the effect consumes.
+  const rowsKey = serializeRows(
+    props.rows.map((v) => ({ name: v.vendor, tokens: v.total_tokens }))
+  )
+  const rows = useMemo(
+    () =>
+      (JSON.parse(rowsKey) as Array<{ name: string; tokens: number }>).map(
+        (r) => ({ vendor: r.name, total_tokens: r.tokens })
+      ),
+    [rowsKey]
+  )
 
   useEffect(() => {
     if (empty) return
-    const top = props.rows.slice(0, 5)
-    const rest = props.rows.slice(5)
+    const top = rows.slice(0, 5)
+    const rest = rows.slice(5)
     const data: Array<{ name: string; value: number }> = top.map((v) => ({
       name: v.vendor,
       value: v.total_tokens,
@@ -258,14 +286,14 @@ export function VendorShareChart(props: {
       ],
     }
     setOption(option)
-  }, [empty, props.rows, props.theme, setOption, t])
+  }, [empty, rows, props.theme, setOption, t])
 
   // Rotate the rose highlight; skipped for reduced-motion users.
   useEffect(() => {
-    if (empty || props.rows.length < 2) return
+    if (empty || rows.length < 2) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     let cur = 0
-    const count = Math.min(props.rows.length, 6)
+    const count = Math.min(rows.length, 6)
     const id = window.setInterval(() => {
       const chart = chartRef.current
       if (!chart) return
@@ -278,7 +306,7 @@ export function VendorShareChart(props: {
       cur = (cur + 1) % count
     }, 2400)
     return () => window.clearInterval(id)
-  }, [empty, props.rows.length, chartRef])
+  }, [empty, rows.length, chartRef])
 
   if (!props.loading && empty) return <NoData />
   return <div ref={setContainer} className='bsc-chart' />
@@ -293,9 +321,31 @@ export function TokenTrendChart(props: {
   const { t } = useTranslation()
   const { setContainer, setOption } = useEChart()
   const empty = !props.history || props.history.points.length === 0
+  // Content-keyed history (points + models): a new object identity from a
+  // parent re-render with identical content must not replay setOption.
+  const historyKey = props.history
+    ? JSON.stringify([
+        props.history.points.map((p) => [p.label, p.model, p.tokens]),
+        props.history.models.map((m) => m.name),
+      ])
+    : ''
+  const history = useMemo(() => {
+    if (!historyKey) return undefined
+    const parsed = JSON.parse(historyKey) as [
+      Array<[string, string, number]>,
+      string[]
+    ]
+    return {
+      points: parsed[0].map(([label, model, tokens]) => ({
+        label,
+        model,
+        tokens,
+      })),
+      models: parsed[1].map((name) => ({ name })),
+    }
+  }, [historyKey])
 
   useEffect(() => {
-    const history = props.history
     if (empty || !history) return
 
     const labels: string[] = []
@@ -413,7 +463,7 @@ export function TokenTrendChart(props: {
       series,
     }
     setOption(option)
-  }, [empty, props.history, props.theme, setOption, t])
+  }, [empty, history, props.theme, setOption, t])
 
   if (!props.loading && empty) return <NoData />
   return <div ref={setContainer} className='bsc-chart' />
