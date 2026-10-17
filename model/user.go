@@ -107,6 +107,10 @@ type User struct {
 	LinuxDOId            string                     `json:"linux_do_id" gorm:"column:linux_do_id;index"`
 	Setting              string                     `json:"setting" gorm:"type:text;column:setting"`
 	Remark               string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
+	// Geographic attribution maintained by admins, used to aggregate usage on
+	// the public rankings map. Names must match the shipped GeoJSON labels.
+	Province             string                     `json:"province" gorm:"type:varchar(64);default:''" validate:"max=64"`
+	City                 string                     `json:"city" gorm:"type:varchar(64);default:''" validate:"max=64"`
 	StripeCustomer       string                     `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	CreatedAt            int64                      `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt          int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
@@ -882,6 +886,8 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 		"display_name": newUser.DisplayName,
 		"group":        newUser.Group,
 		"remark":       newUser.Remark,
+		"province":     newUser.Province,
+		"city":         newUser.City,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

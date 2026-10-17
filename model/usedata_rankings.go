@@ -71,10 +71,16 @@ func GetRankingQuotaBuckets(startTime int64, endTime int64, bucketSize int64) ([
 }
 
 func rankingBucketExpr(bucketSize int64) string {
+	return rankingBucketExprFor("created_at", bucketSize)
+}
+
+// rankingBucketExprFor qualifies the timestamp column so the expression stays
+// unambiguous once quota_data is joined against another table.
+func rankingBucketExprFor(column string, bucketSize int64) string {
 	if common.UsingMainDatabase(common.DatabaseTypeMySQL) {
-		return fmt.Sprintf("FLOOR(created_at / %d) * %d", bucketSize, bucketSize)
+		return fmt.Sprintf("FLOOR(%s / %d) * %d", column, bucketSize, bucketSize)
 	}
-	return fmt.Sprintf("(created_at / %d) * %d", bucketSize, bucketSize)
+	return fmt.Sprintf("(%s / %d) * %d", column, bucketSize, bucketSize)
 }
 
 func applyRankingQuotaTimeRange(query *gorm.DB, startTime int64, endTime int64) *gorm.DB {

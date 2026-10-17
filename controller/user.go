@@ -658,6 +658,11 @@ func UpdateUser(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
+	updatedUser.Province = strings.TrimSpace(updatedUser.Province)
+	updatedUser.City = strings.TrimSpace(updatedUser.City)
+	if updatedUser.Province == "" {
+		updatedUser.City = ""
+	}
 	if err := common.Validate.StructExcept(&updatedUser, "Password"); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgUserInputInvalid, map[string]any{"Error": err.Error()})
 		return
