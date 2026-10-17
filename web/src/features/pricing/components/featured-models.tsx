@@ -137,9 +137,11 @@ function FeaturedCard({
       type='button'
       onClick={onClick}
       title={model.model_name}
-      className='border-border/60 bg-card/80 hover:border-border hover:shadow-md group snap-start flex w-[290px] shrink-0 cursor-pointer flex-col gap-2 rounded-2xl border p-4 text-left shadow-xs backdrop-blur-sm transition-all duration-300 sm:w-[380px] xl:w-[420px]'
+      className='border-border/60 bg-card/80 hover:border-border hover:shadow-md group flex w-full cursor-pointer flex-col gap-2 rounded-2xl border p-4 text-left shadow-xs backdrop-blur-sm transition-all duration-300'
     >
-      <div className='flex min-w-0 items-center gap-3'>
+      {/* The row wraps the price under the name once the card gets too narrow,
+          which is what keeps four across from overflowing at small widths. */}
+      <div className='flex min-w-0 flex-wrap items-center gap-3'>
         <div
           aria-hidden
           className='bg-muted/50 flex size-9 shrink-0 items-center justify-center rounded-lg'
@@ -163,7 +165,7 @@ function FeaturedCard({
             </p>
           )}
         </div>
-        <div className='shrink-0 text-right'>
+        <div className='ml-auto shrink-0 text-right'>
           {priceDisplay.free ? (
             <span className='rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400'>
               {t('Free to use')}
@@ -244,28 +246,21 @@ export const FeaturedModels = memo(function FeaturedModels(
         </span>
       </div>
 
-      <div
-        className='overflow-x-auto pb-1'
-        style={{
-          maskImage:
-            'linear-gradient(to right, black 0%, black 96%, transparent 100%)',
-          WebkitMaskImage:
-            'linear-gradient(to right, black 0%, black 96%, transparent 100%)',
-        }}
-      >
-        <div className='no-scrollbar flex w-max snap-x gap-6'>
-          {featured.map((model) => (
-            <FeaturedCard
-              key={model.id ?? model.model_name}
-              model={model}
-              tokenUnit={tokenUnit}
-              showRechargePrice={showRechargePrice}
-              priceRate={priceRate}
-              usdExchangeRate={usdExchangeRate}
-              onClick={() => props.onModelClick(model.model_name)}
-            />
-          ))}
-        </div>
+      {/* Fluid four-across grid: the cards share the strip width instead of
+          holding fixed pixel widths, so MAX_FEATURED_MODELS always fit and the
+          row never needs a horizontal scrollbar. */}
+      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+        {featured.map((model) => (
+          <FeaturedCard
+            key={model.id ?? model.model_name}
+            model={model}
+            tokenUnit={tokenUnit}
+            showRechargePrice={showRechargePrice}
+            priceRate={priceRate}
+            usdExchangeRate={usdExchangeRate}
+            onClick={() => props.onModelClick(model.model_name)}
+          />
+        ))}
       </div>
     </section>
   )
