@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Link } from '@tanstack/react-router'
 
-import { HeroBrandSun, HeroOrbit, HeroParticles } from './hero-visuals'
+import { HeroBrandSystem, HeroParticles } from './hero-visuals'
 
 /**
  * Deep-space hero in the keynote (index3) bloodline: starfield canvas,
@@ -32,10 +32,9 @@ export function HeroHeading() {
 
   return (
     <section className='relative flex min-h-[92vh] flex-col items-center justify-center overflow-hidden px-[5%] pt-24 pb-16 text-center md:pt-28'>
-      {/* Brand sun (bottom) → starfield canvas → orbiting model chips */}
-      <HeroBrandSun />
+      {/* Brand sun + orbiting model chips (below), then the starfield canvas */}
+      <HeroBrandSystem />
       <HeroParticles />
-      <HeroOrbit />
 
       <div className='relative z-10 mx-auto w-full'>
         <p className='text-primary mb-9 text-sm font-semibold tracking-[0.5em]'>

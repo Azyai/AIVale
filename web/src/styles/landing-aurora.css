@@ -57,19 +57,16 @@ For commercial licensing, please contact support@quantumnous.com
   box-shadow: 0 12px 34px rgba(92, 110, 255, 0.6);
 }
 
-/* ── Hero: orbiting model chips ── */
-.hero-orbit {
-  --orbit-r: min(370px, 38vmin);
-}
+/* ── Hero: corona ring + orbiting model chips ──
+ * Ring and swarm hang off .hero-system (the sun anchor) and are centred with
+ * negative margins instead of translate(), because a spin animation overwrites
+ * transform and would slowly walk the ring away from the centre. The chip
+ * transforms are written per frame by HeroBrandSystem. */
 .hero-orbit-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(var(--orbit-r) * 1.58);
-  height: calc(var(--orbit-r) * 1.58);
-  transform: translate(-50%, -50%);
-  border: 1px dashed rgba(148, 163, 216, 0.22);
-  border-radius: 50%;
+  width: calc(var(--orbit-r) * 1.5);
+  height: calc(var(--orbit-r) * 1.5);
+  margin: calc(var(--orbit-r) * -0.75);
+  border: 1px dashed rgba(148, 163, 216, 0.2);
   animation: hero-spin 150s linear infinite reverse;
 }
 .hero-orbit-ring::before {
@@ -79,16 +76,16 @@ For commercial licensing, please contact support@quantumnous.com
   border-radius: 50%;
   border: 1px solid rgba(148, 163, 216, 0.08);
 }
-.hero-orbit-spin {
-  position: absolute;
+.hero-swarm {
   inset: 0;
-  animation: hero-spin 95s linear infinite;
 }
-.hero-orbit-slot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: rotate(var(--a)) translateY(calc(-1 * var(--orbit-r)));
+/* Two classes so this beats `.hero-chip`'s static opacity below. */
+.hero-swarm .hero-swarm-chip {
+  top: 0;
+  left: 0;
+  /* Invisible until the swarm loop paints the first frame. */
+  opacity: 0;
+  will-change: transform, opacity;
 }
 .hero-chip {
   display: block;
@@ -103,81 +100,103 @@ For commercial licensing, please contact support@quantumnous.com
   padding: 8px 16px;
   backdrop-filter: blur(6px);
   opacity: 0.8;
-  animation: hero-counterspin 95s linear infinite;
-  transform: rotate(calc(-1 * var(--a)));
 }
 @keyframes hero-spin {
   to {
     transform: rotate(360deg);
   }
 }
-@keyframes hero-counterspin {
-  from {
-    transform: rotate(calc(-1 * var(--a)));
-  }
-  to {
-    transform: rotate(calc(-1 * var(--a) - 360deg));
-  }
-}
 
-/* ── Hero: the brand orb as the sun the model chips orbit ──
- * Placed at the exact orbit center and treated as deep-space glow rather than
- * a logo sticker: desaturated, blurred, dimmed, and wrapped in a violet/cyan
- * halo that bleeds into the starfield. Sized off the same vmin scale as
- * --orbit-r so the sun's edge stays well inside the dashed ring, which in turn
- * stays inside the chip orbit — sun → ring → planets. */
+/* ── Hero: the brand orb as the sun of the chip system ──
+ * Anchored low-left of the headline rather than dead centre, and kept crisp
+ * instead of washed out: a hair of blur, most of the brand saturation, dim
+ * opacity, so it reads as a star behind the copy rather than a pasted logo —
+ * the halo is what blends it into the starfield. Sun, corona ring and swarm all
+ * hang off .hero-system (one anchor point) so the planets really do circle the
+ * logo. Negative margins centre them, which leaves transform free for the spin
+ * and breathe animations. */
 .hero-sun-layer {
-  --sun-d: min(430px, 44vmin);
+  --sun-d: min(420px, 42vmin);
+  --sun-x: 36%;
+  --sun-y: 62%;
+  --orbit-r: min(360px, 36vmin);
+}
+.hero-system {
+  position: absolute;
+  top: var(--sun-y);
+  left: var(--sun-x);
+  width: 0;
+  height: 0;
 }
 .hero-sun,
-.hero-sun-halo {
+.hero-sun-halo,
+.hero-orbit-ring,
+.hero-swarm,
+.hero-swarm-chip {
   position: absolute;
-  top: 50%;
-  left: 50%;
+}
+.hero-sun,
+.hero-sun-halo,
+.hero-orbit-ring {
+  top: 0;
+  left: 0;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
 }
 .hero-sun {
   width: var(--sun-d);
   height: var(--sun-d);
-  opacity: 0.2;
-  box-shadow: 0 0 120px 30px rgba(124, 92, 255, 0.22);
+  margin: calc(var(--sun-d) / -2);
+  opacity: 0.34;
+  box-shadow: 0 0 90px 18px rgba(124, 92, 255, 0.28);
   animation: hero-sun-breathe 14s ease-in-out infinite alternate;
 }
 /* BrandOrb renders a <span>; it needs to be a block for size-full to apply
  * (in the header it is blockified by the flex parent, here it is not). */
 .hero-sun-core {
   display: block;
-  filter: saturate(0.58) blur(9px);
+  filter: saturate(0.9) blur(1.5px);
   animation: hero-spin 170s linear infinite;
 }
 .hero-sun-halo {
-  width: calc(var(--sun-d) * 2.6);
-  height: calc(var(--sun-d) * 2.6);
+  width: calc(var(--sun-d) * 2.1);
+  height: calc(var(--sun-d) * 2.1);
+  margin: calc(var(--sun-d) * -1.05);
   background: radial-gradient(
     circle,
-    rgba(124, 92, 255, 0.2) 0%,
-    rgba(92, 140, 255, 0.12) 34%,
-    rgba(34, 211, 238, 0.06) 56%,
-    transparent 72%
+    rgba(124, 92, 255, 0.18) 0%,
+    rgba(92, 140, 255, 0.1) 38%,
+    rgba(34, 211, 238, 0.05) 58%,
+    transparent 74%
   );
-  filter: blur(26px);
+  filter: blur(18px);
   animation: hero-sun-breathe 20s ease-in-out infinite alternate-reverse;
 }
 @keyframes hero-sun-breathe {
   from {
-    transform: translate(-50%, -50%) scale(0.965);
+    transform: scale(0.97);
   }
   to {
-    transform: translate(-50%, -50%) scale(1.035);
+    transform: scale(1.03);
   }
 }
 /* Light theme: keep the sun a whisper so headline contrast holds on white. */
 :root:not(.dark) .hero-sun {
-  opacity: 0.14;
+  opacity: 0.2;
 }
 :root:not(.dark) .hero-sun-halo {
-  filter: blur(30px);
+  filter: blur(24px);
+}
+/* Corona ring and planet swarm are desktop-only — the same gate the JS uses,
+ * so the animation loop never runs against display:none boxes. */
+.hero-orbit-ring,
+.hero-swarm {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .hero-orbit-ring,
+  .hero-swarm {
+    display: block;
+  }
 }
 
 /* ── 破题:gradient-bordered answer panel ── */
@@ -403,7 +422,6 @@ For commercial licensing, please contact support@quantumnous.com
 @media (prefers-reduced-motion: reduce) {
   .hero-grad-text,
   .hero-orbit-ring,
-  .hero-orbit-spin,
   .hero-chip,
   .hero-sun,
   .hero-sun-core,
