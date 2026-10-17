@@ -16,12 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
+
+import type { SignatureEntry } from './signatures'
 
 /* Province landmarks as line-art glyphs assembled from plain SVG primitives
  * (strokes + circles), one per province-level region. Keys must match the
  * GeoJSON / catalog labels. Names are proper nouns, so they are not run
- * through i18n; the rail's accessible label is passed in by the caller. */
+ * through i18n. */
 type Glyph = { d: string; circles?: [number, number, number][] }
 
 const GLYPHS: Record<string, Glyph> = {
@@ -190,32 +192,56 @@ export function LandmarkGlyph(props: { name: string; className?: string }) {
 }
 
 /**
- * Landmark rail floating over the top of the map: one assembled-primitive
- * glyph per province-level region. Clicking a glyph drills into (or switches
- * to) that province; the focused one is marked with aria-current.
+ * Dynamic-island capsule floating over the map. Collapsed it is a slim hint
+ * pill; once the map is zoomed far enough that place names are readable (or a
+ * province has been opened up), it expands and cycles the signature landmark
+ * and dish of the regions in view — the reveal is driven by the map's own zoom,
+ * so the island only talks about places you can actually see.
  */
-export function LandmarkRail(props: {
-  names: string[]
-  active: string | null
-  onSelect: (name: string) => void
-  ariaLabel: string
+export function LandmarkIsland(props: {
+  entries: SignatureEntry[]
+  expanded: boolean
+  hint: string
 }) {
-  if (props.names.length === 0) return null
+  const [index, setIndex] = useState(0)
+  const count = props.entries.length
+
+  useEffect(() => {
+    if (count < 2 || !props.expanded) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const id = window.setInterval(() => {
+      setIndex((i) => (i + 1) % count)
+    }, 4200)
+    return () => window.clearInterval(id)
+  }, [count, props.expanded])
+
+  const current = count > 0 ? props.entries[index % count] : undefined
+
   return (
-    <div className='bsc-landmark-rail' role='group' aria-label={props.ariaLabel}>
-      {props.names.map((name) => (
-        <button
-          key={name}
-          type='button'
-          className={cn('bsc-landmark-chip')}
-          title={name}
-          aria-label={name}
-          aria-current={props.active === name ? 'true' : undefined}
-          onClick={() => props.onSelect(name)}
-        >
-          <LandmarkGlyph name={name} />
-        </button>
-      ))}
+    <div
+      className='bsc-island'
+      data-expanded={props.expanded ? 'true' : 'false'}
+      title={
+        current
+          ? `${current.name} · ${current.landmark} · ${current.food}`
+          : props.hint
+      }
+    >
+      <span className='bsc-island-glyph'>
+        {current ? <LandmarkGlyph name={current.glyph} /> : null}
+      </span>
+      <span className='bsc-island-collapsed'>{props.hint}</span>
+      {current ? (
+        // Keyed so each new region replays the slide-in, the way an island
+        // morphs rather than swaps its content.
+        <span key={current.name} className='bsc-island-expanded'>
+          <b className='bsc-island-name'>{current.name}</b>
+          <span className='bsc-island-tags'>
+            <span className='bsc-island-tag'>{current.landmark}</span>
+            <span className='bsc-island-tag'>{current.food}</span>
+          </span>
+        </span>
+      ) : null}
     </div>
   )
 }

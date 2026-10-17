@@ -554,15 +554,61 @@ export function ConcentrationGauges(props: {
  * ECharts (see use-region-geo); it swaps between the national map and a
  * province's city map, so the container is keyed to force a fresh chart.
  */
+export const MAP_LABEL_ZOOM = 2.2
+
+/** Zoom a freshly mounted map starts at; re-reported whenever the geometry
+ * swaps so the parent never keeps the previous scope's zoom level. */
+const MAP_INITIAL_ZOOM = 1.14
+
 export function RegionMapChart(props: {
   theme: ScreenChartTheme
   mapKey?: string
   rows: RegionStat[]
   showLabels: boolean
   onSelect?: (name: string) => void
+  onZoom?: (zoom: number) => void
   fallback?: ReactNode
 }) {
-  const { setContainer, setOption } = useEChart({ onClick: props.onSelect })
+  const zoomRef = useRef(MAP_INITIAL_ZOOM)
+  const revealedRef = useRef(false)
+  const onZoomRef = useRef(props.onZoom)
+  onZoomRef.current = props.onZoom
+  const { setContainer, setOption, chartRef } = useEChart({
+    onClick: props.onSelect,
+    onZoom: (zoom) => {
+      zoomRef.current = zoom
+      // Roaming only transforms the map group, so label formatters do not run
+      // again on their own. When the reveal threshold is crossed, merge the
+      // label config back in — a merge (no replaceMerge) keeps the roam state.
+      const revealed = zoom >= MAP_LABEL_ZOOM
+      if (revealed !== revealedRef.current) {
+        revealedRef.current = revealed
+        const patch: EChartsOption = {
+          series: [
+            {
+              type: 'map',
+              map: props.mapKey ?? '',
+              label: {
+                formatter: (p) =>
+                  p.value || zoomRef.current >= MAP_LABEL_ZOOM
+                    ? String(p.name)
+                    : '',
+              },
+            },
+          ],
+        }
+        chartRef.current?.setOption(patch)
+      }
+      props.onZoom?.(zoom)
+    },
+  })
+
+  useEffect(() => {
+    zoomRef.current = MAP_INITIAL_ZOOM
+    revealedRef.current = false
+    onZoomRef.current?.(MAP_INITIAL_ZOOM)
+  }, [props.mapKey])
+
   // Content-keyed: the 1s clock re-renders the parent with fresh array
   // identities, which must not replay setOption (see RankBarChart).
   const rowsKey = JSON.stringify(
@@ -596,10 +642,10 @@ export function RegionMapChart(props: {
         show: rows.length > 0,
         min: 0,
         max,
-        left: 10,
-        bottom: 14,
-        itemWidth: 10,
-        itemHeight: 88,
+        left: 12,
+        bottom: 16,
+        itemWidth: 8,
+        itemHeight: 76,
         calculable: true,
         precision: 0,
         text: [formatTokens(max), '0'],
@@ -607,8 +653,8 @@ export function RegionMapChart(props: {
         formatter: (value) => formatTokens(Number(value)),
         inRange: {
           color: [
-            withAlpha(props.theme.accent, 0.16),
-            withAlpha(props.theme.accent, 0.52),
+            withAlpha(props.theme.accent, 0.18),
+            withAlpha(props.theme.accent, 0.55),
             props.theme.series[1],
           ],
         },
@@ -620,31 +666,44 @@ export function RegionMapChart(props: {
           map: mapKey,
           // Wheel zoom + drag pan; zooming out to the floor restores the fit.
           roam: true,
-          scaleLimit: { min: 1, max: 9 },
-          zoom: 1.12,
-          layoutCenter: ['50%', '56%'],
-          layoutSize: '108%',
+          scaleLimit: { min: 1, max: 14 },
+          zoom: MAP_INITIAL_ZOOM,
+          layoutCenter: ['50%', '52%'],
+          layoutSize: '116%',
           label: {
             show: true,
             color: props.theme.textSub,
             fontSize: props.showLabels ? 10 : 9,
-            formatter: (p) => (p.value ? String(p.name) : ''),
+            // Only regions with usage are named at the default zoom; past
+            // MAP_LABEL_ZOOM every place name shows, which is the cue the
+            // landmark island waits for. Read through a ref so a zoom change
+            // never replays setOption (that would reset the roam).
+            textShadowColor: withAlpha(props.theme.background, 0.85),
+            textShadowBlur: 4,
+            formatter: (p) =>
+              p.value || zoomRef.current >= MAP_LABEL_ZOOM ? String(p.name) : '',
           },
           itemStyle: {
-            areaColor: withAlpha(props.theme.textSub, 0.09),
-            borderColor: withAlpha(props.theme.accent, 0.5),
+            areaColor: verticalGradient(props.theme.textSub, 0.16, 0.05),
+            borderColor: withAlpha(props.theme.accent, 0.55),
             borderWidth: 1,
-            shadowColor: withAlpha(props.theme.accent, 0.28),
-            shadowBlur: 20,
+            shadowColor: withAlpha(props.theme.accent, 0.3),
+            shadowBlur: 16,
+            shadowOffsetY: 3,
           },
           emphasis: {
-            label: { show: true, color: props.theme.textTitle, fontSize: 11 },
+            label: {
+              show: true,
+              color: props.theme.textTitle,
+              fontSize: 11,
+              fontWeight: 600,
+            },
             itemStyle: {
-              areaColor: withAlpha(props.theme.accent, 0.68),
+              areaColor: withAlpha(props.theme.accent, 0.72),
               borderColor: props.theme.accent,
-              borderWidth: 1.4,
-              shadowBlur: 26,
-              shadowColor: withAlpha(props.theme.accent, 0.45),
+              borderWidth: 1.6,
+              shadowBlur: 30,
+              shadowColor: withAlpha(props.theme.accent, 0.5),
             },
           },
           select: { disabled: true },

@@ -82,7 +82,7 @@ For commercial licensing, please contact support@quantumnous.com
   flex-direction: column;
 }
 
-/* ===== Body grid: left · map · right, token trend along the bottom ===== */
+/* ===== Body grid: three columns — leaderboards · map · trend & share ===== */
 .bsc-body {
   flex: 1;
   min-height: 0;
@@ -92,10 +92,8 @@ For commercial licensing, please contact support@quantumnous.com
   grid-template-columns:
     minmax(0, 20fr) minmax(0, 60fr)
     minmax(0, 20fr);
-  grid-template-rows: minmax(0, 1fr) clamp(118px, 15vh, 164px);
-  grid-template-areas:
-    'left center right'
-    'bottom bottom bottom';
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'left center right';
 }
 .bsc-area-left {
   grid-area: left;
@@ -105,9 +103,6 @@ For commercial licensing, please contact support@quantumnous.com
 }
 .bsc-area-right {
   grid-area: right;
-}
-.bsc-area-bottom {
-  grid-area: bottom;
 }
 .bsc-col {
   display: flex;
@@ -120,10 +115,11 @@ For commercial licensing, please contact support@quantumnous.com
   flex: 1 1 0;
   min-height: 0;
 }
-/* The map is the centerpiece, but the region panel below it still needs room
- * for its three calendar totals plus a readable mini trend. */
-.bsc-col > .bsc-panel-map {
-  flex: 2.6 1 0;
+/* Regional Usage is three numbers now (its trend line lives in the enlarged
+ * dialog), so it only takes its content height and the map — the centerpiece —
+ * gets every remaining pixel of the column. */
+.bsc-col > .bsc-panel-region {
+  flex: 0 0 auto;
 }
 
 /* ===== Panels — rounded cockpit cards ===== */
@@ -338,57 +334,124 @@ For commercial licensing, please contact support@quantumnous.com
   white-space: nowrap;
 }
 
-/* Landmark rail: assembled-primitive glyphs floating over the map top. */
-.bsc-landmark-rail {
+/* Landmark island: a capsule floating over the map top. Collapsed it is a slim
+ * hint; once the map is zoomed far enough to read place names (or a province is
+ * opened up) it morphs wider and cycles that region's landmark and dish. */
+.bsc-island {
   position: absolute;
-  top: 2px;
-  left: 6px;
-  right: 6px;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 2;
   display: flex;
-  gap: 3px;
-  padding: 3px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
-  background: color-mix(in srgb, var(--card) 78%, transparent);
+  align-items: center;
+  gap: 8px;
+  /* max-content so the centred capsule gets its natural width instead of being
+   * shrink-to-fitted into the half of the panel right of `left: 50%`. */
+  width: max-content;
+  max-width: calc(100% - 12px);
+  padding: 4px 12px 4px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 22px rgba(4, 8, 24, 0.28);
+  transition:
+    padding 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    border-radius 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 0.5s,
+    background-color 0.5s;
 }
-.bsc-landmark-rail::-webkit-scrollbar {
-  display: none;
+.bsc-island[data-expanded='true'] {
+  padding: 7px 16px 7px 9px;
+  border-radius: 18px;
+  border-color: color-mix(in srgb, var(--primary) 32%, transparent);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
 }
-.bsc-landmark-chip {
-  flex: none;
+.bsc-island-glyph {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--bsc-text-sub);
-  cursor: pointer;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--bsc-accent);
   transition:
-    color 0.15s,
-    background-color 0.15s,
-    border-color 0.15s;
+    width 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    height 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
-.bsc-landmark-chip svg {
+.bsc-island-glyph svg {
   width: 18px;
   height: 18px;
 }
-.bsc-landmark-chip:hover {
-  color: var(--bsc-accent);
+.bsc-island[data-expanded='true'] .bsc-island-glyph {
+  width: 26px;
+  height: 26px;
+}
+.bsc-island[data-expanded='true'] .bsc-island-glyph svg {
+  width: 23px;
+  height: 23px;
+}
+.bsc-island-collapsed {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--bsc-text-sub);
+}
+.bsc-island[data-expanded='true'] .bsc-island-collapsed {
+  display: none;
+}
+.bsc-island-expanded {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.bsc-island[data-expanded='true'] .bsc-island-expanded {
+  display: flex;
+  animation: bsc-island-in 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.bsc-island-name {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--bsc-text-title);
+  white-space: nowrap;
+}
+.bsc-island-tags {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.bsc-island-tag {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--bsc-text-sub);
   background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
 }
-.bsc-landmark-chip:focus-visible {
-  outline: 2px solid var(--bsc-accent);
-  outline-offset: 1px;
+@keyframes bsc-island-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.bsc-landmark-chip[aria-current='true'] {
-  color: var(--bsc-accent);
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+@media (prefers-reduced-motion: reduce) {
+  .bsc-island,
+  .bsc-island-glyph,
+  .bsc-island[data-expanded='true'] .bsc-island-expanded {
+    animation: none;
+    transition: none;
+  }
 }
 .bsc-map-hint {
   position: absolute;
@@ -414,6 +477,10 @@ For commercial licensing, please contact support@quantumnous.com
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 8px;
+}
+/* Nothing renders below the totals in the cockpit panel anymore. */
+.bsc-panel-region .bsc-region-totals {
+  margin-bottom: 0;
 }
 .bsc-region-total {
   display: flex;
@@ -646,8 +713,7 @@ For commercial licensing, please contact support@quantumnous.com
     grid-template-areas:
       'center'
       'left'
-      'right'
-      'bottom';
+      'right';
   }
   .bsc-col > .bsc-panel {
     flex: none;
@@ -657,8 +723,8 @@ For commercial licensing, please contact support@quantumnous.com
     flex: none;
     min-height: 460px;
   }
-  .bsc-area-bottom {
-    min-height: 240px;
+  .bsc-col > .bsc-panel-region {
+    min-height: 0;
   }
   .bsc-panel-tools {
     flex-wrap: wrap;

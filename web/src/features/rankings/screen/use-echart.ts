@@ -32,6 +32,8 @@ import type { EChartsOption } from 'echarts'
 export function useEChart(handlers?: {
   /** Fires with the clicked datum's name (map regions, pie slices, bars). */
   onClick?: (name: string) => void
+  /** Fires with the absolute zoom of a map series after a wheel / pinch roam. */
+  onZoom?: (zoom: number) => void
 }) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const chartRef = useRef<echarts.ECharts | null>(null)
@@ -48,6 +50,24 @@ export function useEChart(handlers?: {
     chart.on('click', (params) => {
       const name = (params as { name?: string }).name
       if (name) handlersRef.current?.onClick?.(name)
+    })
+    // The roam payload only carries the gesture's zoom delta, so the absolute
+    // value has to be read back off the option — coalesced to one read per
+    // frame because a wheel spin fires this continuously.
+    let zoomQueued = false
+    chart.on('georoam', () => {
+      if (zoomQueued) return
+      zoomQueued = true
+      requestAnimationFrame(() => {
+        zoomQueued = false
+        if (chart.isDisposed()) return
+        const option = chart.getOption() as {
+          series?: Array<{ zoom?: number }>
+          geo?: Array<{ zoom?: number }>
+        }
+        const zoom = option.series?.[0]?.zoom ?? option.geo?.[0]?.zoom
+        if (typeof zoom === 'number') handlersRef.current?.onZoom?.(zoom)
+      })
     })
     const observer = new ResizeObserver(() => {
       // Dispose can race this callback (dialog close / option swap removes

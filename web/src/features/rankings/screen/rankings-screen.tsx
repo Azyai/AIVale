@@ -16,7 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -46,8 +52,10 @@ import type {
   VendorRanking,
 } from '../types'
 import { CountUpNumber } from './count-up-number'
-import { LandmarkRail } from './landmarks'
+import { LandmarkIsland } from './landmarks'
+import { signatureEntries } from './signatures'
 import {
+  MAP_LABEL_ZOOM,
   ModelRankChart,
   RegionMapChart,
   RegionRankChart,
@@ -79,6 +87,11 @@ const EMPTY_USERS: UserRanking[] = []
 const EMPTY_VENDORS: VendorRanking[] = []
 const EMPTY_REGIONS: RegionStat[] = []
 const EMPTY_POINTS: RegionPoint[] = []
+
+/** Leaderboard depth: five rows keep the three stacked panels readable on the
+ * wall screen, twenty is what the enlarged dialog has room for. */
+const TOP_N = 5
+const TOP_N_ZOOM = 20
 
 /** Panels that can be opened in the enlarged dialog. */
 type ZoomId =
@@ -223,7 +236,7 @@ function zoomView(
         <ModelRankChart
           loading={ctx.fetching}
           theme={ctx.theme}
-          rows={ctx.models.slice(0, 20)}
+          rows={ctx.models.slice(0, TOP_N_ZOOM)}
         />
       ),
     }
@@ -235,7 +248,7 @@ function zoomView(
         <UserRankChart
           loading={ctx.fetching}
           theme={ctx.theme}
-          rows={ctx.users.slice(0, 20)}
+          rows={ctx.users.slice(0, TOP_N_ZOOM)}
         />
       ),
     }
@@ -247,7 +260,7 @@ function zoomView(
         <RegionRankChart
           loading={ctx.fetching}
           theme={ctx.theme}
-          rows={ctx.mapRows}
+          rows={ctx.mapRows.slice(0, TOP_N_ZOOM)}
           onSelect={ctx.onRegionSelect}
         />
       ),
@@ -328,6 +341,7 @@ export function RankingsScreen() {
 
   const [province, setProvince] = useState<string | null>(null)
   const [zoomId, setZoomId] = useState<ZoomId | null>(null)
+  const [mapZoom, setMapZoom] = useState(1)
 
   const rankingsQuery = useScreenRankings(period)
   const regionsQuery = useScreenRegions(period, province ?? '')
@@ -351,9 +365,26 @@ export function RankingsScreen() {
     return match ? match.adcode : undefined
   }, [catalogQuery.data, province])
   const geo = useRegionGeo(provinceAdcode)
-  const catalogNames = useMemo(
-    () => catalogQuery.data?.provinces.map((p) => p.name) ?? [],
-    [catalogQuery.data]
+
+  // Wheel roam fires continuously, so quantize: React bails out when the value
+  // is unchanged and the label / island thresholds only care about tenths.
+  const handleMapZoom = useCallback((zoom: number) => {
+    setMapZoom((prev) => {
+      const next = Math.round(zoom * 10) / 10
+      return next === prev ? prev : next
+    })
+  }, [])
+
+  // Landmark island content: regions with usage first, then the rest of the
+  // map in view, so the capsule always talks about what is on screen.
+  const islandEntries = useMemo(
+    () =>
+      signatureEntries({
+        dataNames: mapRows.map((r) => r.name),
+        scopeNames: geo.names,
+        province,
+      }),
+    [mapRows, geo.names, province]
   )
 
   const handlePeriodChange = (next: RankingPeriod) => {
@@ -366,13 +397,6 @@ export function RankingsScreen() {
       setProvince(name)
     }
   }
-  // Landmark rail: drill into a province, switch while drilled, or click the
-  // focused province's glyph to return to the national map.
-  const handleRailSelect = (name: string) => {
-    if (!catalogNames.includes(name)) return
-    setProvince(province === name ? null : name)
-  }
-
   const periodLabel = t(
     PERIODS.find((p) => p.id === period)?.labelKey ?? 'Week'
   )
@@ -451,7 +475,7 @@ export function RankingsScreen() {
             <ModelRankChart
               loading={fetching}
               theme={theme}
-              rows={models.slice(0, 10)}
+              rows={models.slice(0, TOP_N)}
             />
           </Panel>
           <Panel
@@ -462,8 +486,26 @@ export function RankingsScreen() {
             <UserRankChart
               loading={fetching}
               theme={theme}
-              rows={users.slice(0, 10)}
+              rows={users.slice(0, TOP_N)}
             />
+          </Panel>
+          <Panel
+            title={province ? t('City Rankings') : t('Province Rankings')}
+            extra={<small>{periodLabel}</small>}
+            onZoom={() => setZoomId('regions')}
+          >
+            <RegionRankChart
+              loading={regionsQuery.isFetching}
+              theme={theme}
+              rows={mapRows.slice(0, TOP_N)}
+              onSelect={province ? undefined : handleRegionSelect}
+            />
+            {regions && regions.unassigned.total_tokens > 0 ? (
+              <div className='bsc-panel-foot'>
+                <span>{t('Unassigned Region')}</span>
+                <span>{formatTokens(regions.unassigned.total_tokens)}</span>
+              </div>
+            ) : null}
           </Panel>
         </div>
 
@@ -475,11 +517,10 @@ export function RankingsScreen() {
             onZoom={() => setZoomId('map')}
           >
             <div className='bsc-map-wrap'>
-              <LandmarkRail
-                names={catalogNames}
-                active={province}
-                onSelect={handleRailSelect}
-                ariaLabel={t('Click a province to drill down')}
+              <LandmarkIsland
+                entries={islandEntries}
+                expanded={province != null || mapZoom >= MAP_LABEL_ZOOM}
+                hint={t('Zoom in to reveal local landmarks and flavors')}
               />
               <RegionMapChart
                 theme={theme}
@@ -487,6 +528,7 @@ export function RankingsScreen() {
                 rows={mapRows}
                 showLabels={province != null}
                 onSelect={handleRegionSelect}
+                onZoom={handleMapZoom}
                 fallback={
                   <div className='bsc-chart-placeholder'>
                     {geo.failed
@@ -512,38 +554,28 @@ export function RankingsScreen() {
               </div>
             </div>
           </Panel>
+          {/* Numbers only here — the trend line lives in the enlarged dialog. */}
           <Panel
+            className='bsc-panel-region'
             title={t('Regional Usage')}
             extra={<small>{province ?? t('Nationwide')}</small>}
             onZoom={() => setZoomId('region')}
           >
             <RegionTotals detail={regions?.detail} />
-            <RegionTrendChart
-              loading={regionsQuery.isFetching}
-              theme={theme}
-              points={detailSeries}
-            />
           </Panel>
         </div>
 
         <div className='bsc-col bsc-area-right'>
           <Panel
-            title={province ? t('City Rankings') : t('Province Rankings')}
+            title={t('Token Trend')}
             extra={<small>{periodLabel}</small>}
-            onZoom={() => setZoomId('regions')}
+            onZoom={() => setZoomId('trend')}
           >
-            <RegionRankChart
-              loading={regionsQuery.isFetching}
+            <TokenTrendChart
+              loading={fetching}
               theme={theme}
-              rows={mapRows.slice(0, 10)}
-              onSelect={province ? undefined : handleRegionSelect}
+              history={snapshot?.models_history}
             />
-            {regions && regions.unassigned.total_tokens > 0 ? (
-              <div className='bsc-panel-foot'>
-                <span>{t('Unassigned Region')}</span>
-                <span>{formatTokens(regions.unassigned.total_tokens)}</span>
-              </div>
-            ) : null}
           </Panel>
           <Panel
             title={t('Vendor Share')}
@@ -557,19 +589,6 @@ export function RankingsScreen() {
             />
           </Panel>
         </div>
-
-        <Panel
-          className='bsc-area-bottom'
-          title={t('Token Trend')}
-          extra={<small>{periodLabel}</small>}
-          onZoom={() => setZoomId('trend')}
-        >
-          <TokenTrendChart
-            loading={fetching}
-            theme={theme}
-            history={snapshot?.models_history}
-          />
-        </Panel>
       </>
     )
   }
