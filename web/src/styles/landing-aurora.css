@@ -120,6 +120,66 @@ For commercial licensing, please contact support@quantumnous.com
   }
 }
 
+/* ── Hero: the brand orb as the sun the model chips orbit ──
+ * Placed at the exact orbit center and treated as deep-space glow rather than
+ * a logo sticker: desaturated, blurred, dimmed, and wrapped in a violet/cyan
+ * halo that bleeds into the starfield. Sized off the same vmin scale as
+ * --orbit-r so the sun's edge stays well inside the dashed ring, which in turn
+ * stays inside the chip orbit — sun → ring → planets. */
+.hero-sun-layer {
+  --sun-d: min(430px, 44vmin);
+}
+.hero-sun,
+.hero-sun-halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.hero-sun {
+  width: var(--sun-d);
+  height: var(--sun-d);
+  opacity: 0.2;
+  box-shadow: 0 0 120px 30px rgba(124, 92, 255, 0.22);
+  animation: hero-sun-breathe 14s ease-in-out infinite alternate;
+}
+/* BrandOrb renders a <span>; it needs to be a block for size-full to apply
+ * (in the header it is blockified by the flex parent, here it is not). */
+.hero-sun-core {
+  display: block;
+  filter: saturate(0.58) blur(9px);
+  animation: hero-spin 170s linear infinite;
+}
+.hero-sun-halo {
+  width: calc(var(--sun-d) * 2.6);
+  height: calc(var(--sun-d) * 2.6);
+  background: radial-gradient(
+    circle,
+    rgba(124, 92, 255, 0.2) 0%,
+    rgba(92, 140, 255, 0.12) 34%,
+    rgba(34, 211, 238, 0.06) 56%,
+    transparent 72%
+  );
+  filter: blur(26px);
+  animation: hero-sun-breathe 20s ease-in-out infinite alternate-reverse;
+}
+@keyframes hero-sun-breathe {
+  from {
+    transform: translate(-50%, -50%) scale(0.965);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.035);
+  }
+}
+/* Light theme: keep the sun a whisper so headline contrast holds on white. */
+:root:not(.dark) .hero-sun {
+  opacity: 0.14;
+}
+:root:not(.dark) .hero-sun-halo {
+  filter: blur(30px);
+}
+
 /* ── 破题:gradient-bordered answer panel ── */
 .why-answer {
   background:
@@ -345,6 +405,9 @@ For commercial licensing, please contact support@quantumnous.com
   .hero-orbit-ring,
   .hero-orbit-spin,
   .hero-chip,
+  .hero-sun,
+  .hero-sun-core,
+  .hero-sun-halo,
   .arch-core,
   .fly-ring,
   .beam-v i,

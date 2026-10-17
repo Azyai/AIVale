@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { BrandOrb } from '@/components/layout/components/header-logo'
 import { cn } from '@/lib/utils'
 
 /* Orbiting model chips — the models the gateway currently routes. */
@@ -32,6 +33,26 @@ const ORBIT_CHIPS = [
   'GPT',
   '私有算力 · 规划',
 ] as const
+
+/**
+ * The brand orb as the sun of the hero system: same vector mark as the header,
+ * desaturated, blurred and dimmed so it reads as deep-space glow instead of a
+ * sticker, with the model chips orbiting it as planets. Sits below the
+ * starfield canvas so stars still twinkle in front of it.
+ */
+export function HeroBrandSun() {
+  return (
+    <div
+      aria-hidden
+      className='hero-sun-layer pointer-events-none absolute inset-0 z-0 overflow-hidden'
+    >
+      <div className='hero-sun-halo' />
+      <div className='hero-sun'>
+        <BrandOrb className='hero-sun-core size-full' />
+      </div>
+    </div>
+  )
+}
 
 export function HeroOrbit() {
   const { t } = useTranslation()
