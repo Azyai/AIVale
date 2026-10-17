@@ -545,9 +545,18 @@ For commercial licensing, please contact support@quantumnous.com
   background: var(--popover);
 }
 .dark .rank-board-dialog {
-  /* Opaque panel fill: the translucent glass made charts hard to read
-   * against the page showing through. */
-  background-color: var(--popover);
-  border: 1px solid var(--border);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  /* 80% opaque frosted panel (the backdrop blur itself is applied via an
+   * inline style on the DialogContent — the production CSS minifier
+   * strips the unprefixed backdrop-filter, keeping only -webkit-). */
+  background: linear-gradient(
+    180deg,
+    color-mix(
+      in srgb,
+      color-mix(in oklch, var(--primary) 14%, var(--popover)) 80%,
+      transparent
+    ),
+    color-mix(in srgb, var(--popover) 80%, transparent) 45%
+  );
+  border: 1px solid color-mix(in oklch, var(--primary) 36%, var(--border));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
 }

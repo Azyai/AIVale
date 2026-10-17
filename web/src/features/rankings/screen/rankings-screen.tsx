@@ -552,7 +552,16 @@ export function RankingsScreen() {
             if (!open) setOpenBoard(null)
           }}
         >
-          <DialogContent className='rank-board-dialog sm:max-w-5xl'>
+          <DialogContent
+            className='rank-board-dialog sm:max-w-5xl'
+            // Frosted-glass blur via inline style: the production CSS
+            // minifier rewrites backdrop-filter down to -webkit-only,
+            // which Firefox (and some embedded webviews) ignore.
+            style={{
+              backdropFilter: 'blur(48px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(48px) saturate(1.8)',
+            }}
+          >
             <DialogHeader>
               <DialogTitle>{detail.title}</DialogTitle>
               <DialogDescription>{detail.description}</DialogDescription>
