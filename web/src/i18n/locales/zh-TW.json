@@ -7328,6 +7328,8 @@
     "Province": "省份",
     "City": "城市",
     "Select a province": "請選擇省份",
-    "Select a city": "請選擇城市"
+    "Select a city": "請選擇城市",
+    "Token 服务 · 模型部署": "Token 服務 · 模型部署",
+    "Scroll to zoom, drag to pan": "滾輪縮放，拖曳平移"
   }
 }

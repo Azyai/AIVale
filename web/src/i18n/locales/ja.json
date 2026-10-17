@@ -7328,6 +7328,8 @@
     "Province": "省",
     "City": "市",
     "Select a province": "省を選択",
-    "Select a city": "市を選択"
+    "Select a city": "市を選択",
+    "Token 服务 · 模型部署": "Token サービス · モデルデプロイ",
+    "Scroll to zoom, drag to pan": "ホイールでズーム、ドラッグで移動"
   }
 }

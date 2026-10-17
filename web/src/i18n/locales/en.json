@@ -7328,6 +7328,8 @@
     "Province": "Province",
     "City": "City",
     "Select a province": "Select a province",
-    "Select a city": "Select a city"
+    "Select a city": "Select a city",
+    "Token 服务 · 模型部署": "Token Service · Model Deployment",
+    "Scroll to zoom, drag to pan": "Scroll to zoom, drag to pan"
   }
 }
