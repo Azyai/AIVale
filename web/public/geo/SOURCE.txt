@@ -1,3 +1,6 @@
-China / province boundary GeoJSON, simplified (Douglas-Peucker, EPS=0.03) from
-Alibaba DataV.GeoAtlas (https://datav.aliyun.com/portal/school/atlas/area_selector).
+China / province boundary GeoJSON, simplified (Douglas-Peucker, EPS=0.012 for
+china.json and EPS=0.014 for provinces) from Alibaba DataV.GeoAtlas
+(https://datav.aliyun.com/portal/school/atlas/area_selector).
 See regions.json for the province -> city name and adcode cascade used by the UI.
+Note: DataV publishes no district-level boundary for 710000 (台湾省), so that
+file holds the single province outline instead of a city feature set.

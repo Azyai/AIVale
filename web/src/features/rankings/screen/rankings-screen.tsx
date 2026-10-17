@@ -46,6 +46,7 @@ import type {
   VendorRanking,
 } from '../types'
 import { CountUpNumber } from './count-up-number'
+import { LandmarkRail } from './landmarks'
 import {
   ModelRankChart,
   RegionMapChart,
@@ -350,6 +351,10 @@ export function RankingsScreen() {
     return match ? match.adcode : undefined
   }, [catalogQuery.data, province])
   const geo = useRegionGeo(provinceAdcode)
+  const catalogNames = useMemo(
+    () => catalogQuery.data?.provinces.map((p) => p.name) ?? [],
+    [catalogQuery.data]
+  )
 
   const handlePeriodChange = (next: RankingPeriod) => {
     navigate({ search: { period: next } })
@@ -360,6 +365,12 @@ export function RankingsScreen() {
     if (catalogQuery.data?.provinces.some((p) => p.name === name)) {
       setProvince(name)
     }
+  }
+  // Landmark rail: drill into a province, switch while drilled, or click the
+  // focused province's glyph to return to the national map.
+  const handleRailSelect = (name: string) => {
+    if (!catalogNames.includes(name)) return
+    setProvince(province === name ? null : name)
   }
 
   const periodLabel = t(
@@ -464,6 +475,12 @@ export function RankingsScreen() {
             onZoom={() => setZoomId('map')}
           >
             <div className='bsc-map-wrap'>
+              <LandmarkRail
+                names={catalogNames}
+                active={province}
+                onSelect={handleRailSelect}
+                ariaLabel={t('Click a province to drill down')}
+              />
               <RegionMapChart
                 theme={theme}
                 mapKey={geo.mapKey}
@@ -486,9 +503,12 @@ export function RankingsScreen() {
                 </div>
               ) : null}
               <div className='bsc-map-tip'>
-                {province
-                  ? t('Showing cities of the selected province')
-                  : t('Click a province to drill down')}
+                <span>
+                  {province
+                    ? t('Showing cities of the selected province')
+                    : t('Click a province to drill down')}
+                </span>
+                <span>{t('Scroll to zoom, drag to pan')}</span>
               </div>
             </div>
           </Panel>

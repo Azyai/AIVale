@@ -87,12 +87,12 @@ For commercial licensing, please contact support@quantumnous.com
   flex: 1;
   min-height: 0;
   display: grid;
-  gap: 12px;
-  padding: 12px 14px 14px;
+  gap: 10px;
+  padding: 10px 12px 12px;
   grid-template-columns:
-    minmax(0, 22fr) minmax(0, 56fr)
-    minmax(0, 22fr);
-  grid-template-rows: minmax(0, 1fr) clamp(132px, 17vh, 184px);
+    minmax(0, 20fr) minmax(0, 60fr)
+    minmax(0, 20fr);
+  grid-template-rows: minmax(0, 1fr) clamp(118px, 15vh, 164px);
   grid-template-areas:
     'left center right'
     'bottom bottom bottom';
@@ -112,7 +112,7 @@ For commercial licensing, please contact support@quantumnous.com
 .bsc-col {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   min-height: 0;
 }
@@ -123,7 +123,7 @@ For commercial licensing, please contact support@quantumnous.com
 /* The map is the centerpiece, but the region panel below it still needs room
  * for its three calendar totals plus a readable mini trend. */
 .bsc-col > .bsc-panel-map {
-  flex: 2.2 1 0;
+  flex: 2.6 1 0;
 }
 
 /* ===== Panels — rounded cockpit cards ===== */
@@ -325,13 +325,70 @@ For commercial licensing, please contact support@quantumnous.com
 }
 .bsc-map-tip {
   position: absolute;
-  right: 4px;
-  top: 0;
+  right: 6px;
+  bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
   font-size: 11px;
   color: var(--bsc-text-sub);
   opacity: 0.8;
   pointer-events: none;
   white-space: nowrap;
+}
+
+/* Landmark rail: assembled-primitive glyphs floating over the map top. */
+.bsc-landmark-rail {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+}
+.bsc-landmark-rail::-webkit-scrollbar {
+  display: none;
+}
+.bsc-landmark-chip {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bsc-text-sub);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.bsc-landmark-chip svg {
+  width: 18px;
+  height: 18px;
+}
+.bsc-landmark-chip:hover {
+  color: var(--bsc-accent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.bsc-landmark-chip:focus-visible {
+  outline: 2px solid var(--bsc-accent);
+  outline-offset: 1px;
+}
+.bsc-landmark-chip[aria-current='true'] {
+  color: var(--bsc-accent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
 }
 .bsc-map-hint {
   position: absolute;
