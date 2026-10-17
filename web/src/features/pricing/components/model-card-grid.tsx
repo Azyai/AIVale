@@ -17,11 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { memo, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 
-import { Button } from '@/components/ui/button'
+import { DataTablePagination, useDataTable } from '@/components/data-table'
 import { getPerfMetricsSummary } from '@/features/performance-metrics/api'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
@@ -29,6 +28,10 @@ import { DEFAULT_PRICING_PAGE_SIZE, DEFAULT_TOKEN_UNIT } from '../constants'
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelCard } from './model-card'
 import type { ModelPerfBadgeData } from './model-perf-badge'
+
+// Cards have no columns; the table exists only so the pager behaves exactly as
+// it does in the table view.
+const NO_COLUMNS: ColumnDef<PricingModel, unknown>[] = []
 
 export interface ModelCardGridProps {
   models: PricingModel[]
@@ -43,12 +46,11 @@ export interface ModelCardGridProps {
 export const ModelCardGrid = memo(function ModelCardGrid(
   props: ModelCardGridProps
 ) {
-  const { t } = useTranslation()
-  const [page, setPage] = useState(1)
-  const pageSize = DEFAULT_PRICING_PAGE_SIZE
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: DEFAULT_PRICING_PAGE_SIZE,
+  })
   const tokenUnit = props.tokenUnit ?? DEFAULT_TOKEN_UNIT
-  const totalPages = Math.max(1, Math.ceil(props.models.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
 
   const perfQuery = useQuery({
     queryKey: ['perf-metrics-summary', 24],
@@ -57,10 +59,19 @@ export const ModelCardGrid = memo(function ModelCardGrid(
     retry: false,
   })
 
-  const pagedModels = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return props.models.slice(start, start + pageSize)
-  }, [currentPage, pageSize, props.models])
+  const { table } = useDataTable({
+    data: props.models,
+    columns: NO_COLUMNS,
+    pageCount: Math.ceil(props.models.length / pagination.pageSize),
+    pagination,
+    onPaginationChange: setPagination,
+    manualPagination: false,
+    withFilteredRowModel: false,
+    withSortedRowModel: false,
+    withFacetedRowModel: false,
+  })
+
+  const pagedModels = table.getRowModel().rows.map((row) => row.original)
 
   const perfMap = useMemo(() => {
     const map = new Map<string, ModelPerfBadgeData>()
@@ -96,42 +107,7 @@ export const ModelCardGrid = memo(function ModelCardGrid(
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className='text-muted-foreground flex flex-col items-center justify-between gap-3 border-t px-4 py-3 text-sm sm:flex-row'>
-          <p className='text-muted-foreground'>
-            {t('Page {{current}} of {{total}}', {
-              current: currentPage,
-              total: totalPages,
-            })}
-          </p>
-          <div className='flex items-center gap-2'>
-            <Button
-              type='button'
-              variant='outline'
-              size='sm'
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={currentPage <= 1}
-              className='gap-1.5'
-            >
-              <ChevronLeft className='size-4' />
-              {t('Previous page')}
-            </Button>
-            <Button
-              type='button'
-              variant='outline'
-              size='sm'
-              onClick={() =>
-                setPage((current) => Math.min(totalPages, current + 1))
-              }
-              disabled={currentPage >= totalPages}
-              className='gap-1.5'
-            >
-              {t('Next page')}
-              <ChevronRight className='size-4' />
-            </Button>
-          </div>
-        </div>
-      )}
+      <DataTablePagination table={table} />
     </div>
   )
 })

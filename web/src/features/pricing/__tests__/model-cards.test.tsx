@@ -463,14 +463,34 @@ describe('model cards', () => {
         <ModelCardGrid models={models} onModelClick={vi.fn()} />
       </QueryClientProvider>
     )
-    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+    const previousPage = () =>
+      screen.getByRole('button', { name: 'Go to previous page' })
+    const nextPage = () =>
+      screen.getByRole('button', { name: 'Go to next page' })
+    expect(previousPage()).toBeDisabled()
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(20)
-    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    await user.click(nextPage())
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1)
     expect(screen.getByRole('heading', { name: 'model-21' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Previous page' }))
+    expect(nextPage()).toBeDisabled()
+    await user.click(previousPage())
     expect(screen.getByRole('heading', { name: 'model-1' })).toBeVisible()
+  })
+
+  it('keeps the pager visible when every card already fits on one page', () => {
+    queryClient.setQueryData(['perf-metrics-summary', 24], {
+      success: true,
+      data: { models: [] },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ModelCardGrid models={[pricingModel()]} onModelClick={vi.fn()} />
+      </QueryClientProvider>
+    )
+    expect(screen.getByRole('button', { name: /Go to page 1/ })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Go to next page' })
+    ).toBeDisabled()
   })
 
   it('switches the card grid to three columns at the xl breakpoint instead of 2xl', () => {
