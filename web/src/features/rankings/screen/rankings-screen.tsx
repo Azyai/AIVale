@@ -367,10 +367,12 @@ export function RankingsScreen() {
   const geo = useRegionGeo(provinceAdcode)
 
   // Wheel roam fires continuously, so quantize: React bails out when the value
-  // is unchanged and the label / island thresholds only care about tenths.
+  // is unchanged. Floor rather than round — the chart reveals place names at
+  // the raw zoom, so a rounded-up tenth would expand the landmark island over
+  // a map that is still hiding its labels.
   const handleMapZoom = useCallback((zoom: number) => {
     setMapZoom((prev) => {
-      const next = Math.round(zoom * 10) / 10
+      const next = Math.floor(zoom * 10) / 10
       return next === prev ? prev : next
     })
   }, [])

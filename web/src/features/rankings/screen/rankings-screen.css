@@ -377,6 +377,10 @@ For commercial licensing, please contact support@quantumnous.com
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
+  /* It floats over the canvas: without this the capsule eats wheel and drag
+   * events across the whole top-centre of the map, so roaming only works
+   * wherever the island is not. Nothing in it is interactive. */
+  pointer-events: none;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -600,6 +600,7 @@ export function RegionMapChart(props: {
   fallback?: ReactNode
 }) {
   const zoomRef = useRef(MAP_INITIAL_ZOOM)
+  const centerRef = useRef<[number, number] | undefined>(undefined)
   const revealedRef = useRef(false)
   const onZoomRef = useRef(props.onZoom)
   onZoomRef.current = props.onZoom
@@ -607,6 +608,12 @@ export function RegionMapChart(props: {
     onClick: props.onSelect,
     onZoom: (zoom) => {
       zoomRef.current = zoom
+      // Track the pan alongside the zoom so a later setOption can put the
+      // viewer back exactly where they were (see the option effect below).
+      const live = chartRef.current?.getOption() as
+        | { series?: Array<{ center?: [number, number] }> }
+        | undefined
+      centerRef.current = live?.series?.[0]?.center
       // Roaming only transforms the map group, so label formatters do not run
       // again on their own. When the reveal threshold is crossed, merge the
       // label config back in — a merge (no replaceMerge) keeps the roam state.
@@ -635,6 +642,7 @@ export function RegionMapChart(props: {
 
   useEffect(() => {
     zoomRef.current = MAP_INITIAL_ZOOM
+    centerRef.current = undefined
     revealedRef.current = false
     onZoomRef.current?.(MAP_INITIAL_ZOOM)
   }, [props.mapKey])
@@ -655,6 +663,14 @@ export function RegionMapChart(props: {
 
   useEffect(() => {
     if (!mapKey) return
+    // This effect also runs when the minute's data lands, and setOption goes
+    // through with replaceMerge:['series'] — which would discard whatever the
+    // viewer had roamed to and snap the map back to its initial framing. The
+    // roam handlers keep the live view in these refs so it can be handed
+    // straight back to the new option; a programmatic setOption fires no
+    // georoam, so nothing else would notice the view had been reset.
+    const zoom = zoomRef.current
+    const center = centerRef.current
     const max = Math.max(1, ...rows.map((r) => r.tokens))
     const option: EChartsOption = {
       tooltip: {
@@ -691,7 +707,8 @@ export function RegionMapChart(props: {
           // Wheel zoom + drag pan; zooming out to the floor restores the fit.
           roam: true,
           scaleLimit: { min: 1, max: 14 },
-          zoom: MAP_INITIAL_ZOOM,
+          zoom,
+          center,
           layoutCenter: ['50%', '52%'],
           layoutSize: '116%',
           label: {
