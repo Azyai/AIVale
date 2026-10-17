@@ -821,6 +821,27 @@ For commercial licensing, please contact support@quantumnous.com
   --spacing: 0.3rem;
 }
 
+/* Console density: the authenticated shell packs tables, stat cards and
+ * sidebar nav, so its body text sits one step above the marketing pages.
+ * Overriding Tailwind's `--text-*` variables (rather than individual
+ * utilities) keeps every consumer in sync — responsive variants such as
+ * `sm:text-xs` resolve the same variable — and line-heights stay proportional
+ * because Tailwind stores them as ratios. Skipped when the visitor or the site
+ * admin picked an explicit density, so that preference always wins. */
+body:not([data-theme-scale]) .console-root {
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+}
+
+/* The larger labels need room: default nav rows grow from 32px to 36px with
+ * the vertical padding trimmed so the text box is never clipped. Icon-collapsed
+ * sidebars keep their 32px squares (those utilities are marked important). */
+body:not([data-theme-scale]) .console-root [data-sidebar='menu-button']:not([data-size='lg']) {
+  height: auto;
+  min-height: 2.25rem;
+  padding-block: 0.375rem;
+}
+
 /* ── Content layout ───────────────────────────────────────────────────── */
 /* `centered` clamps inset content to a comfortable reading width on large screens.
  * Targets every direct child of <SidebarInset> so router outlet wrappers and

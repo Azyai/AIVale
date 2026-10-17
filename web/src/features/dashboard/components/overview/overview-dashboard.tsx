@@ -650,7 +650,7 @@ export function OverviewDashboard() {
           <div id={setupGuideId} hidden={!setupGuideExpanded}>
             {setupGuideExpanded && (
               <CardStaggerContainer className='grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]'>
-                <CardStaggerItem className='bg-card h-full overflow-hidden rounded-2xl border shadow-xs'>
+                <CardStaggerItem className='border-border/70 bg-card h-full overflow-hidden rounded-2xl border shadow-sm'>
                   <div className='relative h-full overflow-hidden p-4 sm:p-5'>
                     <SetupGuideBackdrop />
                     <div className='relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]'>
@@ -733,7 +733,7 @@ export function OverviewDashboard() {
           </div>
           {!setupGuideExpanded && !setupComplete && (
             <CardStaggerContainer>
-              <CardStaggerItem className='bg-card overflow-hidden rounded-2xl border shadow-xs'>
+              <CardStaggerItem className='border-border/70 bg-card overflow-hidden rounded-2xl border shadow-sm'>
                 <div className='relative overflow-hidden px-4 py-3 sm:px-5'>
                   <SetupGuideBackdrop compact />
                   <div className='relative flex flex-wrap items-center justify-between gap-3'>
