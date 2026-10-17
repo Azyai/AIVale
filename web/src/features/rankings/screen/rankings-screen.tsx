@@ -16,16 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { ArrowExpand02Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 
 import { PublicLayout } from '@/components/layout'
 import {
@@ -35,29 +31,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useStatus } from '@/hooks/use-status'
-import { DEFAULT_SYSTEM_NAME } from '@/lib/constants'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
-import { getRankings } from '../api'
+import { getRankingRegions, getRankings, getRegionsCatalog } from '../api'
 import { formatTokens } from '../lib/format'
 import type {
   ModelHistorySeries,
   ModelRanking,
-  RankingMover,
   RankingPeriod,
+  RegionDetail,
+  RegionPoint,
+  RegionStat,
   UserRanking,
   VendorRanking,
 } from '../types'
 import { CountUpNumber } from './count-up-number'
 import {
-  ConcentrationGauges,
   ModelRankChart,
+  RegionMapChart,
+  RegionRankChart,
+  RegionTrendChart,
   TokenTrendChart,
   UserRankChart,
   VendorShareChart,
 } from './screen-charts'
-import { useScreenTheme } from './use-screen-theme'
+import { useRegionGeo } from './use-region-geo'
+import { useScreenTheme, type ScreenChartTheme } from './use-screen-theme'
 import './rankings-screen.css'
 
 const VALID_PERIODS = new Set<RankingPeriod>([
@@ -72,12 +71,23 @@ const PERIODS: { id: RankingPeriod; labelKey: string }[] = [
   { id: 'month', labelKey: 'Month' },
   { id: 'year', labelKey: 'Year' },
 ]
-// Module-level empty arrays keep useMemo deps referentially stable while
-// the snapshot has not loaded yet.
+// Module-level empty arrays keep useMemo deps referentially stable while the
+// snapshots have not loaded yet.
 const EMPTY_MODELS: ModelRanking[] = []
 const EMPTY_USERS: UserRanking[] = []
 const EMPTY_VENDORS: VendorRanking[] = []
-const EMPTY_MOVERS: RankingMover[] = []
+const EMPTY_REGIONS: RegionStat[] = []
+const EMPTY_POINTS: RegionPoint[] = []
+
+/** Panels that can be opened in the enlarged dialog. */
+type ZoomId =
+  | 'models'
+  | 'users'
+  | 'map'
+  | 'region'
+  | 'regions'
+  | 'vendors'
+  | 'trend'
 
 /** Refresh the wall-screen data once a minute while staying cache-friendly. */
 function useScreenRankings(period: RankingPeriod) {
@@ -86,6 +96,28 @@ function useScreenRankings(period: RankingPeriod) {
     queryFn: async () => requireServerSuccess(await getRankings(period)),
     staleTime: 5 * 60 * 1000,
     refetchInterval: 60 * 1000,
+  })
+}
+
+function useScreenRegions(period: RankingPeriod, province: string) {
+  return useQuery({
+    queryKey: ['rankings-regions', period, province],
+    queryFn: async () =>
+      requireServerSuccess(await getRankingRegions(period, province)),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000,
+    // Keeps the previous scope on screen while the next one loads, so drilling
+    // in or switching period never blanks the map.
+    placeholderData: (previous) => previous,
+  })
+}
+
+function useRegionsCatalog() {
+  return useQuery({
+    queryKey: ['regions-catalog'],
+    queryFn: getRegionsCatalog,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
   })
 }
 
@@ -102,177 +134,190 @@ function useClock(): () => string {
   }
 }
 
-type MoverRow = {
-  model: string
-  delta: number
-  current: number
-  growth: number
-}
-
-function moveBadge(delta: number) {
-  if (delta > 0) {
-    return <span className='bsc-lv bsc-lv-up'>▲{delta}</span>
-  }
-  if (delta < 0) {
-    return <span className='bsc-lv bsc-lv-down'>▼{Math.abs(delta)}</span>
-  }
-  return <span className='bsc-lv'>—</span>
-}
-
-/**
- * Rank-movement marquee: duplicated list translated upward in a loop,
- * pausing when the tab is hidden or the user prefers reduced motion.
- */
-function MoversMarquee(props: { rows: MoverRow[] }) {
-  const { t } = useTranslation()
-  const ulRef = useRef<HTMLUListElement>(null)
-  const scrollable = props.rows.length >= 5
-
-  useEffect(() => {
-    if (!scrollable) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const ul = ulRef.current
-    if (!ul) return
-    let y = 0
-    const id = window.setInterval(() => {
-      if (document.hidden || !ul.scrollHeight) return
-      y = (y + 1) % (ul.scrollHeight / 2)
-      ul.style.transform = `translateY(-${y}px)`
-    }, 40)
-    return () => window.clearInterval(id)
-  }, [scrollable])
-
-  const rows = (scrollable ? [props.rows, props.rows] : [props.rows]).flatMap(
-    (copy, copyIdx) =>
-      copy.map((r) => ({ ...r, key: `${copyIdx}:${r.model}:${r.current}` }))
-  )
-  return (
-    <div className='bsc-scroll-table'>
-      <ul ref={ulRef}>
-        {rows.map((r) => (
-          <li key={r.key}>
-            <span className='bsc-c-rank'>#{r.current}</span>
-            <span className='bsc-c-model'>{r.model}</span>
-            <span className='bsc-c-move'>{moveBadge(r.delta)}</span>
-            <span
-              className={`bsc-c-growth ${r.growth >= 0 ? 'bsc-growth-up' : 'bsc-growth-down'}`}
-            >
-              {r.growth >= 0 ? '+' : ''}
-              {r.growth.toFixed(1)}%
-            </span>
-          </li>
-        ))}
-      </ul>
-      {props.rows.length === 0 && (
-        <div className='bsc-chart-placeholder'>{t('No data')}</div>
-      )}
-    </div>
-  )
-}
-
-type BoardId =
-  | 'monitor'
-  | 'models'
-  | 'users'
-  | 'vendors'
-  | 'trend'
-  | 'movers'
-  | 'concentration'
-
-function trendSnapshot(history: ModelHistorySeries | undefined) {
-  const buckets = new Map<string, number>()
-  for (const point of history?.points ?? []) {
-    buckets.set(point.label, (buckets.get(point.label) ?? 0) + point.tokens)
-  }
-  const labels = [...buckets.keys()]
-  const latest = labels.length ? (buckets.get(labels[labels.length - 1]) ?? 0) : 0
-  const previous =
-    labels.length > 1 ? (buckets.get(labels[labels.length - 2]) ?? 0) : 0
-  const growth = previous > 0 ? ((latest - previous) / previous) * 100 : 0
-  return {
-    latest,
-    growth,
-    label: labels[labels.length - 1] ?? '',
-    topModel: history?.models[0]?.name ?? '',
-  }
-}
-
-function BoardButton(props: {
-  open: boolean
+function Panel(props: {
   title: string
-  hint: string
-  action: string
-  onClick: () => void
+  extra?: ReactNode
+  className?: string
+  onZoom?: () => void
   children: ReactNode
+}) {
+  const { t } = useTranslation()
+  return (
+    <section className={`bsc-panel ${props.className ?? ''}`}>
+      <div className='bsc-panel-title'>
+        <span className='bsc-panel-name'>{props.title}</span>
+        <div className='bsc-panel-tools'>
+          {props.extra}
+          {props.onZoom ? (
+            <button
+              type='button'
+              className='bsc-zoom'
+              onClick={props.onZoom}
+              aria-label={t('View details')}
+              title={t('View details')}
+            >
+              <HugeiconsIcon icon={ArrowExpand02Icon} aria-hidden='true' />
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {props.children}
+    </section>
+  )
+}
+
+/** Calendar-to-date token volume of the region currently in focus. */
+function RegionTotals(props: {
+  detail: RegionDetail | undefined
   className?: string
 }) {
+  const { t } = useTranslation()
+  const cells = [
+    { label: t('Today'), value: props.detail?.today_tokens ?? 0 },
+    { label: t('This Month'), value: props.detail?.month_tokens ?? 0 },
+    { label: t('This Year'), value: props.detail?.year_tokens ?? 0 },
+  ]
   return (
-    <button
-      type='button'
-      data-slot='card'
-      data-open={props.open ? 'true' : undefined}
-      className={`rank-board bg-card text-card-foreground border-border flex h-full min-h-56 flex-col gap-3 rounded-xl border p-4 ${props.className ?? ''}`}
-      onClick={props.onClick}
-    >
-      <div className='flex items-start justify-between gap-3'>
-        <div className='min-w-0'>
-          <div className='text-sm font-semibold'>{props.title}</div>
-          <div className='text-muted-foreground mt-0.5 text-xs'>{props.hint}</div>
+    <div className={`bsc-region-totals ${props.className ?? ''}`}>
+      {cells.map((cell) => (
+        <div key={cell.label} className='bsc-region-total'>
+          <CountUpNumber
+            value={cell.value}
+            format={formatTokens}
+            className='bsc-region-total-value'
+          />
+          <span className='bsc-region-total-label'>{cell.label}</span>
         </div>
-        <span className='text-primary shrink-0 text-xs font-medium'>
-          {props.action}
-        </span>
-      </div>
-      <div className='flex min-h-0 flex-1 flex-col justify-center gap-2.5'>
-        {props.children}
-      </div>
-    </button>
-  )
-}
-
-function SummaryRow(props: { mark: string; name: string; value: string }) {
-  return (
-    <div className='flex min-w-0 items-center gap-2 text-sm'>
-      <span className='text-primary w-8 shrink-0 font-semibold tabular-nums'>
-        {props.mark}
-      </span>
-      <span className='min-w-0 flex-1 truncate'>{props.name}</span>
-      <span className='text-muted-foreground shrink-0 tabular-nums'>
-        {props.value}
-      </span>
+      ))}
     </div>
   )
 }
 
-function KpiCard(props: {
-  label: string
-  value: number
-  format: (value: number) => string
-  sub?: string
-}) {
-  return (
-    <div className='bsc-kpi'>
-      <CountUpNumber value={props.value} format={props.format} />
-      <div className='bsc-kpi-label'>{props.label}</div>
-      {props.sub ? <div className='bsc-kpi-sub'>{props.sub}</div> : null}
-    </div>
-  )
+type ZoomContext = {
+  t: (key: string) => string
+  fetching: boolean
+  theme: ScreenChartTheme
+  province: string | null
+  models: ModelRanking[]
+  users: UserRanking[]
+  vendors: VendorRanking[]
+  history: ModelHistorySeries | undefined
+  mapRows: RegionStat[]
+  mapKey: string | undefined
+  detail: RegionDetail | undefined
+  series: RegionPoint[]
+  onRegionSelect: (name: string) => void
+}
+
+/** Enlarged version of a panel: the same chart with room to show more rows. */
+function zoomView(
+  id: ZoomId,
+  ctx: ZoomContext
+): { title: string; body: ReactNode } {
+  const { t } = ctx
+  if (id === 'models') {
+    return {
+      title: t('Model Rankings'),
+      body: (
+        <ModelRankChart
+          loading={ctx.fetching}
+          theme={ctx.theme}
+          rows={ctx.models.slice(0, 20)}
+        />
+      ),
+    }
+  }
+  if (id === 'users') {
+    return {
+      title: t('User Rankings'),
+      body: (
+        <UserRankChart
+          loading={ctx.fetching}
+          theme={ctx.theme}
+          rows={ctx.users.slice(0, 20)}
+        />
+      ),
+    }
+  }
+  if (id === 'regions') {
+    return {
+      title: ctx.province ? t('City Rankings') : t('Province Rankings'),
+      body: (
+        <RegionRankChart
+          loading={ctx.fetching}
+          theme={ctx.theme}
+          rows={ctx.mapRows}
+          onSelect={ctx.onRegionSelect}
+        />
+      ),
+    }
+  }
+  if (id === 'vendors') {
+    return {
+      title: t('Vendor Share'),
+      body: (
+        <VendorShareChart
+          loading={ctx.fetching}
+          theme={ctx.theme}
+          rows={ctx.vendors}
+        />
+      ),
+    }
+  }
+  if (id === 'trend') {
+    return {
+      title: t('Token Trend'),
+      body: (
+        <TokenTrendChart
+          loading={ctx.fetching}
+          theme={ctx.theme}
+          history={ctx.history}
+        />
+      ),
+    }
+  }
+  if (id === 'region') {
+    return {
+      title: t('Regional Usage'),
+      body: (
+        <>
+          <RegionTotals detail={ctx.detail} className='bsc-region-totals-lg' />
+          <RegionTrendChart
+            loading={ctx.fetching}
+            theme={ctx.theme}
+            points={ctx.series}
+          />
+        </>
+      ),
+    }
+  }
+  return {
+    title: ctx.province ?? t('Regional Distribution'),
+    body: (
+      <RegionMapChart
+        theme={ctx.theme}
+        mapKey={ctx.mapKey}
+        rows={ctx.mapRows}
+        showLabels
+        onSelect={ctx.onRegionSelect}
+      />
+    ),
+  }
 }
 
 /**
- * Rankings page as a big screen — a fixed 1920×1080 stage (letterbox-scaled)
- * rendering the live rankings snapshot, themed to follow the app's light /
- * dark / system setting. Rendered inside the standard public layout (top
- * navigation stays visible), filling the content area below the fixed
- * site header.
+ * Rankings cockpit: a full-bleed wall screen filling the viewport below the
+ * site header. The China map takes the center and drills province → city on
+ * click, with ranking / share panels on both sides and the token trend along
+ * the bottom. Every panel can be opened enlarged. Follows the app's light /
+ * dark / system theme.
  */
 export function RankingsScreen() {
   const { t } = useTranslation()
   const search = useSearch({ from: '/rankings/' })
   const navigate = useNavigate({ from: '/rankings/' })
   const clock = useClock()
-  const { status } = useStatus()
-  const screenTheme = useScreenTheme()
+  const theme = useScreenTheme()
 
   const period: RankingPeriod = VALID_PERIODS.has(
     search.period as RankingPeriod
@@ -280,64 +325,94 @@ export function RankingsScreen() {
     ? (search.period as RankingPeriod)
     : 'week'
 
-  const query = useScreenRankings(period)
-  const snapshot = query.data?.data
+  const [province, setProvince] = useState<string | null>(null)
+  const [zoomId, setZoomId] = useState<ZoomId | null>(null)
+
+  const rankingsQuery = useScreenRankings(period)
+  const regionsQuery = useScreenRegions(period, province ?? '')
+  const catalogQuery = useRegionsCatalog()
+
+  const snapshot = rankingsQuery.data?.data
+  const regions = regionsQuery.data?.data
 
   const models = snapshot?.models ?? EMPTY_MODELS
   const users = snapshot?.users ?? EMPTY_USERS
   const vendors = snapshot?.vendors ?? EMPTY_VENDORS
+  const provinces = regions?.provinces ?? EMPTY_REGIONS
+  const mapRows = province ? (regions?.cities ?? EMPTY_REGIONS) : provinces
+  const detailSeries = regions?.detail?.series ?? EMPTY_POINTS
 
-  const totalTokens = useMemo(
-    () => models.reduce((sum, m) => sum + m.total_tokens, 0),
-    [models]
-  )
-  const modelTop10Share = useMemo(
-    () => models.slice(0, 10).reduce((sum, m) => sum + m.share, 0) * 100,
-    [models]
-  )
-  const userTop10Share = useMemo(
-    () => users.slice(0, 10).reduce((sum, u) => sum + u.share, 0) * 100,
-    [users]
-  )
-  const topVendorShare = vendors[0] ? vendors[0].share * 100 : 0
-  const moverRows = useMemo<MoverRow[]>(() => {
-    const toRow = (m: RankingMover): MoverRow => ({
-      model: m.model_name,
-      delta: m.rank_delta,
-      current: m.current_rank,
-      growth: m.growth_pct,
-    })
-    return [
-      ...(snapshot?.top_movers ?? EMPTY_MOVERS).map(toRow),
-      ...(snapshot?.top_droppers ?? EMPTY_MOVERS).map(toRow),
-    ]
-  }, [snapshot])
+  // undefined (not null) while the catalog is still loading, so the map keeps
+  // showing the previous geometry instead of flashing back to the national one.
+  const provinceAdcode = useMemo(() => {
+    if (!province) return null
+    const match = catalogQuery.data?.provinces.find((p) => p.name === province)
+    return match ? match.adcode : undefined
+  }, [catalogQuery.data, province])
+  const geo = useRegionGeo(provinceAdcode)
 
   const handlePeriodChange = (next: RankingPeriod) => {
     navigate({ search: { period: next } })
   }
+  const handleRegionSelect = (name: string) => {
+    // Only catalog provinces drill down; clicks on other shapes are ignored.
+    if (province) return
+    if (catalogQuery.data?.provinces.some((p) => p.name === name)) {
+      setProvince(name)
+    }
+  }
 
-  const [openBoard, setOpenBoard] = useState<BoardId | null>(null)
-  const trend = trendSnapshot(snapshot?.models_history)
-
-  const systemName = status?.system_name || DEFAULT_SYSTEM_NAME
   const periodLabel = t(
     PERIODS.find((p) => p.id === period)?.labelKey ?? 'Week'
   )
+  // Nothing can be attributed to a region until admins set province / city on
+  // users, so say that instead of leaving a blank map unexplained.
+  const regionsUnmapped =
+    !regionsQuery.isLoading &&
+    (regions?.total_tokens ?? 0) > 0 &&
+    provinces.length === 0
 
-  let content: ReactNode
-  if (query.isLoading) {
-    content = (
+  const mapTools = (
+    <>
+      {province ? (
+        <button
+          type='button'
+          className='bsc-back'
+          onClick={() => setProvince(null)}
+        >
+          ← {t('Nationwide')}
+        </button>
+      ) : null}
+      <div role='tablist' aria-label={t('Period')} className='bsc-periods'>
+        {PERIODS.map((p) => (
+          <button
+            key={p.id}
+            type='button'
+            role='tab'
+            aria-selected={p.id === period}
+            className='bsc-period-btn'
+            onClick={() => handlePeriodChange(p.id)}
+          >
+            {t(p.labelKey)}
+          </button>
+        ))}
+      </div>
+      <div className='bsc-clock'>{clock()}</div>
+    </>
+  )
+
+  // Both feeds drive the same screen, so hold it until they have both answered.
+  const loading = rankingsQuery.isLoading || regionsQuery.isLoading
+
+  let body: ReactNode
+  if (loading) {
+    body = (
       <div className='bsc-center'>
-        <div>
-          <b>{systemName}</b>
-          <br />
-          {t('Loading')}…
-        </div>
+        <div>{t('Loading')}…</div>
       </div>
     )
-  } else if (query.isError) {
-    content = (
+  } else if (rankingsQuery.isError) {
+    body = (
       <div className='bsc-center'>
         <div>
           <b>{t('Failed to load rankings data')}</b>
@@ -345,7 +420,7 @@ export function RankingsScreen() {
           <button
             type='button'
             className='bsc-retry'
-            onClick={() => void query.refetch()}
+            onClick={() => void rankingsQuery.refetch()}
           >
             {t('Retry')}
           </button>
@@ -353,203 +428,160 @@ export function RankingsScreen() {
       </div>
     )
   } else {
-    const detail = boardDetail({
-      id: openBoard,
-      t,
-      periodLabel,
-      loading: query.isFetching,
-      theme: screenTheme,
-      models,
-      users,
-      vendors,
-      history: snapshot?.models_history,
-      moverRows,
-      modelTop10Share,
-      userTop10Share,
-      topVendorShare,
-    })
-    content = (
-      <div className='space-y-4'>
-        <header className='flex flex-wrap items-center justify-between gap-3'>
-          <h1 className='text-xl font-semibold tracking-tight'>
-            {t('Usage Data Monitor')}
-          </h1>
-          <div className='flex flex-wrap items-center gap-3'>
-            <div role='tablist' aria-label={t('Period')} className='bsc-periods'>
-              {PERIODS.map((p) => (
-                <button
-                  key={p.id}
-                  type='button'
-                  role='tab'
-                  aria-selected={p.id === period}
-                  className='bsc-period-btn'
-                  onClick={() => handlePeriodChange(p.id)}
-                >
-                  {t(p.labelKey)}
-                </button>
-              ))}
-            </div>
-            <div className='bsc-clock'>{clock()}</div>
-          </div>
-        </header>
-
-        <button
-          type='button'
-          data-slot='card'
-          data-open={openBoard === 'monitor' ? 'true' : undefined}
-          className='rank-monitor bg-card text-card-foreground border-border rounded-xl border p-4'
-          onClick={() => setOpenBoard('monitor')}
-        >
-          <div className='mb-3 flex items-center justify-between gap-3'>
-            <div className='text-sm font-semibold'>{t('Full Monitor')}</div>
-            <span className='text-primary text-xs font-medium'>
-              {t('View details')}
-            </span>
-          </div>
-          <div className='grid grid-cols-2 gap-3 md:grid-cols-5'>
-            <KpiCard
-              label={t('Total Tokens')}
-              value={totalTokens}
-              format={formatTokens}
-            />
-            <KpiCard
-              label={t('Active Models')}
-              value={models.length}
-              format={(v) => Math.round(v).toLocaleString()}
-            />
-            <KpiCard
-              label={t('Listed Users')}
-              value={users.length}
-              format={(v) => Math.round(v).toLocaleString()}
-            />
-            <KpiCard
-              label={t('Active Vendors')}
-              value={vendors.length}
-              format={(v) => Math.round(v).toLocaleString()}
-            />
-            <KpiCard
-              label={t('Top Model Share')}
-              value={models[0] ? models[0].share * 100 : 0}
-              format={(v) => `${v.toFixed(1)}%`}
-              sub={models[0]?.model_name}
-            />
-          </div>
-        </button>
-
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-          <BoardButton
-            open={openBoard === 'models'}
+    const fetching = rankingsQuery.isFetching || regionsQuery.isFetching
+    body = (
+      <>
+        <div className='bsc-col bsc-area-left'>
+          <Panel
             title={t('Model Rankings')}
-            hint={`${periodLabel} · tokens`}
-            action={t('View details')}
-            onClick={() => setOpenBoard('models')}
+            extra={<small>{periodLabel}</small>}
+            onZoom={() => setZoomId('models')}
           >
-            {models.slice(0, 3).map((row) => (
-              <SummaryRow
-                key={row.model_name}
-                mark={`#${row.rank}`}
-                name={row.model_name}
-                value={formatTokens(row.total_tokens)}
-              />
-            ))}
-            {models.length === 0 ? <EmptyHint label={t('No data')} /> : null}
-          </BoardButton>
-          <BoardButton
-            open={openBoard === 'users'}
+            <ModelRankChart
+              loading={fetching}
+              theme={theme}
+              rows={models.slice(0, 10)}
+            />
+          </Panel>
+          <Panel
             title={t('User Rankings')}
-            hint={`${periodLabel} · tokens`}
-            action={t('View details')}
-            onClick={() => setOpenBoard('users')}
+            extra={<small>{periodLabel}</small>}
+            onZoom={() => setZoomId('users')}
           >
-            {users.slice(0, 3).map((row) => (
-              <SummaryRow
-                key={row.user_id}
-                mark={`#${row.rank}`}
-                name={row.username}
-                value={formatTokens(row.total_tokens)}
-              />
-            ))}
-            {users.length === 0 ? <EmptyHint label={t('No data')} /> : null}
-          </BoardButton>
-          <BoardButton
-            open={openBoard === 'vendors'}
-            title={t('Vendor Share')}
-            hint={periodLabel}
-            action={t('View details')}
-            onClick={() => setOpenBoard('vendors')}
-          >
-            {vendors.slice(0, 3).map((row) => (
-              <SummaryRow
-                key={row.vendor}
-                mark={`#${row.rank}`}
-                name={row.vendor}
-                value={`${(row.share * 100).toFixed(1)}%`}
-              />
-            ))}
-            {vendors.length === 0 ? <EmptyHint label={t('No data')} /> : null}
-          </BoardButton>
-          <BoardButton
-            open={openBoard === 'trend'}
-            title={t('Token Trend')}
-            hint={trend.label || periodLabel}
-            action={t('View details')}
-            onClick={() => setOpenBoard('trend')}
-          >
-            <div className='text-primary text-3xl font-semibold tabular-nums'>
-              {formatTokens(trend.latest)}
-            </div>
-            <div className='text-muted-foreground text-sm'>
-              {trend.growth >= 0 ? '+' : ''}
-              {trend.growth.toFixed(1)}%
-              {trend.topModel ? ` · ${trend.topModel}` : ''}
-            </div>
-          </BoardButton>
-          <BoardButton
-            open={openBoard === 'movers'}
-            title={t('Rank Movements')}
-            hint={periodLabel}
-            action={t('View details')}
-            onClick={() => setOpenBoard('movers')}
-          >
-            {moverRows.slice(0, 3).map((row) => (
-              <SummaryRow
-                key={`${row.model}:${row.current}`}
-                mark={`#${row.current}`}
-                name={row.model}
-                value={`${row.growth >= 0 ? '+' : ''}${row.growth.toFixed(1)}%`}
-              />
-            ))}
-            {moverRows.length === 0 ? <EmptyHint label={t('No data')} /> : null}
-          </BoardButton>
-          <BoardButton
-            open={openBoard === 'concentration'}
-            title={t('Concentration')}
-            hint={periodLabel}
-            action={t('View details')}
-            onClick={() => setOpenBoard('concentration')}
-          >
-            <SummaryRow
-              mark=''
-              name={t('Top 10 Model Concentration')}
-              value={`${modelTop10Share.toFixed(1)}%`}
+            <UserRankChart
+              loading={fetching}
+              theme={theme}
+              rows={users.slice(0, 10)}
             />
-            <SummaryRow
-              mark=''
-              name={t('Top 10 User Concentration')}
-              value={`${userTop10Share.toFixed(1)}%`}
-            />
-            <SummaryRow
-              mark=''
-              name={t('Top Vendor Share')}
-              value={`${topVendorShare.toFixed(1)}%`}
-            />
-          </BoardButton>
+          </Panel>
         </div>
 
+        <div className='bsc-col bsc-area-center'>
+          <Panel
+            className='bsc-panel-map'
+            title={province ?? t('Regional Distribution')}
+            extra={mapTools}
+            onZoom={() => setZoomId('map')}
+          >
+            <div className='bsc-map-wrap'>
+              <RegionMapChart
+                theme={theme}
+                mapKey={geo.mapKey}
+                rows={mapRows}
+                showLabels={province != null}
+                onSelect={handleRegionSelect}
+                fallback={
+                  <div className='bsc-chart-placeholder'>
+                    {geo.failed
+                      ? t('Failed to load map data')
+                      : `${t('Loading')}…`}
+                  </div>
+                }
+              />
+              {regionsUnmapped ? (
+                <div className='bsc-map-hint'>
+                  {t(
+                    'No region data yet. Set province and city on users in User Management to populate the map.'
+                  )}
+                </div>
+              ) : null}
+              <div className='bsc-map-tip'>
+                {province
+                  ? t('Showing cities of the selected province')
+                  : t('Click a province to drill down')}
+              </div>
+            </div>
+          </Panel>
+          <Panel
+            title={t('Regional Usage')}
+            extra={<small>{province ?? t('Nationwide')}</small>}
+            onZoom={() => setZoomId('region')}
+          >
+            <RegionTotals detail={regions?.detail} />
+            <RegionTrendChart
+              loading={regionsQuery.isFetching}
+              theme={theme}
+              points={detailSeries}
+            />
+          </Panel>
+        </div>
+
+        <div className='bsc-col bsc-area-right'>
+          <Panel
+            title={province ? t('City Rankings') : t('Province Rankings')}
+            extra={<small>{periodLabel}</small>}
+            onZoom={() => setZoomId('regions')}
+          >
+            <RegionRankChart
+              loading={regionsQuery.isFetching}
+              theme={theme}
+              rows={mapRows.slice(0, 10)}
+              onSelect={province ? undefined : handleRegionSelect}
+            />
+            {regions && regions.unassigned.total_tokens > 0 ? (
+              <div className='bsc-panel-foot'>
+                <span>{t('Unassigned Region')}</span>
+                <span>{formatTokens(regions.unassigned.total_tokens)}</span>
+              </div>
+            ) : null}
+          </Panel>
+          <Panel
+            title={t('Vendor Share')}
+            extra={<small>{periodLabel}</small>}
+            onZoom={() => setZoomId('vendors')}
+          >
+            <VendorShareChart
+              loading={fetching}
+              theme={theme}
+              rows={vendors}
+            />
+          </Panel>
+        </div>
+
+        <Panel
+          className='bsc-area-bottom'
+          title={t('Token Trend')}
+          extra={<small>{periodLabel}</small>}
+          onZoom={() => setZoomId('trend')}
+        >
+          <TokenTrendChart
+            loading={fetching}
+            theme={theme}
+            history={snapshot?.models_history}
+          />
+        </Panel>
+      </>
+    )
+  }
+
+  const zoom = zoomId
+    ? zoomView(zoomId, {
+        t,
+        fetching: rankingsQuery.isFetching || regionsQuery.isFetching,
+        theme,
+        province,
+        models,
+        users,
+        vendors,
+        history: snapshot?.models_history,
+        mapRows,
+        mapKey: geo.mapKey,
+        detail: regions?.detail,
+        series: detailSeries,
+        onRegionSelect: handleRegionSelect,
+      })
+    : null
+
+  return (
+    <PublicLayout showMainContainer={false}>
+      <div className='bsc-root'>
+        <div className='bsc-screen'>
+          <div className='bsc-body'>{body}</div>
+        </div>
         <Dialog
-          open={openBoard != null}
+          open={zoom != null}
           onOpenChange={(open) => {
-            if (!open) setOpenBoard(null)
+            if (!open) setZoomId(null)
           }}
         >
           <DialogContent
@@ -563,148 +595,15 @@ export function RankingsScreen() {
             }}
           >
             <DialogHeader>
-              <DialogTitle>{detail.title}</DialogTitle>
-              <DialogDescription>{detail.description}</DialogDescription>
+              <DialogTitle>{zoom?.title}</DialogTitle>
+              <DialogDescription>
+                {province ?? t('Nationwide')} · {periodLabel}
+              </DialogDescription>
             </DialogHeader>
-            {openBoard === 'monitor' ? (
-              <div className='grid grid-cols-2 gap-3 md:grid-cols-5'>
-                <KpiCard
-                  label={t('Total Tokens')}
-                  value={totalTokens}
-                  format={formatTokens}
-                />
-                <KpiCard
-                  label={t('Active Models')}
-                  value={models.length}
-                  format={(v) => Math.round(v).toLocaleString()}
-                />
-                <KpiCard
-                  label={t('Listed Users')}
-                  value={users.length}
-                  format={(v) => Math.round(v).toLocaleString()}
-                />
-                <KpiCard
-                  label={t('Active Vendors')}
-                  value={vendors.length}
-                  format={(v) => Math.round(v).toLocaleString()}
-                />
-                <KpiCard
-                  label={t('Top Model Share')}
-                  value={models[0] ? models[0].share * 100 : 0}
-                  format={(v) => `${v.toFixed(1)}%`}
-                  sub={models[0]?.model_name}
-                />
-              </div>
-            ) : openBoard ? (
-              <div className='rank-chart-frame'>{detail.body}</div>
-            ) : null}
+            {zoom ? <div className='rank-chart-frame'>{zoom.body}</div> : null}
           </DialogContent>
         </Dialog>
       </div>
-    )
-  }
-
-  return (
-    <PublicLayout showMainContainer={false}>
-      <div className='mx-auto w-full max-w-[1280px] px-4 pt-24 pb-12 md:px-6 md:pt-32'>
-        {content}
-      </div>
     </PublicLayout>
   )
-}
-
-function EmptyHint(props: { label: string }) {
-  return (
-    <div className='text-muted-foreground text-sm'>{props.label}</div>
-  )
-}
-
-function boardDetail(props: {
-  id: BoardId | null
-  t: (key: string) => string
-  periodLabel: string
-  loading: boolean
-  theme: ReturnType<typeof useScreenTheme>
-  models: ModelRanking[]
-  users: UserRanking[]
-  vendors: VendorRanking[]
-  history: ModelHistorySeries | undefined
-  moverRows: MoverRow[]
-  modelTop10Share: number
-  userTop10Share: number
-  topVendorShare: number
-}) {
-  const { t } = props
-  if (props.id === 'users') {
-    return {
-      title: t('User Rankings'),
-      description: props.periodLabel,
-      body: (
-        <UserRankChart
-          loading={props.loading}
-          theme={props.theme}
-          rows={props.users.slice(0, 10)}
-        />
-      ),
-    }
-  }
-  if (props.id === 'vendors') {
-    return {
-      title: t('Vendor Share'),
-      description: props.periodLabel,
-      body: (
-        <VendorShareChart
-          loading={props.loading}
-          theme={props.theme}
-          rows={props.vendors}
-        />
-      ),
-    }
-  }
-  if (props.id === 'trend') {
-    return {
-      title: t('Token Trend'),
-      description: props.periodLabel,
-      body: (
-        <TokenTrendChart
-          loading={props.loading}
-          theme={props.theme}
-          history={props.history}
-        />
-      ),
-    }
-  }
-  if (props.id === 'movers') {
-    return {
-      title: t('Rank Movements'),
-      description: props.periodLabel,
-      body: <MoversMarquee rows={props.moverRows} />,
-    }
-  }
-  if (props.id === 'concentration') {
-    return {
-      title: t('Concentration'),
-      description: props.periodLabel,
-      body: (
-        <ConcentrationGauges
-          loading={props.loading}
-          theme={props.theme}
-          modelTop10={props.modelTop10Share}
-          userTop10={props.userTop10Share}
-          topVendor={props.topVendorShare}
-        />
-      ),
-    }
-  }
-  return {
-    title: props.id === 'monitor' ? t('Full Monitor') : t('Model Rankings'),
-    description: props.periodLabel,
-    body: (
-      <ModelRankChart
-        loading={props.loading}
-        theme={props.theme}
-        rows={props.models.slice(0, 10)}
-      />
-    ),
-  }
 }

@@ -18,7 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
 
-import type { RankingPeriod, RankingsSnapshot } from './types'
+import type {
+  RankingPeriod,
+  RankingsSnapshot,
+  RegionsCatalog,
+  RegionsSnapshot,
+} from './types'
 
 type RankingsResponse = {
   success: boolean
@@ -26,9 +31,32 @@ type RankingsResponse = {
   data: RankingsSnapshot
 }
 
+type RegionsResponse = {
+  success: boolean
+  message?: string
+  data: RegionsSnapshot
+}
+
 export async function getRankings(
   period: RankingPeriod
 ): Promise<RankingsResponse> {
   const res = await api.get('/api/rankings', { params: { period } })
   return res.data
+}
+
+export async function getRankingRegions(
+  period: RankingPeriod,
+  province: string
+): Promise<RegionsResponse> {
+  const res = await api.get('/api/rankings/regions', {
+    params: province ? { period, province } : { period },
+  })
+  return res.data
+}
+
+/** Static province → city cascade shipped with the map GeoJSON. */
+export async function getRegionsCatalog(): Promise<RegionsCatalog> {
+  const res = await fetch('/geo/regions.json')
+  if (!res.ok) throw new Error(`regions catalog: ${res.status}`)
+  return (await res.json()) as RegionsCatalog
 }

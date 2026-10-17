@@ -17,12 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /*
- * Rankings big-screen styles (fluid layout, no transform scaling).
+ * Rankings cockpit styles (fluid layout, no transform scaling).
  * Design language: modern rounded cockpit — generous radii, quiet borders,
  * static gradients only (no animated glows / scans / pulses). Every color
  * derives from the app theme tokens, so the screen follows the selected
- * light / dark / system theme and any admin theme preset (e.g. the curated
- * `aurora-violet` palette designed for this screen). All classes are
+ * light / dark / system theme and any admin theme preset. All classes are
  * `bsc-` prefixed so they cannot collide with Tailwind or app styles.
  */
 .bsc-root {
@@ -38,22 +37,25 @@ For commercial licensing, please contact support@quantumnous.com
   --bsc-accent-danger: var(--destructive);
   --bsc-up: var(--success);
 
-  /* Fills the content area below the fixed site header; the exact height is
-   * set from JS so the stage fills the viewport edge-to-edge. */
+  /* Fills the viewport; the fixed site header (h-16 mobile / md:h-24) is out
+   * of flow, so its height is reserved as padding inside the 100svh box. */
   position: relative;
   width: 100%;
-  min-height: 480px;
+  height: 100svh;
+  min-height: 620px;
+  padding-top: 64px;
   overflow: hidden;
   background: var(--bsc-bg-main);
   color: var(--bsc-text-main);
   font-family:
     'PingFang SC', 'Microsoft YaHei', 'Segoe UI', 'Public Sans', sans-serif;
 }
+@media (min-width: 768px) {
+  .bsc-root {
+    padding-top: 96px;
+  }
+}
 
-/* Fluid stage: fills the root below the site header. Panels and charts
- * re-layout with the container (no transform scaling → no text distortion);
- * the design proportions follow the 1920×1080 demo (27/46/27 columns,
- * ~56/42 panel split, 72px header). */
 .bsc-screen {
   position: relative;
   width: 100%;
@@ -80,141 +82,48 @@ For commercial licensing, please contact support@quantumnous.com
   flex-direction: column;
 }
 
-/* ===== Header (h = 72px) ===== */
-.bsc-header {
-  height: 72px;
-  position: relative;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 0 28px;
-}
-.bsc-header::after {
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--bsc-border-glow) 18%,
-    var(--bsc-accent) 50%,
-    var(--bsc-border-glow) 82%,
-    transparent
-  );
-}
-.bsc-title {
+/* ===== Body grid: left · map · right, token trend along the bottom ===== */
+.bsc-body {
   flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  justify-content: center;
-  font-size: clamp(20px, 1.7vw, 32px);
-  font-weight: 700;
-  color: var(--bsc-text-title);
-  letter-spacing: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-/* Fade-out flourish lines flanking the title (static deco). */
-.bsc-title::before,
-.bsc-title::after {
-  content: '';
-  flex: 1 1 0;
-  max-width: 300px;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--primary) 45%, transparent)
-  );
-}
-.bsc-title::after {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--primary) 45%, transparent),
-    transparent
-  );
-}
-.bsc-header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
-
-/* Period tabs — pill-shaped segmented control. */
-.bsc-periods {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 7%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
-}
-.bsc-period-btn {
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--bsc-text-sub);
-  padding: 4px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  font-variant-numeric: tabular-nums;
-  transition: color 0.15s, background-color 0.15s;
-}
-.bsc-period-btn:hover {
-  color: var(--bsc-text-main);
-}
-.bsc-period-btn[aria-selected='true'] {
-  color: var(--bsc-accent-fg);
-  background: var(--bsc-accent);
-}
-.bsc-period-btn:focus-visible {
-  outline: 2px solid var(--bsc-accent);
-  outline-offset: 2px;
-}
-
-.bsc-clock {
-  text-align: right;
-  font-size: 14px;
-  color: var(--bsc-text-sub);
-  letter-spacing: 1px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.bsc-clock b {
-  color: var(--bsc-accent);
-  font-weight: 600;
-}
-
-/* ===== Three-column layout: left 27% / mid 46% / right 27% ===== */
-.bsc-layout {
-  flex: 1;
-  display: flex;
-  gap: 16px;
-  padding: 16px;
   min-height: 0;
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  grid-template-columns:
+    minmax(0, 22fr) minmax(0, 56fr)
+    minmax(0, 22fr);
+  grid-template-rows: minmax(0, 1fr) clamp(132px, 17vh, 184px);
+  grid-template-areas:
+    'left center right'
+    'bottom bottom bottom';
+}
+.bsc-area-left {
+  grid-area: left;
+}
+.bsc-area-center {
+  grid-area: center;
+}
+.bsc-area-right {
+  grid-area: right;
+}
+.bsc-area-bottom {
+  grid-area: bottom;
 }
 .bsc-col {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
   min-height: 0;
 }
-.bsc-col-side {
-  flex: 0 0 27%;
+.bsc-col > .bsc-panel {
+  flex: 1 1 0;
+  min-height: 0;
 }
-.bsc-col-mid {
-  flex: 1 1 46%;
+/* The map is the centerpiece, but the region panel below it still needs room
+ * for its three calendar totals plus a readable mini trend. */
+.bsc-col > .bsc-panel-map {
+  flex: 2.2 1 0;
 }
 
 /* ===== Panels — rounded cockpit cards ===== */
@@ -223,18 +132,21 @@ For commercial licensing, please contact support@quantumnous.com
   border: 1px solid var(--bsc-border-glow);
   border-radius: 14px;
   position: relative;
-  padding: 14px;
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 .bsc-panel-title {
   position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
+  row-gap: 6px;
+  flex-wrap: wrap;
   flex: none;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--bsc-text-title);
   margin-bottom: 12px;
@@ -262,12 +174,131 @@ For commercial licensing, please contact support@quantumnous.com
     transparent
   );
 }
-.bsc-panel-title small {
+.bsc-panel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Right-aligned cluster: period tabs, clock, drill-out and enlarge controls. */
+.bsc-panel-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.bsc-panel-tools small {
   font-size: 12px;
   color: var(--bsc-text-sub);
   font-weight: 400;
-  margin-left: auto;
   white-space: nowrap;
+}
+.bsc-panel-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  font-size: 11px;
+  color: var(--bsc-text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Enlarge control — opens the panel's chart in a dialog. */
+.bsc-zoom {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--bsc-text-sub);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.bsc-zoom svg {
+  width: 13px;
+  height: 13px;
+}
+.bsc-zoom:hover {
+  color: var(--bsc-accent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.bsc-zoom:focus-visible {
+  outline: 2px solid var(--bsc-accent);
+  outline-offset: 2px;
+}
+
+/* Drill-out control in the map panel header. */
+.bsc-back {
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--bsc-accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bsc-back:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+.bsc-back:focus-visible {
+  outline: 2px solid var(--bsc-accent);
+  outline-offset: 2px;
+}
+
+/* Period tabs — pill-shaped segmented control. */
+.bsc-periods {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.bsc-period-btn {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bsc-text-sub);
+  padding: 3px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+.bsc-period-btn:hover {
+  color: var(--bsc-text-main);
+}
+.bsc-period-btn[aria-selected='true'] {
+  color: var(--bsc-accent-fg);
+  background: var(--bsc-accent);
+}
+.bsc-period-btn:focus-visible {
+  outline: 2px solid var(--bsc-accent);
+  outline-offset: 2px;
+}
+
+.bsc-clock {
+  text-align: right;
+  font-size: 12px;
+  color: var(--bsc-text-sub);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .bsc-chart {
@@ -280,71 +311,93 @@ For commercial licensing, please contact support@quantumnous.com
   place-items: center;
   color: var(--bsc-text-sub);
   font-size: 13px;
+  text-align: center;
+  padding: 12px;
 }
 
-/* Panel split follows the demo proportions (~560:424 → 1.32:1), fluid. */
-.bsc-panel-rank {
-  flex: 1.32 1 0;
-  min-height: 240px;
-}
-.bsc-panel-fixed {
-  flex: 1 1 0;
-  min-height: 200px;
-}
-
-/* ===== KPI flip cards — tinted chips inside the panel ===== */
-.bsc-kpi-row {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
-  /* Tall enough for the three-row chip (value + label + sub) at any
-   * viewport scale — the top-model card is the tallest. */
-  height: 132px;
-  flex: none;
-}
-.bsc-kpi {
+/* ===== Map panel ===== */
+.bsc-map-wrap {
+  position: relative;
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bsc-map-tip {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  font-size: 11px;
+  color: var(--bsc-text-sub);
+  opacity: 0.8;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.bsc-map-hint {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  transform: translateX(-50%);
+  max-width: 76%;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--bsc-text-sub);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ===== Region calendar totals ===== */
+.bsc-region-totals {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bsc-region-total {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 0;
-  padding: 8px 10px;
-  border-radius: 12px;
+  gap: 2px;
+  padding: 5px 6px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 13%, transparent);
+  min-width: 0;
 }
-.bsc-kpi-value {
-  font-size: clamp(26px, 2.3vw, 38px);
+.bsc-region-total-value {
+  font-size: clamp(15px, 1.2vw, 22px);
   font-weight: 700;
   color: var(--bsc-accent);
-  line-height: 1;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.bsc-kpi-label {
-  font-size: 13px;
-  color: var(--bsc-text-sub);
-  letter-spacing: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-.bsc-kpi-sub {
+.bsc-region-total-label {
   font-size: 11px;
-  color: var(--bsc-accent);
+  color: var(--bsc-text-sub);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+}
+/* Enlarged dialog variant. */
+.bsc-region-totals-lg {
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.bsc-region-totals-lg .bsc-region-total {
+  padding: 14px 10px;
+}
+.bsc-region-totals-lg .bsc-region-total-value {
+  font-size: clamp(24px, 2.4vw, 38px);
+}
+.bsc-region-totals-lg .bsc-region-total-label {
+  font-size: 13px;
 }
 
 /* ===== Movers marquee table ===== */
-.bsc-log-panel {
-  flex: 0 0 190px;
-}
 .bsc-scroll-table {
   flex: 1;
   min-height: 0;
@@ -373,7 +426,7 @@ For commercial licensing, please contact support@quantumnous.com
 .bsc-scroll-table li {
   display: flex;
   align-items: center;
-  height: 34px;
+  height: 32px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--bsc-text-main);
@@ -388,23 +441,23 @@ For commercial licensing, please contact support@quantumnous.com
   text-overflow: ellipsis;
 }
 .bsc-c-rank {
-  flex: 0 0 56px;
+  flex: 0 0 52px;
   color: var(--bsc-text-sub);
 }
 .bsc-c-model {
   flex: 1 1 auto;
 }
 .bsc-c-move {
-  flex: 0 0 72px;
+  flex: 0 0 68px;
 }
 .bsc-c-growth {
-  flex: 0 0 96px;
+  flex: 0 0 88px;
   text-align: right;
   font-weight: 600;
 }
 .bsc-lv {
   display: inline-block;
-  min-width: 48px;
+  min-width: 46px;
   padding: 1px 8px;
   border-radius: 999px;
   font-size: 12px;
@@ -432,7 +485,8 @@ For commercial licensing, please contact support@quantumnous.com
 
 /* ===== Centered loading / error states ===== */
 .bsc-center {
-  flex: 1;
+  /* Spans the whole explicit grid, whatever the current area layout is. */
+  grid-area: 1 / 1 / -1 / -1;
   display: grid;
   place-items: center;
   text-align: center;
@@ -462,6 +516,39 @@ For commercial licensing, please contact support@quantumnous.com
   outline-offset: 2px;
 }
 
+/* ===== Enlarged panel dialog ===== */
+.rank-chart-frame {
+  display: flex;
+  flex-direction: column;
+  height: min(68vh, 620px);
+  min-height: 320px;
+}
+.rank-chart-frame .bsc-chart,
+.rank-chart-frame .bsc-scroll-table {
+  width: 100%;
+  min-height: 260px;
+  flex: 1;
+}
+.rank-board-dialog {
+  background: var(--popover);
+}
+.dark .rank-board-dialog {
+  /* 80% opaque frosted panel (the backdrop blur itself is applied via an
+   * inline style on the DialogContent — the production CSS minifier
+   * strips the unprefixed backdrop-filter, keeping only -webkit-). */
+  background: linear-gradient(
+    180deg,
+    color-mix(
+      in srgb,
+      color-mix(in oklch, var(--primary) 14%, var(--popover)) 80%,
+      transparent
+    ),
+    color-mix(in srgb, var(--popover) 80%, transparent) 45%
+  );
+  border: 1px solid color-mix(in oklch, var(--primary) 36%, var(--border));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+}
+
 /* Dark mode: slightly deeper ambient washes; everything stays static. */
 .dark .bsc-screen {
   background:
@@ -482,81 +569,45 @@ For commercial licensing, please contact support@quantumnous.com
     ),
     var(--bsc-bg-main);
 }
-.dark .bsc-title {
-  color: var(--bsc-text-title);
-}
-.dark .bsc-panel-title small {
+.dark .bsc-panel-tools small {
   color: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
 }
-
-/* Rankings modules follow the console glass: equal cards, hover and open glow. */
-.rank-board,
-.rank-monitor {
-  width: 100%;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
-}
-.rank-board:hover,
-.rank-monitor:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklch, var(--primary) 42%, var(--border));
-}
-.rank-board:active,
-.rank-monitor:active {
-  transform: translateY(0) scale(0.985);
-}
-.rank-board[data-open='true'],
-.rank-monitor[data-open='true'] {
-  border-color: color-mix(in oklch, var(--primary) 55%, var(--border));
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 32%, transparent);
-}
-.dark .rank-board:hover,
-.dark .rank-monitor:hover,
-.dark .rank-board[data-open='true'],
-.dark .rank-monitor[data-open='true'] {
-  border-color: rgba(186, 170, 255, 0.55);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 0 0 1px rgba(160, 140, 255, 0.38),
-    0 0 22px rgba(110, 80, 255, 0.32);
-}
-.dark .bsc-kpi-value {
+.dark .bsc-region-total-value {
   text-shadow: 0 0 12px rgba(140, 110, 255, 0.55);
 }
 
-.rank-chart-frame {
-  display: flex;
-  flex-direction: column;
-  height: min(62vh, 520px);
-  min-height: 320px;
-}
-.rank-chart-frame .bsc-chart,
-.rank-chart-frame .bsc-scroll-table {
-  width: 100%;
-  min-height: 280px;
-  flex: 1;
-}
-
-.rank-board-dialog {
-  background: var(--popover);
-}
-.dark .rank-board-dialog {
-  /* 80% opaque frosted panel (the backdrop blur itself is applied via an
-   * inline style on the DialogContent — the production CSS minifier
-   * strips the unprefixed backdrop-filter, keeping only -webkit-). */
-  background: linear-gradient(
-    180deg,
-    color-mix(
-      in srgb,
-      color-mix(in oklch, var(--primary) 14%, var(--popover)) 80%,
-      transparent
-    ),
-    color-mix(in srgb, var(--popover) 80%, transparent) 45%
-  );
-  border: 1px solid color-mix(in oklch, var(--primary) 36%, var(--border));
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+/* ===== Narrow viewports: stack the cockpit into one scrolling column ===== */
+@media (max-width: 1180px) {
+  .bsc-root {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+  .bsc-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'center'
+      'left'
+      'right'
+      'bottom';
+  }
+  .bsc-col > .bsc-panel {
+    flex: none;
+    min-height: 280px;
+  }
+  .bsc-col > .bsc-panel-map {
+    flex: none;
+    min-height: 460px;
+  }
+  .bsc-area-bottom {
+    min-height: 240px;
+  }
+  .bsc-panel-tools {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .bsc-center {
+    min-height: 40vh;
+  }
 }

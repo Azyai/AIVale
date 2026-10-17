@@ -29,10 +29,15 @@ import type { EChartsOption } from 'echarts'
  * in a ref, so chart creation and `setOption` calls arriving in any order
  * (including the empty-data → data-filled placeholder swap) all converge.
  */
-export function useEChart() {
+export function useEChart(handlers?: {
+  /** Fires with the clicked datum's name (map regions, pie slices, bars). */
+  onClick?: (name: string) => void
+}) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const chartRef = useRef<echarts.ECharts | null>(null)
   const pendingOptionRef = useRef<EChartsOption | null>(null)
+  const handlersRef = useRef(handlers)
+  handlersRef.current = handlers
 
   useEffect(() => {
     if (!container) return
@@ -40,6 +45,10 @@ export function useEChart() {
     chartRef.current = chart
     const pending = pendingOptionRef.current
     if (pending) chart.setOption(pending, { replaceMerge: ['series'] })
+    chart.on('click', (params) => {
+      const name = (params as { name?: string }).name
+      if (name) handlersRef.current?.onClick?.(name)
+    })
     const observer = new ResizeObserver(() => {
       // Dispose can race this callback (dialog close / option swap removes
       // the container after the observer fired); resize() on a disposed

@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
@@ -25,6 +25,9 @@ import { formatTokens } from '../lib/format'
 import type {
   ModelHistorySeries,
   ModelRanking,
+  RankingMover,
+  RegionPoint,
+  RegionStat,
   UserRanking,
   VendorRanking,
 } from '../types'
@@ -108,8 +111,9 @@ function RankBarChart(props: {
   theme: ScreenChartTheme
   rows: Array<{ name: string; tokens: number }>
   barColor: string
+  onSelect?: (name: string) => void
 }) {
-  const { setContainer, setOption } = useEChart()
+  const { setContainer, setOption } = useEChart({ onClick: props.onSelect })
   const empty = props.rows.length === 0
   // Rows arrive as a fresh array every parent render; memoize on the
   // serialized content so the option effect below only re-runs when the
@@ -543,4 +547,295 @@ export function ConcentrationGauges(props: {
 
   if (!props.loading && empty) return <NoData />
   return <div ref={setContainer} className='bsc-chart' />
+}
+
+/**
+ * Center: regional choropleth. `mapKey` is a GeoJSON already registered with
+ * ECharts (see use-region-geo); it swaps between the national map and a
+ * province's city map, so the container is keyed to force a fresh chart.
+ */
+export function RegionMapChart(props: {
+  theme: ScreenChartTheme
+  mapKey?: string
+  rows: RegionStat[]
+  showLabels: boolean
+  onSelect?: (name: string) => void
+  fallback?: ReactNode
+}) {
+  const { setContainer, setOption } = useEChart({ onClick: props.onSelect })
+  // Content-keyed: the 1s clock re-renders the parent with fresh array
+  // identities, which must not replay setOption (see RankBarChart).
+  const rowsKey = JSON.stringify(
+    props.rows.map((r) => [r.name, r.total_tokens, r.share])
+  )
+  const rows = useMemo(
+    () =>
+      (JSON.parse(rowsKey) as Array<[string, number, number]>).map(
+        ([name, tokens, share]) => ({ name, tokens, share })
+      ),
+    [rowsKey]
+  )
+  const mapKey = props.mapKey
+
+  useEffect(() => {
+    if (!mapKey) return
+    const max = Math.max(1, ...rows.map((r) => r.tokens))
+    const option: EChartsOption = {
+      tooltip: {
+        ...tooltipBase(props.theme),
+        trigger: 'item',
+        formatter: (p) => {
+          const d = firstParam(p)
+          const row = rows.find((r) => r.name === d.name)
+          if (!row) return `${d.name ?? ''}<br/><b>${formatTokens(0)}</b>`
+          return `${row.name}<br/><b>${formatTokens(row.tokens)}</b> · ${(row.share * 100).toFixed(1)}%`
+        },
+      },
+      visualMap: {
+        type: 'continuous',
+        show: rows.length > 0,
+        min: 0,
+        max,
+        left: 10,
+        bottom: 14,
+        itemWidth: 10,
+        itemHeight: 88,
+        calculable: true,
+        precision: 0,
+        text: [formatTokens(max), '0'],
+        textStyle: { color: props.theme.textSub, fontSize: 11 },
+        formatter: (value) => formatTokens(Number(value)),
+        inRange: {
+          color: [
+            withAlpha(props.theme.accent, 0.16),
+            withAlpha(props.theme.accent, 0.52),
+            props.theme.series[1],
+          ],
+        },
+        seriesIndex: 0,
+      },
+      series: [
+        {
+          type: 'map',
+          map: mapKey,
+          roam: false,
+          zoom: 1.04,
+          layoutCenter: ['52%', '50%'],
+          layoutSize: '98%',
+          label: {
+            show: props.showLabels,
+            color: props.theme.textSub,
+            fontSize: 10,
+          },
+          itemStyle: {
+            areaColor: withAlpha(props.theme.textSub, 0.07),
+            borderColor: withAlpha(props.theme.accent, 0.34),
+            borderWidth: 0.7,
+            shadowColor: withAlpha(props.theme.accent, 0.22),
+            shadowBlur: 14,
+          },
+          emphasis: {
+            label: { show: true, color: props.theme.textTitle, fontSize: 11 },
+            itemStyle: {
+              areaColor: withAlpha(props.theme.accent, 0.6),
+              borderColor: props.theme.accent,
+            },
+          },
+          select: { disabled: true },
+          data: rows.map((r) => ({ name: r.name, value: r.tokens })),
+        },
+      ],
+    }
+    setOption(option)
+  }, [mapKey, rows, props.theme, props.showLabels, setOption])
+
+  if (!mapKey) return props.fallback ?? <NoData />
+  return <div key={mapKey} ref={setContainer} className='bsc-chart' />
+}
+
+/** Right column: province (or drilled-down city) ranking bars. */
+export function RegionRankChart(props: {
+  loading: boolean
+  theme: ScreenChartTheme
+  rows: RegionStat[]
+  onSelect?: (name: string) => void
+}) {
+  return (
+    <RankBarChart
+      loading={props.loading}
+      theme={props.theme}
+      rows={props.rows.map((r) => ({ name: r.name, tokens: r.total_tokens }))}
+      barColor={props.theme.series[2]}
+      onSelect={props.onSelect}
+    />
+  )
+}
+
+/** Center-bottom: token trend of the region currently in focus. */
+export function RegionTrendChart(props: {
+  loading: boolean
+  theme: ScreenChartTheme
+  points: RegionPoint[]
+}) {
+  const { setContainer, setOption } = useEChart()
+  const pointsKey = JSON.stringify(props.points.map((p) => [p.label, p.tokens]))
+  const points = useMemo(
+    () =>
+      (JSON.parse(pointsKey) as Array<[string, number]>).map(
+        ([label, tokens]) => ({ label, tokens })
+      ),
+    [pointsKey]
+  )
+  const empty = points.length === 0
+
+  useEffect(() => {
+    if (empty) return
+    const color = props.theme.series[1]
+    const option: EChartsOption = {
+      tooltip: {
+        ...tooltipBase(props.theme),
+        valueFormatter: (v) => formatTokens(Number(v)),
+      },
+      grid: { top: 16, left: 8, right: 16, bottom: 2, containLabel: true },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: points.map((p) => p.label),
+        axisLine: axisLine(props.theme),
+        axisTick: { show: false },
+        axisLabel: {
+          color: props.theme.textSub,
+          fontSize: 11,
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: {
+          color: props.theme.textSub,
+          fontSize: 11,
+          formatter: (v: number) => formatTokens(v),
+        },
+        splitLine: splitLine(props.theme),
+      },
+      series: [
+        {
+          type: 'line',
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 5,
+          showSymbol: points.length <= 40,
+          lineStyle: {
+            width: 2.5,
+            color,
+            shadowColor: withAlpha(color, 0.6),
+            shadowBlur: 12,
+          },
+          itemStyle: { color },
+          areaStyle: { color: verticalGradient(color, 0.32, 0.02) },
+          data: points.map((p) => p.tokens),
+        },
+      ],
+    }
+    setOption(option)
+  }, [empty, points, props.theme, setOption])
+
+  if (!props.loading && empty) return <NoData />
+  return <div ref={setContainer} className='bsc-chart' />
+}
+
+type MoverRow = {
+  model: string
+  delta: number
+  current: number
+  growth: number
+}
+
+function moveBadge(delta: number) {
+  if (delta > 0) {
+    return <span className='bsc-lv bsc-lv-up'>▲{delta}</span>
+  }
+  if (delta < 0) {
+    return <span className='bsc-lv bsc-lv-down'>▼{Math.abs(delta)}</span>
+  }
+  return <span className='bsc-lv'>—</span>
+}
+
+function toMoverRows(
+  movers: RankingMover[] | undefined,
+  droppers: RankingMover[] | undefined
+): MoverRow[] {
+  const toRow = (m: RankingMover): MoverRow => ({
+    model: m.model_name,
+    delta: m.rank_delta,
+    current: m.current_rank,
+    growth: m.growth_pct,
+  })
+  return [...(movers ?? []).map(toRow), ...(droppers ?? []).map(toRow)]
+}
+
+/**
+ * Rank-movement marquee: duplicated list translated upward in a loop,
+ * pausing when the tab is hidden or the user prefers reduced motion.
+ */
+export function RankMovementMarquee(props: {
+  movers?: RankingMover[]
+  droppers?: RankingMover[]
+}) {
+  const { t } = useTranslation()
+  const ulRef = useRef<HTMLUListElement>(null)
+  const moversKey = JSON.stringify(props.movers ?? [])
+  const droppersKey = JSON.stringify(props.droppers ?? [])
+  const source = useMemo(
+    () =>
+      toMoverRows(
+        JSON.parse(moversKey) as RankingMover[],
+        JSON.parse(droppersKey) as RankingMover[]
+      ),
+    [moversKey, droppersKey]
+  )
+  const scrollable = source.length >= 5
+
+  useEffect(() => {
+    if (!scrollable) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const ul = ulRef.current
+    if (!ul) return
+    let y = 0
+    const id = window.setInterval(() => {
+      if (document.hidden || !ul.scrollHeight) return
+      y = (y + 1) % (ul.scrollHeight / 2)
+      ul.style.transform = `translateY(-${y}px)`
+    }, 40)
+    return () => window.clearInterval(id)
+  }, [scrollable])
+
+  const rows = (scrollable ? [source, source] : [source]).flatMap(
+    (copy, copyIdx) =>
+      copy.map((r) => ({ ...r, key: `${copyIdx}:${r.model}:${r.current}` }))
+  )
+  return (
+    <div className='bsc-scroll-table'>
+      <ul ref={ulRef}>
+        {rows.map((r) => (
+          <li key={r.key}>
+            <span className='bsc-c-rank'>#{r.current}</span>
+            <span className='bsc-c-model'>{r.model}</span>
+            <span className='bsc-c-move'>{moveBadge(r.delta)}</span>
+            <span
+              className={`bsc-c-growth ${r.growth >= 0 ? 'bsc-growth-up' : 'bsc-growth-down'}`}
+            >
+              {r.growth >= 0 ? '+' : ''}
+              {r.growth.toFixed(1)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+      {source.length === 0 && (
+        <div className='bsc-chart-placeholder'>{t('No data')}</div>
+      )}
+    </div>
+  )
 }

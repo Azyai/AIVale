@@ -152,3 +152,66 @@ export type RankingsSnapshot = {
   /** 100%-stacked area history of token share by vendor over the period. */
   vendor_share_history: VendorShareSeries
 }
+
+/**
+ * One province (or, when drilled down, one city) with its token usage.
+ * Region names are the GeoJSON labels admins pick in user management.
+ */
+export type RegionStat = {
+  rank: number
+  name: string
+  total_tokens: number
+  users: number
+  /** Distinct cities with traffic — provinces only. */
+  cities?: number
+  /** Busiest city — provinces only. */
+  top_city?: string
+  /** Share of the enclosing scope (0..1). */
+  share: number
+  growth_pct: number
+}
+
+export type RegionPoint = {
+  ts: string
+  label: string
+  tokens: number
+}
+
+/** Calendar-to-date usage of the selected region, plus the period series. */
+export type RegionDetail = {
+  province: string
+  city?: string
+  today_tokens: number
+  month_tokens: number
+  year_tokens: number
+  series: RegionPoint[]
+}
+
+export type RegionsSnapshot = {
+  period: RankingPeriod
+  /** Empty string means the national level. */
+  province: string
+  total_tokens: number
+  provinces: RegionStat[]
+  /** City breakdown; only filled when `province` is set. */
+  cities: RegionStat[]
+  /** Usage that could not be attributed to any region. */
+  unassigned: RegionStat
+  detail: RegionDetail
+}
+
+export type RegionCityOption = {
+  adcode: number
+  name: string
+}
+
+export type RegionProvinceOption = {
+  adcode: number
+  name: string
+  cities: RegionCityOption[]
+}
+
+/** Static `/geo/regions.json` cascade used to resolve map GeoJSON files. */
+export type RegionsCatalog = {
+  provinces: RegionProvinceOption[]
+}
