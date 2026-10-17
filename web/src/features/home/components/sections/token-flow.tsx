@@ -35,7 +35,7 @@ const REDUCED =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-type ScnId = 'standard' | 'team' | 'failover'
+type ScnId = 'standard' | 'failover'
 type NodeId =
   | 'client'
   | 'gateway'
@@ -46,7 +46,6 @@ type NodeId =
   | 'bill'
   | 'data'
 type NodeState = 'idle' | 'on' | 'ok' | 'err'
-type LineKind = 'init' | 'running' | 'again'
 type FlowColor = 'v' | 'c' | 'a'
 type LogTag =
   | 'REQ'
@@ -57,6 +56,7 @@ type LogTag =
   | 'DATA'
   | 'WARN'
   | 'DONE'
+  | 'SYS'
 
 interface NodeDef {
   id: NodeId
@@ -68,7 +68,6 @@ interface NodeDef {
   icon: IconName
   title: string
   sub: string
-  err?: boolean
 }
 
 interface PathDef {
@@ -152,11 +151,11 @@ const NODES: NodeDef[] = [
   { id: 'client', x: 120, y: 180, w: 188, h: 78, kind: 'main', icon: 'client', title: '终端应用', sub: '对话 / 代码 / Agent' },
   { id: 'gateway', x: 352, y: 180, w: 188, h: 78, kind: 'main', icon: 'shield', title: '统一网关', sub: '鉴权 · 限流 · 协议' },
   { id: 'router', x: 584, y: 180, w: 188, h: 78, kind: 'main', icon: 'route', title: '智能调度', sub: '负载均衡 · 熔断切换' },
-  { id: 'chA', x: 812, y: 96, w: 200, h: 64, kind: 'ch', icon: 'chip', title: 'CH-01 · 千问 125B', sub: '主力对话 · 权重 40%', err: true },
+  { id: 'chA', x: 812, y: 96, w: 200, h: 64, kind: 'ch', icon: 'chip', title: 'CH-01 · 千问 125B', sub: '主力对话 · 权重 40%' },
   { id: 'chB', x: 812, y: 180, w: 200, h: 64, kind: 'ch', icon: 'chip', title: 'CH-02 · Qwen3.8-Flash', sub: '轻量高速 · 权重 35%' },
   { id: 'chC', x: 812, y: 264, w: 200, h: 64, kind: 'ch', icon: 'chip', title: 'CH-03 · MiniMax H3', sub: '文生图 · 权重 25%' },
   { id: 'bill', x: 1012, y: 180, w: 176, h: 78, kind: 'main', icon: 'coin', title: '计量计费', sub: '计量·扣费·账单' },
-  { id: 'data', x: 600, y: 344, w: 560, h: 64, kind: 'bar', icon: 'bars', title: '数据洞察', sub: '监控大屏 · 排行榜 · 对账 · 订阅账单' },
+  { id: 'data', x: 600, y: 344, w: 560, h: 64, kind: 'bar', icon: 'bars', title: '数据洞察', sub: '数据看板 · 排行榜 · 对账 · 订阅账单' },
 ]
 
 /* Wires — d values verbatim from the deck. */
@@ -173,20 +172,13 @@ const PATHS: PathDef[] = [
   { id: 'p5', d: 'M 1012 219 C 1012 288 946 344 884 344', c: 'a', label: { text: '异步落账', x: 1016, y: 288 } },
 ]
 
-const SCN_ORDER: ScnId[] = ['standard', 'team', 'failover']
-const SCN_LABEL: Record<ScnId, string> = {
-  standard: '标准调用',
-  team: '团队额度',
-  failover: '故障切换',
-}
+/* The demo plays these two scripts back to back, forever, once the section
+ * scrolls into view: a clean standard call, then a failover call. */
+const LOOP: ScnId[] = ['standard', 'failover']
 
-/* Requester badge / note chrome per scenario (badge id + color are
- * technical strings and stay untranslated; only the name is a key). */
-const SC_META: Record<ScnId, { badgeId: string; badgeName: string; badgeColor: string; cls: string }> = {
-  standard: { badgeId: 'u-1024', badgeName: '个人', badgeColor: '#a78bfa', cls: '' },
-  team: { badgeId: 'u-2077', badgeName: '数据智能组', badgeColor: '#34d399', cls: 'sc-team' },
-  failover: { badgeId: 'u-1024', badgeName: '个人', badgeColor: '#a78bfa', cls: 'sc-failover' },
-}
+/* Requester badge under the client node. id / color are technical strings;
+ * only the name is a translation key. */
+const BADGE = { id: 'u-1024', name: '个人', color: '#a78bfa' }
 
 const INIT_NODES: Record<NodeId, NodeState> = {
   client: 'idle',
@@ -210,15 +202,10 @@ export function TokenFlowTheater() {
   const { t } = useTranslation()
 
   /* ---------- React state ---------- */
-  const [scenario, setScenario] = useState<ScnId>('standard')
   const [nodeState, setNodeState] = useState<Record<NodeId, NodeState>>(INIT_NODES)
   const [flowOn, setFlowOn] = useState<Record<string, boolean>>({})
-  const [errtagShow, setErrtagShow] = useState(false)
-  const [flash, setFlash] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [lineKind, setLineKind] = useState<LineKind>('init')
   const [lines, setLines] = useState<LogLine[]>([])
-  const [hot, setHot] = useState<{ wal: boolean; lat: boolean }>({ wal: false, lat: false })
+  const [hot, setHot] = useState<{ lat: boolean }>({ lat: false })
 
   /* ---------- DOM refs ---------- */
   const rootRef = useRef<HTMLElement>(null)
@@ -238,17 +225,11 @@ export function TokenFlowTheater() {
   const running = useRef(false)
   const logSeq = useRef(0)
   const mounted = useRef(true)
-  const scenarioRef = useRef<ScnId>('standard')
   const ctx = useRef({
     aborted: false,
     waiters: new Set<() => void>(),
     timeouts: new Set<number>(),
   })
-
-  const setScenarioValue = (sc: ScnId) => {
-    scenarioRef.current = sc
-    setScenario(sc)
-  }
 
   /* ---------- Particle engine ---------- */
   const tick = (now: number) => {
@@ -393,10 +374,8 @@ export function TokenFlowTheater() {
   const resetAll = () => {
     setNodeState(INIT_NODES)
     setFlowOn({})
-    setErrtagShow(false)
-    setFlash(false)
     setLines([])
-    setHot({ wal: false, lat: false })
+    setHot({ lat: false })
     for (const f of flows.current) f.res()
     flows.current = []
     if (raf.current != null) {
@@ -449,45 +428,6 @@ export function TokenFlowTheater() {
       await wait(260)
       log('DONE', '端到端 1,140ms · 本次请求闭环')
     },
-    async team() {
-      log('REQ', 'POST /v1/chat/completions · model=qwen3.8-flash')
-      active('client')
-      await wait(420)
-      await flow('p1', { color: 'v' })
-      active('gateway')
-      log('AUTH', '成员 u-2077 · 团队「数据智能组」· 飞书 SSO 鉴权通过')
-      await wait(320)
-      log('AUTH', '个人当月额度校验通过 · 团队策略 · 按人限额')
-      await wait(260)
-      await flow('p2', { color: 'v' })
-      active('router')
-      log('ROUTE', '轻量请求 · 优先低延迟渠道')
-      await wait(260)
-      await flow('p3b', { color: 'v' })
-      active('chB')
-      log('ROUTE', '命中 CH-02 Qwen3.8-Flash · 负载最低 · 预计 P95 240ms')
-      await wait(280)
-      log('INFER', '首字节返回 208ms · 开始流式输出')
-      const arc = flow('pArc', { color: 'c', count: 7, dur: 1300, gap: 140 })
-      await wait(560)
-      log('INFER', '生成完毕 · 688 tok')
-      await arc
-      await flow('p4b', { color: 'a', count: 4, dur: 640 })
-      active('bill')
-      log('BILL', '团队钱包统一扣减 ¥0.86 · 成员用量记账 u-2077')
-      if (mounted.current) setHot((h) => ({ ...h, wal: true }))
-      tween(stTokRef.current, 0, 688, 1000, (v) => fmtNum(Math.round(v), 0))
-      tween(stWalRef.current, 1250, 1249.14, 1000, (v) => `¥ ${fmtNum(v, 2)}`)
-      tween(stLatRef.current, 0, 792, 1000, (v) => `${Math.round(v)} ms`)
-      await wait(420)
-      log('BILL', '团队本月累计 128.4 万 tok · 额度占用 42%')
-      await wait(320)
-      await flow('p5', { color: 'a', count: 3, dur: 900 })
-      active('data')
-      log('DATA', '排行榜 · 团队看板更新 · 对账流水 +1')
-      await wait(240)
-      log('DONE', '端到端 792ms · 多租户链路闭环')
-    },
     async failover() {
       log('REQ', 'POST /v1/chat/completions · model=qwen-125b')
       active('client')
@@ -505,12 +445,6 @@ export function TokenFlowTheater() {
       await wait(420)
       log('WARN', 'CH-01 健康探测超时 · 上游 5xx ×2 · 触发熔断')
       markErr('chA')
-      setFlash(true)
-      const fid = window.setTimeout(() => {
-        if (mounted.current) setFlash(false)
-      }, 1500)
-      ctx.current.timeouts.add(fid)
-      if (mounted.current) setErrtagShow(true)
       await wait(560)
       log('ROUTE', '故障自动切换 → CH-02 Qwen3.8-Flash · 对业务无感')
       await flow('p3b', { color: 'v' })
@@ -539,67 +473,65 @@ export function TokenFlowTheater() {
   }
 
   /* ---------- Run control ---------- */
+  const SESSION_LABEL: Record<ScnId, string> = {
+    standard: t('标准调用'),
+    failover: t('故障切换'),
+  }
+  const sessionNo = useRef(0)
+
+  /* Each run owns its terminal session: the log is cleared and reopened with
+   * a divider line, so consecutive plays never read as one continuous run. */
   const run = async (sc: ScnId) => {
     if (running.current) return
     running.current = true
-    setBusy(true)
-    setLineKind('running')
     w0.current = Date.now()
     runT0.current = performance.now()
     resetAll()
-    setScenarioValue(sc)
+    sessionNo.current += 1
+    log('SYS', `── 第 ${sessionNo.current} 次请求 · ${SESSION_LABEL[sc]} ──`)
     try {
       await SCN[sc]()
     } finally {
       running.current = false
-      if (mounted.current) {
-        setBusy(false)
-        setLineKind('again')
-      }
     }
   }
 
   const runRef = useRef(run)
   runRef.current = run
+  const waitRef = useRef(wait)
+  waitRef.current = wait
 
-  const handleRun = () => {
-    void run(scenario)
-  }
-
-  const handleReset = () => {
-    if (running.current) return
-    resetAll()
-    setLineKind('init')
-  }
-
-  const handleSeg = (sc: ScnId) => {
-    setScenarioValue(sc)
-    if (!running.current) void run(sc)
-  }
-
-  /* Auto-demo once when the section scrolls into view. */
+  /* Endless demo once the section scrolls into view: a clean standard call,
+   * then a failover call, holding each finished frame before the next. */
   useEffect(() => {
     const el = rootRef.current
-    if (!el) return
-    let timer: number | undefined
-    let autoRan = false
+    if (!el || REDUCED) return
+    let cancelled = false
+    let startTimer: number | undefined
+    const loop = async () => {
+      for (let i = 0; !cancelled; i++) {
+        await runRef.current(LOOP[i % LOOP.length])
+        if (cancelled) return
+        await waitRef.current(3500)
+      }
+    }
+    let started = false
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !autoRan) {
-          autoRan = true
-          if (!REDUCED) {
-            timer = window.setTimeout(() => {
-              void runRef.current(scenarioRef.current)
-            }, 700)
-          }
+        if (entries[0].isIntersecting && !started) {
+          started = true
+          startTimer = window.setTimeout(() => {
+            void loop()
+          }, 700)
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.15 }
     )
     io.observe(el)
     return () => {
+      cancelled = true
       io.disconnect()
-      if (timer != null) window.clearTimeout(timer)
+      if (startTimer != null) window.clearTimeout(startTimer)
     }
   }, [])
 
@@ -643,88 +575,18 @@ export function TokenFlowTheater() {
     else pathEls.current.delete(id)
   }
 
-  const meta = SC_META[scenario]
-
-  /* Scenario notes (no nested ternaries — one renderer per scenario). */
-  const renderNote = (sc: ScnId) => {
-    if (sc === 'team') {
-      return (
-        <>
-          <b>{t('团队额度')}</b>
-          {' · '}
-          {t('多租户链路:飞书 SSO + 按人限额校验 → 费用从')}
-          <b>{t('团队钱包')}</b>
-          {t('统一扣减(留意右侧钱包卡片)')}
-        </>
-      )
-    }
-    if (sc === 'failover') {
-      return (
-        <>
-          <b>{t('故障切换')}</b>
-          {' · '}
-          {t('高可用链路:CH-01 熔断告警(红色闪烁)→ ')}
-          <b>{t('无感切换')}</b>
-          {t(' CH-02(留意耗时卡片)')}
-        </>
-      )
-    }
-    return (
-      <>
-        <b>{t('标准调用')}</b>
-        {' · '}
-        {t('个人请求全链路:网关鉴权 → 调度命中 CH-01 → 流式响应 → 钱包扣费 → 数据落账')}
-      </>
-    )
-  }
-  const note = renderNote(scenario)
-
-  const RUN_LABEL: Record<LineKind, string> = {
-    init: t('发起请求'),
-    running: t('链路运行中'),
-    again: t('再跑一次'),
-  }
-  const runLabel = lineKind === 'running' ? `${RUN_LABEL[lineKind]}…` : `${RUN_LABEL[lineKind]} ▸`
-
   return (
     <section ref={rootRef} className='tf tf-stage-font px-[5%] py-12 md:py-16'>
-      <div className='mx-auto w-full max-w-6xl'>
+      <div className='mx-auto w-full'>
         <div className='mb-8 text-center'>
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('一枚 Token 的旅程')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
-            {t('从一次请求,到一笔记账 —— 点击「发起请求」,看平台如何流转与应用每一枚 Token。')}
-          </p>
         </div>
-
-        <div className='flow-ctl'>
-          <div className='seg'>
-            {SCN_ORDER.map((sc) => (
-              <button
-                key={sc}
-                type='button'
-                className={sc === scenario ? 'on' : ''}
-                onClick={() => handleSeg(sc)}
-              >
-                {t(SCN_LABEL[sc])}
-              </button>
-            ))}
-          </div>
-          <div className='grow' />
-          <button type='button' className={busy ? 'btn-primary busy' : 'btn-primary'} onClick={handleRun}>
-            {runLabel}
-          </button>
-          <button type='button' className='btn-ghost' onClick={handleReset}>
-            {t('重置')}
-          </button>
-        </div>
-
-        <div className={meta.cls ? `sc-note ${meta.cls}` : 'sc-note'}>{note}</div>
 
         <div className='flow-grid'>
           <div>
-            <div className={flash ? 'stage-wrap flash' : 'stage-wrap'}>
+            <div className='stage-wrap'>
               <svg
                 className='stage'
                 viewBox='0 0 1180 420'
@@ -770,47 +632,43 @@ export function TokenFlowTheater() {
                         className={st === 'idle' ? 'node' : `node ${st}`}
                         transform={`translate(${n.x},${n.y})`}
                       >
-                        <rect
-                          x={-n.w / 2}
-                          y={-n.h / 2}
-                          width={n.w}
-                          height={n.h}
-                          rx={n.kind === 'ch' ? 14 : 16}
-                          className='box'
-                        />
-                        {n.kind === 'ch' ? (
-                          <>
-                            <circle cx={-n.w / 2 + 18} cy={0} r={3.5} className='chdot' />
-                            <text x={-n.w / 2 + 34} y={-5} className='ttl ch-ttl'>
-                              {n.title}
-                            </text>
-                            <text x={-n.w / 2 + 34} y={16} className='sub ch-sub'>
-                              {t(n.sub)}
-                            </text>
-                          </>
-                        ) : (
-                          <>
-                            <circle cx={-n.w / 2 + 36} cy={0} r={21} />
-                            <g className='ic' transform={`translate(${-n.w / 2 + 24},-12)`}>
-                              {ICONS[n.icon]}
-                            </g>
-                            <text x={-n.w / 2 + 66} y={-4} className='ttl'>
-                              {t(n.title)}
-                            </text>
-                            <text x={-n.w / 2 + 66} y={16} className='sub'>
-                              {t(n.sub)}
-                            </text>
-                          </>
-                        )}
-                        {n.err && (
-                          <text
-                            y={46}
-                            textAnchor='middle'
-                            className={errtagShow ? 'errtag show' : 'errtag'}
-                          >
-                            {`✕ ${t('上游超时')}`}
-                          </text>
-                        )}
+                        {/* Inner group carries the error shake: a CSS transform
+                            on the outer <g> would replace its translate(x,y)
+                            attribute and fling the node to the SVG origin. */}
+                        <g className='node-shake'>
+                          <rect
+                            x={-n.w / 2}
+                            y={-n.h / 2}
+                            width={n.w}
+                            height={n.h}
+                            rx={n.kind === 'ch' ? 14 : 16}
+                            className='box'
+                          />
+                          {n.kind === 'ch' ? (
+                            <>
+                              <circle cx={-n.w / 2 + 18} cy={0} r={3.5} className='chdot' />
+                              <text x={-n.w / 2 + 34} y={-5} className='ttl ch-ttl'>
+                                {n.title}
+                              </text>
+                              <text x={-n.w / 2 + 34} y={16} className='sub ch-sub'>
+                                {t(n.sub)}
+                              </text>
+                            </>
+                          ) : (
+                            <>
+                              <circle cx={-n.w / 2 + 36} cy={0} r={21} />
+                              <g className='ic' transform={`translate(${-n.w / 2 + 24},-12)`}>
+                                {ICONS[n.icon]}
+                              </g>
+                              <text x={-n.w / 2 + 66} y={-4} className='ttl'>
+                                {t(n.title)}
+                              </text>
+                              <text x={-n.w / 2 + 66} y={16} className='sub'>
+                                {t(n.sub)}
+                              </text>
+                            </>
+                          )}
+                        </g>
                       </g>
                     )
                   })}
@@ -819,9 +677,9 @@ export function TokenFlowTheater() {
                     y={252}
                     className='reqbadge'
                     textAnchor='middle'
-                    fill={meta.badgeColor}
+                    fill={BADGE.color}
                   >
-                    {`${meta.badgeId} · ${t(meta.badgeName)}`}
+                    {`${BADGE.id} · ${t(BADGE.name)}`}
                   </text>
                 </g>
                 {/* particles (imperative) */}
@@ -841,7 +699,6 @@ export function TokenFlowTheater() {
                 <i className='la' />
                 {t('计费流')}
               </span>
-              <span className='hint'>{t('进入本页自动演示一次,可切换场景重放')}</span>
             </div>
           </div>
 
@@ -853,7 +710,7 @@ export function TokenFlowTheater() {
                 </div>
                 <div className='sl'>{t('本次消耗 TOKENS')}</div>
               </div>
-              <div className={hot.wal ? 'stat hot-g' : 'stat'}>
+              <div className='stat'>
                 <div className='sv' ref={stWalRef}>
                   ¥ 1,250.00
                 </div>

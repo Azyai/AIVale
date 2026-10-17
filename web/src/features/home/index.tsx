@@ -26,22 +26,22 @@ import {
   PlatformArchitecture,
   PricingSection,
   Roadmap,
+  SellingPoints,
   ToolsWall,
   TokenFlowTheater,
-  WhyPlatform,
 } from './components'
 
 /**
  * Marketing landing page, keynote (index3) bloodline: deep-space hero with
- * orbiting model chips → why → architecture → token-flow theater →
- * pricing → achievements → tools → roadmap → FAQ. Pricing cards stay
+ * orbiting model chips → selling points → architecture → token-flow theater
+ * → pricing → achievements → tools → roadmap → FAQ. Pricing cards stay
  * driven live by the public plans API.
  */
 export function Home() {
   return (
     <PublicLayout showMainContainer={false}>
       <HeroHeading />
-      <WhyPlatform />
+      <SellingPoints />
       <PlatformArchitecture />
       <TokenFlowTheater />
       <PricingSection />

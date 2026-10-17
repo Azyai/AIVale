@@ -45,24 +45,26 @@ const MODEL_CHIPS = [
   'minimax-h3',
   'seedance-2.5',
   'nano-banana-2.1',
-  'mimo-v2.6-pro',
 ] as const
 
 function ModelChipsBoard() {
   const { t } = useTranslation()
   return (
-    <div className='border-border/60 bg-card/80 flex h-full w-full flex-col justify-center rounded-2xl border p-5 shadow-sm backdrop-blur-sm md:p-6'>
-      <div className='flex flex-wrap gap-2'>
-        {MODEL_CHIPS.map((m) => (
+    <div className='border-border/60 bg-card/80 flex h-full w-full flex-col justify-between gap-4 rounded-2xl border p-6 shadow-sm backdrop-blur-sm md:p-7'>
+      <div className='flex flex-wrap gap-2.5'>
+        {MODEL_CHIPS.map((m, i) => (
           <span
             key={m}
-            className='border-border/60 bg-muted/50 rounded-full border px-3 py-1 font-mono text-xs font-medium'
+            className={cn(
+              'border-border/60 bg-muted/50 rounded-full border px-4 py-1 font-mono text-[13px] font-medium',
+              i > 8 && 'hidden lg:inline'
+            )}
           >
             {m}
           </span>
         ))}
       </div>
-      <div className='bg-muted/60 mt-4 rounded-xl p-3.5 font-mono text-[11px] leading-normal'>
+      <div className='bg-muted/60 rounded-xl p-3.5 font-mono text-[12px] leading-5'>
         <div className='text-muted-foreground/70'>
           <span className='text-emerald-500'>POST</span>{' '}
           /v1/chat/completions
@@ -75,6 +77,9 @@ function ModelChipsBoard() {
           <span className='text-violet-500'>
             '&#123; "model": "qwen3.8-max", "messages": [...] &#125;'
           </span>
+        </div>
+        <div className='text-muted-foreground/70 mt-1.5'>
+          ← &#123; "usage": &#123; "prompt": 356, "completion": 1486 &#125; &#125;
         </div>
         <div className='text-emerald-600 dark:text-emerald-400 mt-1.5'>
           ✓ 200 OK · {t('全模态统一接口')}
@@ -216,7 +221,7 @@ export function SellingPoints() {
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('为什么选择京西智库')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
             {t('统一网关接入全模态模型，成本完全可控——为个人与团队而生。')}
           </p>
         </div>
@@ -227,10 +232,13 @@ export function SellingPoints() {
             items[active].tint
           )}
         >
-          <div className='flex flex-col gap-8 md:flex-row md:items-center md:gap-12'>
-            {/* Left: selectable items, active one expands its description —
-                stretched to the board height so both columns align exactly. */}
-            <div className='flex w-full flex-col md:h-[20.375rem] md:justify-between md:w-2/5'>
+          <div className='flex flex-col gap-8 md:flex-row md:items-stretch md:gap-12'>
+            {/* Both columns stack every variant into a single grid cell, so each
+                column is always as tall as its tallest variant and the board
+                keeps one height no matter which item is selected — resizing on
+                every switch is what read as a flicker. `items-stretch` then
+                pins the two columns to each other. */}
+            <div className='flex w-full flex-col md:min-h-[22rem] md:justify-between md:w-2/5'>
               {items.map((item, i) => {
                 const isActive = i === active
                 return (
@@ -262,6 +270,7 @@ export function SellingPoints() {
                       </span>
                     </button>
                     <div
+                      aria-hidden={!isActive}
                       className={cn(
                         'grid transition-all duration-300',
                         isActive
@@ -270,9 +279,20 @@ export function SellingPoints() {
                       )}
                     >
                       <div className='overflow-hidden'>
-                        <p className='text-muted-foreground/80 pl-4 text-base leading-relaxed md:pl-5 md:text-lg'>
-                          {item.description}
-                        </p>
+                        <div className='grid'>
+                          {items.map((other, j) => (
+                            <p
+                              key={other.title}
+                              aria-hidden={j !== i}
+                              className={cn(
+                                'text-muted-foreground/80 col-start-1 row-start-1 pl-4 text-base leading-relaxed transition-opacity duration-300 md:pl-5 md:text-lg',
+                                j === i ? 'opacity-100' : 'opacity-0'
+                              )}
+                            >
+                              {other.description}
+                            </p>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -280,10 +300,24 @@ export function SellingPoints() {
               })}
             </div>
 
-            {/* Right: the visual matching the active item — fixed to the
-                left column's content height so both sides align. */}
-            <div className='flex w-full items-stretch md:h-[20.375rem] md:w-3/5'>
-              {items[active].visual}
+            {/* Right: the visual matching the active item. */}
+            <div className='flex w-full items-stretch md:min-h-[22rem] md:w-3/5'>
+              <div className='grid w-full'>
+                {items.map((item, i) => (
+                  <div
+                    key={item.title}
+                    aria-hidden={i !== active}
+                    className={cn(
+                      'col-start-1 row-start-1 flex transition-opacity duration-500',
+                      i === active
+                        ? 'opacity-100'
+                        : 'pointer-events-none opacity-0'
+                    )}
+                  >
+                    {item.visual}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

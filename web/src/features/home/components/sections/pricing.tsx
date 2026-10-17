@@ -186,7 +186,7 @@ export function PricingSection() {
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('选择适合你的计费方式')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
             {t('订阅套餐享更优单价，按量付费灵活兜底；个人与团队均支持两种模式。')}
           </p>
         </div>

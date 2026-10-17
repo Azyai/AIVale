@@ -89,7 +89,7 @@ export function ToolsWall() {
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('兼容你正在使用的工具')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
             {t('OpenAI 兼容接口——配置一次，所有客户端即用即通。')}
           </p>
         </div>
@@ -97,7 +97,7 @@ export function ToolsWall() {
         <div className='from-violet-500/10 via-violet-500/5 to-cyan-500/10 marquee-container space-y-5 rounded-3xl bg-gradient-to-br p-5 md:p-7'>
           {MARQUEE_ROWS.map((row, i) => (
             <div
-              key={i}
+              key={row[0].label}
               className='overflow-hidden py-1'
               style={{
                 maskImage:

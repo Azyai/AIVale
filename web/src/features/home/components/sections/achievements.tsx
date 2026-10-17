@@ -32,16 +32,12 @@ const METRICS = [
 
 /* 已上线能力清单 — 与平台实际交付一致。 */
 const SHIPPED = [
-  { big: '订阅套餐', small: '季付 · 档位制 · 支持升配' },
-  { big: '团队多租户', small: 'Token 级隔离' },
-  { big: '团队钱包', small: '按人额度管理' },
-  { big: '飞书登录', small: '扫码即入 · SSO' },
+  { big: '支持多种第三方登录', small: '飞书扫码 · SSO' },
+  { big: '额度用量管理', small: '按人限额 · 团队钱包' },
   { big: '模型广场', small: '模型对比 · 千问式体验' },
-  { big: '用量大屏', small: '实时监控 · KPI 总览' },
   { big: '排行榜', small: '团队榜 · 模型榜' },
   { big: '账单对账', small: '流水级核对' },
-  { big: '国际化', small: '7 种语言' },
-  { big: '主题系统', small: '全站默认主题 · 深色优先' },
+  { big: '数据看板', small: '实时监控 · KPI 总览' },
 ] as const
 
 function fmtNum(v: number, dec: number) {
@@ -113,7 +109,7 @@ export function Achievements() {
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('建设成果 · 基座已经跑起来')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
             {t('以下能力全部上线，支撑真实业务运行。')}
           </p>
         </AnimateInView>

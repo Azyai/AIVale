@@ -63,9 +63,9 @@ export function HeroHeading() {
             size='lg'
             variant='outline'
             className='h-13 rounded-full px-9 text-base'
-            render={<Link to='/rankings' />}
+            render={<Link to='/dashboard/$section' params={{ section: 'models' }} />}
           >
-            {t('用量大屏')}
+            {t('数据看板')}
           </Button>
         </div>
 

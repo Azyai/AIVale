@@ -35,7 +35,7 @@ const CORE_MODULES = [
   { title: '统一网关', lines: ['鉴权 · 限流', '协议转换'] },
   { title: '智能调度', lines: ['负载均衡 · 故障切换', '渠道权重'] },
   { title: '计量计费', lines: ['Token 计量 · 团队钱包', '订阅套餐'] },
-  { title: '运营洞察', lines: ['用量大屏 · 排行榜', '账单对账'] },
+  { title: '运营洞察', lines: ['数据看板 · 排行榜', '账单对账'] },
 ] as const
 
 function LayerTag({
@@ -74,12 +74,12 @@ export function PlatformArchitecture() {
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('平台总览 · 一图看清')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
             {t('我们站在业务与算力之间：对上提供标准服务，对下把一切模型收拢为可调度的渠道。')}
           </p>
         </AnimateInView>
 
-        <div className='mx-auto flex w-full max-w-6xl flex-col'>
+        <div className='mx-auto flex w-full flex-col'>
           {/* 应用层 */}
           <AnimateInView className='border-border/60 bg-card/50 rounded-3xl border p-6 backdrop-blur-md md:p-7'>
             <LayerTag name='应用层' sub='消费算力的一方' badge='业务零改造接入' />
@@ -151,7 +151,7 @@ export function PlatformArchitecture() {
           </AnimateInView>
         </div>
 
-        <AnimateInView delay={300} className='mx-auto mt-11 max-w-6xl'>
+        <AnimateInView delay={300} className='mx-auto mt-11 w-full'>
           <p className='text-muted-foreground text-center text-lg leading-relaxed tracking-wide text-balance md:text-2xl'>
             {t('对上，一个标准入口；对下，一切算力皆可调度。')}
             <br />

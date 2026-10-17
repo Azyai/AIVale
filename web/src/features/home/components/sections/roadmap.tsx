@@ -45,7 +45,7 @@ const PHASES: {
     status: 'going',
     statusLabel: '调研就绪 · 推进中',
     title: '模型自部署',
-    text: '基于 A6000 集群私有化部署推理，数据不出内网，成本自主可控。',
+    text: '基于国产算力集群私有化部署推理，数据不出平台，安全合规，成本自主可控。',
     chips: ['千问 125B', 'Qwen3.8-Flash', 'MiniMax H3 文生图', '接入统一调度'],
   },
   {
@@ -76,7 +76,7 @@ const FLY_NODES = [
 const LOGIC_STEPS = [
   {
     title: '自部署先行',
-    text: '把算力成本与数据安全握在自己手里，A6000 调研已完成，轻负载场景成本立降，并以普通渠道身份接入调度，业务方零感知。',
+    text: '把算力成本与数据安全握在自己手里，国产算力调研已完成，轻负载场景成本立降，并以普通渠道身份接入调度，业务方零感知。',
   },
   {
     title: '微调接续',
@@ -106,7 +106,7 @@ export function Roadmap() {
           <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
             {t('未来蓝图 · 三步走')}
           </h2>
-          <p className='text-muted-foreground/70 mx-auto mt-3 max-w-2xl text-base leading-relaxed md:text-lg'>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
             {t('从「用平台」，到「有模型」，再到「育人才」—— 一条递进的路线。')}
           </p>
         </AnimateInView>
