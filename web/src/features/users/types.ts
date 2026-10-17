@@ -59,6 +59,8 @@ export const userSchema = z.object({
   last_login_at: z.number().optional(),
   DeletedAt: z.any().nullable().optional(),
   remark: z.string().optional(),
+  province: z.string().optional(),
+  city: z.string().optional(),
   admin_permissions: z
     .record(z.string(), z.record(z.string(), z.boolean()))
     .optional(),
@@ -125,7 +127,30 @@ export interface UserFormData {
   quota?: number // Only used when updating user
   group?: string // Only used when updating user
   remark?: string // Only used when updating user
+  province?: string
+  city?: string
   admin_permissions?: AdminPermissionMatrix
+}
+
+// ============================================================================
+// Geo Region Types (static asset /geo/regions.json)
+// ============================================================================
+
+export interface GeoCity {
+  adcode: number
+  name: string
+}
+
+export interface GeoProvince {
+  adcode: number
+  name: string
+  cities: GeoCity[]
+}
+
+export interface GeoRegions {
+  generated_at: string
+  source: string
+  provinces: GeoProvince[]
 }
 
 export type ManageUserAction =

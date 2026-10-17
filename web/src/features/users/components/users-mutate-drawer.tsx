@@ -95,7 +95,7 @@ import {
   transformFormDataToPayload,
   transformUserToFormDefaults,
 } from '../lib'
-import type { User } from '../types'
+import type { GeoRegions, User } from '../types'
 import { UserQuotaDialog } from './user-quota-dialog'
 import { useUsers } from './users-provider'
 
@@ -136,6 +136,21 @@ export function UsersMutateDrawer({
     staleTime: 5 * 60 * 1000,
   })
 
+  // Static province/city list; a failed fetch leaves the fields without options.
+  const { data: regions } = useQuery({
+    queryKey: ['geo-regions'],
+    queryFn: async (): Promise<GeoRegions> => {
+      const response = await fetch('/geo/regions.json')
+      if (!response.ok) throw new Error('Failed to load regions')
+      return (await response.json()) as GeoRegions
+    },
+    staleTime: Infinity,
+    retry: false,
+    meta: { errorToast: false },
+  })
+
+  const provinces = regions?.provinces ?? []
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: USER_FORM_DEFAULT_VALUES,
@@ -167,6 +182,10 @@ export function UsersMutateDrawer({
 
   const currentQuotaRaw = form.watch('quota_dollars') || 0
   const selectedRole = form.watch('role')
+  const selectedProvince = form.watch('province')
+  const provinceCities =
+    provinces.find((province) => province.name === selectedProvince)
+      ?.cities ?? []
   const canEditAdminPermissions = currentUser?.role === ROLE.SUPER_ADMIN
   const targetIsAdmin = (selectedRole ?? currentRow?.role ?? 0) >= ROLE.ADMIN
 
@@ -382,6 +401,68 @@ export function UsersMutateDrawer({
                       <FormDescription>
                         {t('Leave empty to use username')}
                       </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='province'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Province')}</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          options={[
+                            { value: '__none__', label: t('Unassigned Region') },
+                            ...provinces.map((province) => ({
+                              value: province.name,
+                              label: province.name,
+                            })),
+                          ]}
+                          onValueChange={(value) => {
+                            field.onChange(
+                              value === '__none__' || !value ? '' : value
+                            )
+                            form.setValue('city', '')
+                          }}
+                          value={field.value || ''}
+                          className='w-full'
+                          placeholder={t('Select a province')}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='city'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('City')}</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          options={[
+                            { value: '__none__', label: t('Unassigned Region') },
+                            ...provinceCities.map((city) => ({
+                              value: city.name,
+                              label: city.name,
+                            })),
+                          ]}
+                          onValueChange={(value) =>
+                            field.onChange(
+                              value === '__none__' || !value ? '' : value
+                            )
+                          }
+                          value={field.value || ''}
+                          className='w-full'
+                          placeholder={t('Select a city')}
+                          disabled={!selectedProvince}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

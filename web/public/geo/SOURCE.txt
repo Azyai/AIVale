@@ -1,0 +1,3 @@
+China / province boundary GeoJSON, simplified (Douglas-Peucker, EPS=0.03) from
+Alibaba DataV.GeoAtlas (https://datav.aliyun.com/portal/school/atlas/area_selector).
+See regions.json for the province -> city name and adcode cascade used by the UI.
