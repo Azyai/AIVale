@@ -108,7 +108,7 @@ For commercial licensing, please contact support@quantumnous.com
 }
 
 /* ── Hero: the brand orb as the sun of the chip system ──
- * Anchored left of the headline and only just below its middle, and kept crisp
+ * Anchored left of the headline and a little below its middle, and kept crisp
  * instead of washed out: a hair of blur, most of the brand saturation, dim
  * opacity, so it reads as a star behind the copy rather than a pasted logo —
  * the halo is what blends it into the starfield. Sun, corona ring and swarm all
@@ -118,7 +118,7 @@ For commercial licensing, please contact support@quantumnous.com
 .hero-sun-layer {
   --sun-d: min(420px, 42vmin);
   --sun-x: 26%;
-  --sun-y: 54%;
+  --sun-y: 58%;
   --orbit-r: min(360px, 36vmin);
 }
 .hero-system {
