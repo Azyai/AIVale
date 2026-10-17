@@ -375,11 +375,19 @@ export function RankingsScreen() {
   const handlePeriodChange = (next: RankingPeriod) => {
     navigate({ search: { period: next } })
   }
+  // Changing scope invalidates the region the pointer was resting on. Without
+  // this the island would keep naming a city from the previous map whenever the
+  // scope changes without a pointer move (keyboard activation fires no
+  // globalout). Falls back to the new province, so drilling in stays expanded.
+  const changeScope = (next: string | null) => {
+    setProvince(next)
+    setHoverRegion(null)
+  }
   const handleRegionSelect = (name: string) => {
     // Only catalog provinces drill down; clicks on other shapes are ignored.
     if (province) return
     if (catalogQuery.data?.provinces.some((p) => p.name === name)) {
-      setProvince(name)
+      changeScope(name)
     }
   }
   const periodLabel = t(
@@ -398,7 +406,7 @@ export function RankingsScreen() {
         <button
           type='button'
           className='bsc-back'
-          onClick={() => setProvince(null)}
+          onClick={() => changeScope(null)}
         >
           ← {t('Nationwide')}
         </button>
