@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { readdirSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { signatureFor } from '../signatures'
@@ -50,5 +52,38 @@ describe('signatureFor', () => {
   it('returns null when nothing is known about the region', () => {
     expect(signatureFor('某个未知区', null)).toBeNull()
     expect(signatureFor(null, '广东省')).toBeNull()
+  })
+
+  it('keeps landmark-only entries for places without a signature dish', () => {
+    expect(signatureFor('朝阳区', '北京市')).toEqual({
+      name: '朝阳区',
+      glyph: '北京市',
+      landmark: '国家体育场鸟巢',
+    })
+  })
+
+  // The island promises something about *every* region the map can draw, so a
+  // regenerated GeoJSON that adds a name must fail here rather than silently
+  // degrade to the province fallback.
+  it('covers every region in the bundled GeoJSON', () => {
+    const geoDir = resolve(process.cwd(), 'public/geo')
+    const files = [
+      resolve(geoDir, 'china.json'),
+      ...readdirSync(resolve(geoDir, 'provinces')).map((f) =>
+        resolve(geoDir, 'provinces', f)
+      ),
+    ]
+    const missing: string[] = []
+    for (const file of files) {
+      const geo = JSON.parse(readFileSync(file, 'utf8')) as {
+        features: Array<{ properties?: { name?: string } }>
+      }
+      for (const feature of geo.features) {
+        const name = feature.properties?.name
+        // province null: only a direct entry answers, no fallback to hide a gap
+        if (name && !signatureFor(name, null)) missing.push(name)
+      }
+    }
+    expect(missing).toEqual([])
   })
 })

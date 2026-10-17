@@ -64,6 +64,20 @@ describe('LandmarkIsland', () => {
     expect(screen.getByText('天坛祈年殿')).toBeInTheDocument()
   })
 
+  it('draws a single tag for a place known only for its landmark', () => {
+    render(
+      <LandmarkIsland
+        entry={{ name: '东城区', glyph: '北京市', landmark: '故宫太和殿' }}
+        hint={HINT}
+      />
+    )
+    expect(screen.getByTitle('东城区 · 故宫太和殿')).toHaveAttribute(
+      'data-expanded',
+      'true'
+    )
+    expect(document.querySelectorAll('.bsc-island-tag')).toHaveLength(1)
+  })
+
   it('collapses back to the hint when the pointer leaves the map', () => {
     const { rerender } = render(<LandmarkIsland entry={CANTON} hint={HINT} />)
     rerender(<LandmarkIsland entry={null} hint={HINT} />)

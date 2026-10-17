@@ -192,24 +192,23 @@ export function LandmarkGlyph(props: { name: string; className?: string }) {
 /**
  * Dynamic-island capsule floating over the map. Collapsed it is a slim hint
  * pill; it expands onto whatever region the pointer is resting on (or the
- * province currently drilled into) and shows that place's signature landmark
- * and dish, so the island always talks about where you are actually looking.
+ * province currently opened up) and names that place's signature landmark and
+ * dish — one tag when the place is only known for one of them, landmark first.
  */
 export function LandmarkIsland(props: {
   entry: SignatureEntry | null
   hint: string
 }) {
   const { entry } = props
+  const tags = entry
+    ? [entry.landmark, entry.food].filter((v): v is string => !!v)
+    : []
 
   return (
     <div
       className='bsc-island'
       data-expanded={entry ? 'true' : 'false'}
-      title={
-        entry
-          ? `${entry.name} · ${entry.landmark} · ${entry.food}`
-          : props.hint
-      }
+      title={entry ? [entry.name, ...tags].join(' · ') : props.hint}
     >
       <span className='bsc-island-glyph'>
         {entry ? <LandmarkGlyph name={entry.glyph} /> : null}
@@ -221,8 +220,11 @@ export function LandmarkIsland(props: {
         <span key={entry.name} className='bsc-island-expanded'>
           <b className='bsc-island-name'>{entry.name}</b>
           <span className='bsc-island-tags'>
-            <span className='bsc-island-tag'>{entry.landmark}</span>
-            <span className='bsc-island-tag'>{entry.food}</span>
+            {tags.map((tag) => (
+              <span key={tag} className='bsc-island-tag'>
+                {tag}
+              </span>
+            ))}
           </span>
         </span>
       ) : null}
