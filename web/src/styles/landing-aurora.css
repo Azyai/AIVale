@@ -1,0 +1,354 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied WARRANTY of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/*
+ * Landing page aurora decor — the deep-space keynote bloodline.
+ * Scoped to class names used only by the home feature sections
+ * (hero-heading / why / architecture / achievements / roadmap).
+ */
+
+/* ── Gradient headline text (hero + flywheel core) ── */
+.hero-grad-text {
+  background: linear-gradient(
+    110deg,
+    #a78bfa 10%,
+    #7c5cff 32%,
+    #22d3ee 62%,
+    #a5f3fc 90%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hero-shimmer 9s ease-in-out infinite alternate;
+}
+@keyframes hero-shimmer {
+  to {
+    background-position: 100% 0;
+  }
+}
+
+/* ── Hero CTA: aurora gradient pill ── */
+.hero-cta {
+  color: #fff;
+  background: linear-gradient(120deg, #7c5cff, #5b8cff 55%, #22d3ee);
+  box-shadow:
+    0 8px 28px rgba(92, 110, 255, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.25s;
+}
+.hero-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 34px rgba(92, 110, 255, 0.6);
+}
+
+/* ── Hero: orbiting model chips ── */
+.hero-orbit {
+  --orbit-r: min(370px, 38vmin);
+}
+.hero-orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--orbit-r) * 1.58);
+  height: calc(var(--orbit-r) * 1.58);
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(148, 163, 216, 0.22);
+  border-radius: 50%;
+  animation: hero-spin 150s linear infinite reverse;
+}
+.hero-orbit-ring::before {
+  content: '';
+  position: absolute;
+  inset: -14%;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 216, 0.08);
+}
+.hero-orbit-spin {
+  position: absolute;
+  inset: 0;
+  animation: hero-spin 95s linear infinite;
+}
+.hero-orbit-slot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--orbit-r)));
+}
+.hero-chip {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #c9cdf2;
+  white-space: nowrap;
+  background: rgba(13, 16, 32, 0.72);
+  border: 1px solid rgba(148, 163, 216, 0.2);
+  border-radius: 999px;
+  padding: 8px 16px;
+  backdrop-filter: blur(6px);
+  opacity: 0.8;
+  animation: hero-counterspin 95s linear infinite;
+  transform: rotate(calc(-1 * var(--a)));
+}
+@keyframes hero-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hero-counterspin {
+  from {
+    transform: rotate(calc(-1 * var(--a)));
+  }
+  to {
+    transform: rotate(calc(-1 * var(--a) - 360deg));
+  }
+}
+
+/* ── 破题:gradient-bordered answer panel ── */
+.why-answer {
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, rgba(124, 92, 255, 0.75), rgba(34, 211, 238, 0.55))
+      border-box;
+  border: 1.5px solid transparent;
+  box-shadow: 0 18px 60px rgba(60, 40, 180, 0.22);
+}
+
+/* ── 架构:pulsing core layer + connector beams ── */
+.arch-core {
+  background:
+    linear-gradient(
+      color-mix(in oklch, var(--card) 92%, transparent),
+      var(--card)
+    ) padding-box,
+    linear-gradient(135deg, rgba(124, 92, 255, 0.7), rgba(34, 211, 238, 0.4))
+      border-box;
+  border: 1.5px solid transparent;
+  animation: arch-pulse 6s ease-in-out infinite;
+}
+@keyframes arch-pulse {
+  0%,
+  100% {
+    box-shadow: 0 16px 60px rgba(60, 40, 180, 0.25);
+  }
+  50% {
+    box-shadow: 0 16px 90px rgba(60, 40, 180, 0.42);
+  }
+}
+
+.beam-v {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.beam-v::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(124, 92, 255, 0.5),
+    rgba(34, 211, 238, 0.5)
+  );
+}
+.beam-v i {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #a78bfa;
+  box-shadow: 0 0 9px #a78bfa;
+  animation: beam-drop 1.8s linear infinite;
+}
+.beam-v i:nth-child(2) {
+  animation-delay: 0.6s;
+  background: #22d3ee;
+  box-shadow: 0 0 9px #22d3ee;
+}
+.beam-v i:nth-child(3) {
+  animation-delay: 1.2s;
+}
+@keyframes beam-drop {
+  0% {
+    top: 5%;
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    top: 94%;
+    opacity: 0;
+  }
+}
+.beam-v.beam-up i {
+  animation: beam-up 1.8s linear infinite;
+  background: #22d3ee;
+  box-shadow: 0 0 9px #22d3ee;
+}
+.beam-v.beam-up i:nth-child(2) {
+  animation-delay: 0.6s;
+  background: #a78bfa;
+  box-shadow: 0 0 9px #a78bfa;
+}
+@keyframes beam-up {
+  0% {
+    top: 94%;
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0;
+  }
+}
+
+/* ── 成果:metric numbers on a soft aurora gradient ── */
+.metric-grad > div:first-child {
+  background: linear-gradient(120deg, var(--foreground), #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── 蓝图:ecosystem flywheel ── */
+.fly-ring {
+  position: absolute;
+  inset: 12%;
+  border: 2px dashed rgba(139, 92, 246, 0.4);
+  border-radius: 50%;
+  animation: hero-spin 48s linear infinite;
+}
+.fly-ring::before {
+  content: '';
+  position: absolute;
+  inset: -9%;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 216, 0.12);
+}
+.fly-node {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 18px;
+  padding: 15px 24px;
+  box-shadow: 0 8px 30px rgba(60, 40, 180, 0.25);
+  text-align: center;
+  white-space: nowrap;
+  transition: all 0.3s;
+}
+.fly-node:hover {
+  border-color: rgba(34, 211, 238, 0.6);
+  transform: scale(1.06);
+}
+.fn-top {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.fn-right {
+  right: 0;
+  top: 50%;
+  transform: translate(50%, -50%);
+}
+.fn-bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 50%);
+}
+.fn-left {
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.fn-top:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+.fn-right:hover {
+  transform: translate(50%, -50%) scale(1.06);
+}
+.fn-bottom:hover {
+  transform: translate(-50%, 50%) scale(1.06);
+}
+.fn-left:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+.fly-arrow {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  opacity: 0.85;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fa-1 {
+  top: 21%;
+  right: 21%;
+  transform: rotate(-45deg);
+}
+.fa-2 {
+  bottom: 21%;
+  right: 21%;
+  transform: rotate(45deg);
+}
+.fa-3 {
+  bottom: 21%;
+  left: 21%;
+  transform: rotate(135deg);
+}
+.fa-4 {
+  top: 21%;
+  left: 21%;
+  transform: rotate(225deg);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .hero-grad-text,
+  .hero-orbit-ring,
+  .hero-orbit-spin,
+  .hero-chip,
+  .arch-core,
+  .fly-ring,
+  .beam-v i,
+  .beam-v.beam-up i {
+    animation: none !important;
+  }
+}

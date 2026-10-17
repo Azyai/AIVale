@@ -16,8 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+export { Achievements } from './sections/achievements'
 export { FAQ } from './sections/faq'
 export { HeroHeading } from './sections/hero-heading'
+export { PlatformArchitecture } from './sections/architecture'
 export { PricingSection } from './sections/pricing'
+export { Roadmap } from './sections/roadmap'
 export { SellingPoints } from './sections/selling-points'
 export { ToolsWall } from './sections/tools'
+export { TokenFlowTheater } from './sections/token-flow'
+export { WhyPlatform } from './sections/why'

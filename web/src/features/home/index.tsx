@@ -19,20 +19,35 @@ For commercial licensing, please contact support@quantumnous.com
 import { PublicLayout } from '@/components/layout'
 import { Footer } from '@/components/layout/components/footer'
 
-import { FAQ, HeroHeading, PricingSection, SellingPoints, ToolsWall } from './components'
+import {
+  Achievements,
+  FAQ,
+  HeroHeading,
+  PlatformArchitecture,
+  PricingSection,
+  Roadmap,
+  ToolsWall,
+  TokenFlowTheater,
+  WhyPlatform,
+} from './components'
 
 /**
- * Marketing landing page (京西智库), qianwen Token-Plan style: compact hero →
- * selling points → pricing → tools → FAQ. Plan cards are driven live by the
- * public plans API.
+ * Marketing landing page, keynote (index3) bloodline: deep-space hero with
+ * orbiting model chips → why → architecture → token-flow theater →
+ * pricing → achievements → tools → roadmap → FAQ. Pricing cards stay
+ * driven live by the public plans API.
  */
 export function Home() {
   return (
     <PublicLayout showMainContainer={false}>
       <HeroHeading />
-      <SellingPoints />
+      <WhyPlatform />
+      <PlatformArchitecture />
+      <TokenFlowTheater />
       <PricingSection />
+      <Achievements />
       <ToolsWall />
+      <Roadmap />
       <FAQ />
       <Footer />
     </PublicLayout>

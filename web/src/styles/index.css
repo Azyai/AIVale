@@ -29,6 +29,8 @@ For commercial licensing, please contact support@quantumnous.com
 
 @import './theme.css';
 @import './theme-presets.css';
+/* Landing page aurora decor (hero orbit / beams / flywheel). */
+@import './landing-aurora.css';
 
 @layer base {
   :root {
