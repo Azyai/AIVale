@@ -1021,3 +1021,63 @@ html.dark {
 .dark .text-violet-500 svg {
   filter: drop-shadow(0 0 6px rgba(140, 110, 255, 0.75));
 }
+
+/* Brand orb, rebuilt from the brand palette with pure CSS gradients (conic
+ * sweep + radial core glow, inner ring and lens-flare cross). Vector-crisp,
+ * transparent and identical on light/dark themes, so no per-theme asset and
+ * no raster background residue. */
+.brand-orb {
+  border-radius: 9999px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 2%,
+      rgba(255, 255, 255, 0) 16%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0) 84%,
+      transparent 98%
+    )
+      center / 100% 7% no-repeat,
+    linear-gradient(
+      0deg,
+      transparent 4%,
+      rgba(255, 255, 255, 0) 18%,
+      rgba(255, 255, 255, 0.55) 50%,
+      rgba(255, 255, 255, 0) 82%,
+      transparent 96%
+    )
+      center / 7% 100% no-repeat,
+    radial-gradient(
+      circle at 50% 50%,
+      #fff 0%,
+      rgba(255, 255, 255, 0.92) 12%,
+      rgba(255, 255, 255, 0.5) 24%,
+      rgba(255, 255, 255, 0.16) 34%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.26) 0 26%,
+      rgba(255, 255, 255, 0.08) 34%,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 58.5%,
+      rgba(255, 255, 255, 0.34) 58.5% 61.5%,
+      transparent 61.5%
+    ),
+    conic-gradient(
+      from 0deg at 50% 50%,
+      #6575ca 0deg,
+      #895cbb 40deg,
+      #c9528c 90deg,
+      #ce4b81 130deg,
+      #ba4f95 180deg,
+      #9552b1 215deg,
+      #5d82d2 270deg,
+      #5288d2 310deg,
+      #6575ca 360deg
+    );
+  box-shadow: 0 0 16px rgba(201, 82, 140, 0.35);
+}

@@ -29,7 +29,7 @@ export const DEFAULT_LOGO = '/logo.png'
  * (option storage, admin setting, /api/status field) stays fully intact;
  * flip this to true to re-enable display.
  */
-export const SHOW_SYSTEM_LOGO = false
+export const SHOW_SYSTEM_LOGO = true
 
 // LocalStorage Keys
 export const STORAGE_KEYS = {

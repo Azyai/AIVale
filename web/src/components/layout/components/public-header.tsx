@@ -30,13 +30,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { useTopNavLinks } from '@/hooks/use-top-nav-links'
-import { SHOW_SYSTEM_LOGO } from '@/lib/constants'
+import { DEFAULT_LOGO, SHOW_SYSTEM_LOGO } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
-import { HeaderLogo } from './header-logo'
+import { BrandLockup, HeaderLogo } from './header-logo'
 
 const AUTH_PROMPT_SECONDS = 5
 
@@ -99,7 +99,14 @@ export function PublicHeader(props: PublicHeaderProps) {
   const displaySiteName = customSiteName || systemName
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
 
-  let logoContent: ReactNode = (
+  // The shipped brand is a horizontal lockup; an admin-configured logo keeps
+  // the square treatment so uploaded marks are not stretched. `/api/status`
+  // appends a cache-busting query to the default path, so compare paths only.
+  const usesBrandLockup =
+    !customLogo && systemLogo.split('?')[0] === DEFAULT_LOGO
+  let logoContent: ReactNode = usesBrandLockup ? (
+    <BrandLockup />
+  ) : (
     <HeaderLogo
       src={systemLogo}
       loading={loading}
@@ -108,7 +115,13 @@ export function PublicHeader(props: PublicHeaderProps) {
     />
   )
   if (customLogo) logoContent = customLogo
-  if (loading) logoContent = <Skeleton className='size-full rounded-lg' />
+  if (loading) {
+    logoContent = usesBrandLockup ? (
+      <Skeleton className='h-full w-36 rounded-lg' />
+    ) : (
+      <Skeleton className='size-full rounded-lg' />
+    )
+  }
 
   let authContent = (
     <Button
@@ -222,7 +235,14 @@ export function PublicHeader(props: PublicHeaderProps) {
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
                 {SHOW_SYSTEM_LOGO && (
-                  <div className='flex size-9 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105 md:size-14'>
+                  <div
+                    className={cn(
+                      'flex shrink-0 items-center transition-all duration-300 group-hover:scale-105',
+                      usesBrandLockup
+                        ? 'h-9 md:h-12'
+                        : 'size-9 justify-center md:size-14'
+                    )}
+                  >
                     {logoContent}
                   </div>
                 )}

@@ -17,6 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import nightLogo from '@/assets/logo-night.png'
+import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
 
 interface HeaderLogoProps {
@@ -25,6 +27,41 @@ interface HeaderLogoProps {
   loading: boolean
   logoLoaded: boolean
   className?: string
+}
+
+/**
+ * Brand orb rebuilt from the brand palette with CSS gradients (`.brand-orb`):
+ * vector-crisp, transparent and identical on light and dark themes.
+ */
+export function BrandOrb(props: { className?: string }) {
+  return (
+    <span
+      aria-hidden='true'
+      className={cn('brand-orb shrink-0', props.className)}
+    />
+  )
+}
+
+/**
+ * Header brand lockup: orb + 京西智库 wordmark (rendered as text so it follows
+ * the theme foreground) + tagline. Pure markup — dark mode needs no second
+ * asset and there is no raster background to leave residue.
+ */
+export function BrandLockup() {
+  const { t } = useTranslation()
+  return (
+    <>
+      <BrandOrb className='size-9 md:size-12' />
+      <span className='flex min-w-0 flex-col gap-1 leading-none'>
+        <span className='text-foreground truncate text-lg font-bold tracking-tight md:text-2xl'>
+          京西智库
+        </span>
+        <span className='text-muted-foreground hidden truncate text-[10px] tracking-[0.28em] md:block md:text-[11px]'>
+          {t('Token 服务 · 模型部署')}
+        </span>
+      </span>
+    </>
+  )
 }
 
 /**
