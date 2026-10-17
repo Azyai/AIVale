@@ -123,7 +123,7 @@ export type ThemeCustomization = {
 }
 
 export const DEFAULT_THEME_CUSTOMIZATION: ThemeCustomization = {
-  preset: 'default',
+  preset: 'aurora-violet',
   font: 'default',
   radius: 'default',
   scale: 'default',

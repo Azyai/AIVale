@@ -295,9 +295,26 @@ For commercial licensing, please contact support@quantumnous.com
  * Curated for the rankings big screen: electric violet primary paired with
  * a cyan counterpoint, plus a data palette (magenta / jade / amber) tuned
  * for chart legibility on both light and dark surfaces. Rounded by default
- * (--radius 0.75rem). Surfaces derive automatically via the semantic
- * surface bridge below. */
+ * (--radius 0.75rem). The dark variant carries the deep-space canvas
+ * (#05060e) shared with the keynote page, so the landing page and the
+ * usage dashboard read as one bloodline. Bespoke surfaces below (it is
+ * opted out of the semantic surface bridge, like anthropic). */
 [data-theme-preset='aurora-violet'] {
+  --background: oklch(0.984 0.006 295);
+  --foreground: oklch(0.21 0.03 295);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 295);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.03 295);
+  --muted: oklch(0.955 0.012 295);
+  --muted-foreground: oklch(0.51 0.045 295);
+  --accent: color-mix(in oklch, var(--primary) 10%, var(--background));
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.9 0.02 295);
+  --input: oklch(0.9 0.02 295);
+  --sidebar: oklch(0.975 0.008 295);
+  --sidebar-border: oklch(0.9 0.02 295);
+
   --primary: oklch(0.56 0.2 295);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.75 0.09 295);
@@ -313,9 +330,27 @@ For commercial licensing, please contact support@quantumnous.com
   --sidebar-accent: oklch(0.56 0.2 295);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-ring: oklch(0.56 0.2 295);
+  --success: var(--chart-4);
+  --warning: var(--chart-5);
+  --info: var(--chart-1);
+  --neutral: var(--muted-foreground);
   --radius: 0.75rem;
 }
 .dark [data-theme-preset='aurora-violet'] {
+  /* Deep-space canvas (#05060e) from the keynote page. */
+  --background: oklch(0.165 0.028 277);
+  --foreground: oklch(0.945 0.017 275);
+  --card: oklch(0.205 0.032 277);
+  --card-foreground: oklch(0.945 0.017 275);
+  --popover: oklch(0.225 0.034 277);
+  --popover-foreground: oklch(0.945 0.017 275);
+  --muted: oklch(0.245 0.034 277);
+  --muted-foreground: oklch(0.72 0.04 275);
+  --accent: oklch(0.28 0.06 295);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.32 0.045 277 / 55%);
+  --input: oklch(0.3 0.042 277 / 70%);
+
   --primary: oklch(0.72 0.16 295);
   --primary-foreground: oklch(0.145 0.02 295);
   --secondary: oklch(0.42 0.08 295);
@@ -454,6 +489,17 @@ For commercial licensing, please contact support@quantumnous.com
   --overview-accent-3: var(--chart-3);
 }
 
+/* ── Aurora Violet (dark) bespoke surfaces ─────────────────────────────── */
+/* The dark aurora canvas is intentionally darker and bluer than a
+ * primary-mix derivation would produce, so it is opted out of the bridge
+ * and declares its own surfaces above. Only sidebar tokens are derived
+ * here to keep the shell consistent with the rest of the app. */
+.dark [data-theme-preset='aurora-violet'] {
+  --sidebar: oklch(0.19 0.03 277);
+  --sidebar-accent: oklch(0.28 0.05 295);
+  --sidebar-border: oklch(0.32 0.045 277 / 55%);
+}
+
 /* ── Semantic surface bridge ──────────────────────────────────────────── */
 /* Color presets should tint the surfaces most components actually use, not
  * only primary buttons. These derived tokens keep the app theme-aware without
@@ -468,10 +514,13 @@ For commercial licensing, please contact support@quantumnous.com
  *   - `anthropic`: warm cream surfaces are a brand choice, NOT a primary-mix
  *     derivation (the Anthropic system deliberately uses warm neutrals for
  *     cards/borders rather than tinting them with the clay accent).
- *   - `simple-large`: keeps intentionally neutral, high-contrast surfaces. */
+ *   - `simple-large`: keeps intentionally neutral, high-contrast surfaces.
+ *   - `aurora-violet`: deep-space canvas is bespoke (see its block above). */
 [data-theme-preset]:not([data-theme-preset='default']):not(
   [data-theme-preset='anthropic']
-):not([data-theme-preset='simple-large']) {
+):not([data-theme-preset='simple-large']):not(
+  [data-theme-preset='aurora-violet']
+) {
   --card: color-mix(in oklch, var(--primary) 3%, var(--background));
   --popover: color-mix(in oklch, var(--primary) 5%, var(--background));
   --muted: color-mix(in oklch, var(--primary) 7%, var(--background));
@@ -496,7 +545,9 @@ For commercial licensing, please contact support@quantumnous.com
 .dark
   [data-theme-preset]:not([data-theme-preset='default']):not(
     [data-theme-preset='anthropic']
-  ):not([data-theme-preset='simple-large']) {
+  ):not([data-theme-preset='simple-large']):not(
+    [data-theme-preset='aurora-violet']
+  ) {
   --card: color-mix(in oklch, var(--primary) 8%, var(--background));
   --popover: color-mix(in oklch, var(--primary) 12%, var(--background));
   --muted: color-mix(in oklch, var(--primary) 12%, var(--background));

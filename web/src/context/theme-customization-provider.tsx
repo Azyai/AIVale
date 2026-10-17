@@ -144,9 +144,11 @@ export function ThemeCustomizationProvider(props: {
   // Mirror state to the <body> via data-* attributes so theme-presets.css can
   // override CSS variables at the right cascade layer.
   useEffect(() => {
+    // Only the literal 'default' preset relies on :root variables; every named
+    // preset (including the code default aurora-violet) needs its attribute.
     applyAttribute(
       'data-theme-preset',
-      preset === DEFAULT_THEME_CUSTOMIZATION.preset ? null : preset
+      preset === 'default' ? null : preset
     )
   }, [preset])
 
