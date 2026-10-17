@@ -319,6 +319,40 @@ For commercial licensing, please contact support@quantumnous.com
   display: flex;
   flex-direction: column;
 }
+/* Survey-table backdrop: a soft accent bloom where the landmass sits, over a
+ * faint dot grid that thins out towards the panel edges. Decorative only — it
+ * paints before the chart canvas, so it never covers the map or eats pointer
+ * events. Inset to the wrap (not the panel) so it stays inside the padding. */
+.bsc-map-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  pointer-events: none;
+  background-image:
+    radial-gradient(
+      ellipse 58% 54% at 50% 46%,
+      color-mix(in srgb, var(--primary) 13%, transparent),
+      transparent 74%
+    ),
+    radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--bsc-text-sub) 30%, transparent) 1px,
+      transparent 1.5px
+    );
+  background-size:
+    100% 100%,
+    22px 22px;
+  /* Fade the grid out towards the corners so it reads as a pool of light
+   * under the map rather than wallpaper across the whole panel. */
+  -webkit-mask-image: radial-gradient(
+    ellipse 88% 84% at 50% 48%,
+    #000 30%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(ellipse 88% 84% at 50% 48%, #000 30%, transparent 100%);
+  opacity: 0.8;
+}
 .bsc-map-tip {
   position: absolute;
   right: 6px;

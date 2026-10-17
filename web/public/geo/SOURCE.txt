@@ -1,6 +1,12 @@
-China / province boundary GeoJSON, simplified (Douglas-Peucker, EPS=0.012 for
-china.json and EPS=0.014 for provinces) from Alibaba DataV.GeoAtlas
-(https://datav.aliyun.com/portal/school/atlas/area_selector).
+China / province boundary GeoJSON from Alibaba DataV.GeoAtlas
+(https://datav.aliyun.com/portal/school/atlas/area_selector), fetched
+2026-10-17 from https://geo.datav.aliyun.com/areas_v3/bound/<adcode>_full.json
+and stored at full resolution — the only change is rounding every coordinate to
+5 decimals (~1 m), which is far below anything the chart can draw. An earlier
+revision Douglas-Peucker simplified these (EPS=0.012 national / 0.014 province)
+and the coastlines turned visibly faceted once the map was roamed in, so the
+simplification step is gone on purpose: do not re-add it without a very small
+tolerance.
 See regions.json for the province -> city name and adcode cascade used by the UI.
 Note: DataV publishes no district-level boundary for 710000 (台湾省), so that
-file holds the single province outline instead of a city feature set.
+file is the province outline from <adcode>.json instead of a city feature set.

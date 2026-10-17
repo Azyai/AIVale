@@ -75,6 +75,36 @@ function tooltipBase(theme: ScreenChartTheme) {
   } as const
 }
 
+/** Land with no traffic: a faint accent sheen at the top fading to almost
+ * nothing, so empty provinces recede behind the ones carrying usage. */
+function landGradient(theme: ScreenChartTheme) {
+  return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+    { offset: 0, color: withAlpha(theme.accent, 0.12) },
+    { offset: 0.6, color: withAlpha(theme.textSub, 0.07) },
+    { offset: 1, color: withAlpha(theme.textSub, 0.03) },
+  ])
+}
+
+/** The landmass floats on a dark extrusion; on a light card a grey one reads
+ * better than black. */
+function landShadow(theme: ScreenChartTheme) {
+  return theme.mode === 'dark'
+    ? 'rgba(2, 6, 23, 0.6)'
+    : withAlpha(theme.textSub, 0.3)
+}
+
+/** Choropleth ramp. Five stops instead of three so neighbouring provinces
+ * differ by a shade rather than a step. */
+function heatRamp(theme: ScreenChartTheme) {
+  return [
+    withAlpha(theme.accent, 0.14),
+    withAlpha(theme.accent, 0.34),
+    withAlpha(theme.series[1], 0.55),
+    withAlpha(theme.series[1], 0.8),
+    theme.series[1],
+  ]
+}
+
 function axisLine(theme: ScreenChartTheme) {
   return { lineStyle: { color: withAlpha(theme.textSub, 0.35) } }
 }
@@ -642,22 +672,16 @@ export function RegionMapChart(props: {
         show: rows.length > 0,
         min: 0,
         max,
-        left: 12,
-        bottom: 16,
-        itemWidth: 8,
-        itemHeight: 76,
+        left: 14,
+        bottom: 18,
+        itemWidth: 10,
+        itemHeight: 92,
         calculable: true,
         precision: 0,
         text: [formatTokens(max), '0'],
-        textStyle: { color: props.theme.textSub, fontSize: 11 },
+        textStyle: { color: props.theme.textSub, fontSize: 10 },
         formatter: (value) => formatTokens(Number(value)),
-        inRange: {
-          color: [
-            withAlpha(props.theme.accent, 0.18),
-            withAlpha(props.theme.accent, 0.55),
-            props.theme.series[1],
-          ],
-        },
+        inRange: { color: heatRamp(props.theme) },
         seriesIndex: 0,
       },
       series: [
@@ -672,24 +696,31 @@ export function RegionMapChart(props: {
           layoutSize: '116%',
           label: {
             show: true,
-            color: props.theme.textSub,
+            color: withAlpha(props.theme.textSub, 0.95),
             fontSize: props.showLabels ? 10 : 9,
+            // A border halo keeps names legible over both bright and dark
+            // provinces — cheaper and crisper than a text shadow.
+            textBorderColor: withAlpha(props.theme.background, 0.9),
+            textBorderWidth: 2,
             // Only regions with usage are named at the default zoom; past
             // MAP_LABEL_ZOOM every place name shows, which is the cue the
             // landmark island waits for. Read through a ref so a zoom change
             // never replays setOption (that would reset the roam).
-            textShadowColor: withAlpha(props.theme.background, 0.85),
-            textShadowBlur: 4,
             formatter: (p) =>
               p.value || zoomRef.current >= MAP_LABEL_ZOOM ? String(p.name) : '',
           },
+          // At full zoom every city is named; drop the ones that would sit on
+          // top of each other rather than letting them collide.
+          labelLayout: { hideOverlap: true },
           itemStyle: {
-            areaColor: verticalGradient(props.theme.textSub, 0.16, 0.05),
-            borderColor: withAlpha(props.theme.accent, 0.55),
-            borderWidth: 1,
-            shadowColor: withAlpha(props.theme.accent, 0.3),
-            shadowBlur: 16,
-            shadowOffsetY: 3,
+            areaColor: landGradient(props.theme),
+            // Hairline internal borders: the landmass should read as one
+            // surface divided by threads, not as a patchwork of stickers.
+            borderColor: withAlpha(props.theme.accent, 0.3),
+            borderWidth: 0.8,
+            shadowColor: landShadow(props.theme),
+            shadowBlur: 22,
+            shadowOffsetY: 10,
           },
           emphasis: {
             label: {
@@ -700,8 +731,8 @@ export function RegionMapChart(props: {
             },
             itemStyle: {
               areaColor: withAlpha(props.theme.accent, 0.72),
-              borderColor: props.theme.accent,
-              borderWidth: 1.6,
+              borderColor: props.theme.series[1],
+              borderWidth: 1.4,
               shadowBlur: 30,
               shadowColor: withAlpha(props.theme.accent, 0.5),
             },

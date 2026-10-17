@@ -24,6 +24,12 @@ export const CHINA_MAP_KEY = 'rankings-china'
 
 type MapSource = Parameters<typeof echarts.registerMap>[1]
 
+/** Bump whenever web/public/geo is regenerated. Those files are served with a
+ * one-week Cache-Control and, unlike the hashed JS/CSS bundles, keep a stable
+ * URL — so without a version in the query a browser would keep drawing the old
+ * geometry long after a deploy. */
+const GEO_VERSION = '2'
+
 // registerMap is global to the echarts instance, so a module-level guard keeps
 // repeated mounts (route changes, period switches) from re-fetching.
 const registeredMaps = new Set<string>()
@@ -63,7 +69,9 @@ async function registerMap(
 export function useRegionGeo(adcode: number | null | undefined) {
   const key = adcode == null ? CHINA_MAP_KEY : `rankings-${adcode}`
   const url =
-    adcode == null ? '/geo/china.json' : `/geo/provinces/${adcode}.json`
+    adcode == null
+      ? `/geo/china.json?v=${GEO_VERSION}`
+      : `/geo/provinces/${adcode}.json?v=${GEO_VERSION}`
   const query = useQuery({
     queryKey: ['rankings-geo', key],
     queryFn: () => registerMap(key, url),
