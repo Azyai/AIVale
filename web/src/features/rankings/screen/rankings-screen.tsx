@@ -546,14 +546,6 @@ export function RankingsScreen() {
                   )}
                 </div>
               ) : null}
-              <div className='bsc-map-tip'>
-                <span>
-                  {province
-                    ? t('Showing cities of the selected province')
-                    : t('Click a province to drill down')}
-                </span>
-                <span>{t('Scroll to zoom, drag to pan')}</span>
-              </div>
             </div>
           </Panel>
           {/* Numbers only here — the trend line lives in the enlarged dialog. */}

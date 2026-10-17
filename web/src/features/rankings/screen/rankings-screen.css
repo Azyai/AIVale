@@ -350,22 +350,12 @@ For commercial licensing, please contact support@quantumnous.com
     #000 30%,
     transparent 100%
   );
-  mask-image: radial-gradient(ellipse 88% 84% at 50% 48%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(
+    ellipse 88% 84% at 50% 48%,
+    #000 30%,
+    transparent 100%
+  );
   opacity: 0.8;
-}
-.bsc-map-tip {
-  position: absolute;
-  right: 6px;
-  bottom: 2px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  font-size: 11px;
-  color: var(--bsc-text-sub);
-  opacity: 0.8;
-  pointer-events: none;
-  white-space: nowrap;
 }
 
 /* Landmark island: a capsule floating over the map top. Collapsed it is a slim
