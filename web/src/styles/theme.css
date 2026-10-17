@@ -189,69 +189,71 @@ For commercial licensing, please contact support@quantumnous.com
 }
 
 .dark {
-  /* OpenAI-like dark mode with a crisp charcoal canvas. */
-  --background: oklch(0.235 0 0);
-  --foreground: oklch(0.965 0 0);
-  --card: oklch(0.285 0 0);
-  --card-foreground: oklch(0.965 0 0);
-  --popover: oklch(0.305 0 0);
-  --popover-foreground: oklch(0.965 0 0);
-  --primary: oklch(0.54 0.142 248.516);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.335 0 0);
-  --secondary-foreground: oklch(0.9 0.05 250);
-  --muted: oklch(0.305 0 0);
-  --muted-foreground: oklch(0.78 0 0);
-  --accent: color-mix(in oklch, var(--primary) 20%, var(--background));
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.696 0.17 162.48);
-  --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.769 0.188 70.08);
-  --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.613 0.14 239.919);
-  --info-foreground: oklch(0.145 0 0);
-  --neutral: oklch(0.76 0 0);
-  --neutral-foreground: oklch(0.155 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 17%);
-  --ring: oklch(0.554 0.148 250.726);
-  --chart-1: oklch(0.76 0.14 250);
-  --chart-2: oklch(0.76 0.13 200);
-  --chart-3: oklch(0.76 0.13 285);
-  --chart-4: oklch(0.75 0.16 325);
-  --chart-5: oklch(0.76 0.14 155);
-  --sidebar: oklch(0.225 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.588 0.123 246.488);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: color-mix(in oklch, var(--primary) 20%, var(--background));
-  --sidebar-accent-foreground: oklch(0.9 0.05 250);
-  --sidebar-border: oklch(1 0 0 / 11%);
-  --sidebar-ring: oklch(0.7 0.17 250);
-  --skeleton-base: oklch(0.335 0 0);
-  --skeleton-highlight: oklch(0.44 0 0);
+  /* Deep-space canvas shared with the keynote page (presentation/index3.html):
+   * bg #05060e, panel #0b0e1b, ink #eef1ff / #aab2d4, hairline
+   * rgba(148,163,216,.14), violet #7c5cff with a cyan counterpoint. */
+  --background: #05060e;
+  --foreground: #eef1ff;
+  --card: #0b0e1b;
+  --card-foreground: #eef1ff;
+  --popover: #0d1120;
+  --popover-foreground: #eef1ff;
+  --primary: #7c5cff;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #c9cdf2;
+  --muted: rgba(255, 255, 255, 0.045);
+  --muted-foreground: #aab2d4;
+  --accent: color-mix(in oklch, var(--primary) 18%, var(--background));
+  --accent-foreground: #eef1ff;
+  --destructive: #fb7185;
+  --destructive-foreground: #20060b;
+  --success: #34d399;
+  --success-foreground: #04150e;
+  --warning: #fbbf24;
+  --warning-foreground: #1a1204;
+  --info: #22d3ee;
+  --info-foreground: #04171b;
+  --neutral: #6d7594;
+  --neutral-foreground: #eef1ff;
+  --border: rgba(148, 163, 216, 0.14);
+  --input: rgba(148, 163, 216, 0.22);
+  --ring: #a78bfa;
+  --chart-1: #a78bfa;
+  --chart-2: #22d3ee;
+  --chart-3: #f472b6;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
+  --sidebar: #090b18;
+  --sidebar-foreground: #eef1ff;
+  --sidebar-primary: #7c5cff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: color-mix(in oklch, var(--primary) 16%, var(--background));
+  --sidebar-accent-foreground: #c4b5fd;
+  --sidebar-border: rgba(148, 163, 216, 0.14);
+  --sidebar-ring: #a78bfa;
+  --skeleton-base: rgba(255, 255, 255, 0.06);
+  --skeleton-highlight: rgba(255, 255, 255, 0.12);
   --table-row: var(--background);
-  --table-header: color-mix(in oklch, var(--foreground) 6%, var(--background));
+  --table-header: color-mix(in oklch, var(--foreground) 4%, var(--background));
   --table-header-hover: color-mix(
-    in oklch,
-    var(--foreground) 9%,
-    var(--background)
-  );
-  --table-disabled: color-mix(
     in oklch,
     var(--foreground) 7%,
     var(--background)
   );
+  --table-disabled: color-mix(
+    in oklch,
+    var(--foreground) 5%,
+    var(--background)
+  );
   --table-disabled-hover: color-mix(
     in oklch,
-    var(--foreground) 9.5%,
+    var(--foreground) 8%,
     var(--background)
   );
   --table-disabled-border: color-mix(
     in oklch,
-    var(--foreground) 24%,
+    var(--foreground) 20%,
     var(--background)
   );
 }

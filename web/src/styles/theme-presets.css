@@ -338,34 +338,34 @@ For commercial licensing, please contact support@quantumnous.com
 }
 .dark [data-theme-preset='aurora-violet'] {
   /* Deep-space canvas (#05060e) from the keynote page. */
-  --background: oklch(0.165 0.028 277);
-  --foreground: oklch(0.945 0.017 275);
-  --card: oklch(0.205 0.032 277);
-  --card-foreground: oklch(0.945 0.017 275);
-  --popover: oklch(0.225 0.034 277);
-  --popover-foreground: oklch(0.945 0.017 275);
-  --muted: oklch(0.245 0.034 277);
-  --muted-foreground: oklch(0.72 0.04 275);
-  --accent: oklch(0.28 0.06 295);
-  --accent-foreground: var(--foreground);
-  --border: oklch(0.32 0.045 277 / 55%);
-  --input: oklch(0.3 0.042 277 / 70%);
+  --background: #05060e;
+  --foreground: #eef1ff;
+  --card: #0b0e1b;
+  --card-foreground: #eef1ff;
+  --popover: #0d1120;
+  --popover-foreground: #eef1ff;
+  --muted: rgba(255, 255, 255, 0.045);
+  --muted-foreground: #aab2d4;
+  --accent: rgba(124, 92, 255, 0.16);
+  --accent-foreground: #eef1ff;
+  --border: rgba(148, 163, 216, 0.14);
+  --input: rgba(148, 163, 216, 0.22);
 
-  --primary: oklch(0.72 0.16 295);
-  --primary-foreground: oklch(0.145 0.02 295);
-  --secondary: oklch(0.42 0.08 295);
-  --secondary-foreground: oklch(0.9 0.05 295);
-  --ring: oklch(0.72 0.16 295);
-  --chart-1: oklch(0.72 0.16 295);
-  --chart-2: oklch(0.78 0.11 220);
-  --chart-3: oklch(0.7 0.16 345);
-  --chart-4: oklch(0.72 0.12 165);
-  --chart-5: oklch(0.82 0.12 85);
-  --sidebar-primary: oklch(0.72 0.16 295);
-  --sidebar-primary-foreground: oklch(0.145 0.02 295);
-  --sidebar-accent: oklch(0.72 0.16 295);
-  --sidebar-accent-foreground: oklch(0.145 0.02 295);
-  --sidebar-ring: oklch(0.72 0.16 295);
+  --primary: #7c5cff;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #c9cdf2;
+  --ring: #a78bfa;
+  --chart-1: #a78bfa;
+  --chart-2: #22d3ee;
+  --chart-3: #f472b6;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
+  --sidebar-primary: #7c5cff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(124, 92, 255, 0.16);
+  --sidebar-accent-foreground: #c4b5fd;
+  --sidebar-ring: #a78bfa;
 }
 
 /* ── Simple Large-font ────────────────────────────────────────────────── */
@@ -495,9 +495,9 @@ For commercial licensing, please contact support@quantumnous.com
  * and declares its own surfaces above. Only sidebar tokens are derived
  * here to keep the shell consistent with the rest of the app. */
 .dark [data-theme-preset='aurora-violet'] {
-  --sidebar: oklch(0.19 0.03 277);
-  --sidebar-accent: oklch(0.28 0.05 295);
-  --sidebar-border: oklch(0.32 0.045 277 / 55%);
+  --sidebar: #090b18;
+  --sidebar-accent: rgba(124, 92, 255, 0.16);
+  --sidebar-border: rgba(148, 163, 216, 0.14);
 }
 
 /* ── Semantic surface bridge ──────────────────────────────────────────── */
