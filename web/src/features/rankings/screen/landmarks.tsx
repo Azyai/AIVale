@@ -16,8 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect, useState } from 'react'
-
 import type { SignatureEntry } from './signatures'
 
 /* Province landmarks as line-art glyphs assembled from plain SVG primitives
@@ -193,52 +191,38 @@ export function LandmarkGlyph(props: { name: string; className?: string }) {
 
 /**
  * Dynamic-island capsule floating over the map. Collapsed it is a slim hint
- * pill; once the map is zoomed far enough that place names are readable (or a
- * province has been opened up), it expands and cycles the signature landmark
- * and dish of the regions in view — the reveal is driven by the map's own zoom,
- * so the island only talks about places you can actually see.
+ * pill; it expands onto whatever region the pointer is resting on (or the
+ * province currently drilled into) and shows that place's signature landmark
+ * and dish, so the island always talks about where you are actually looking.
  */
 export function LandmarkIsland(props: {
-  entries: SignatureEntry[]
-  expanded: boolean
+  entry: SignatureEntry | null
   hint: string
 }) {
-  const [index, setIndex] = useState(0)
-  const count = props.entries.length
-
-  useEffect(() => {
-    if (count < 2 || !props.expanded) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % count)
-    }, 4200)
-    return () => window.clearInterval(id)
-  }, [count, props.expanded])
-
-  const current = count > 0 ? props.entries[index % count] : undefined
+  const { entry } = props
 
   return (
     <div
       className='bsc-island'
-      data-expanded={props.expanded ? 'true' : 'false'}
+      data-expanded={entry ? 'true' : 'false'}
       title={
-        current
-          ? `${current.name} · ${current.landmark} · ${current.food}`
+        entry
+          ? `${entry.name} · ${entry.landmark} · ${entry.food}`
           : props.hint
       }
     >
       <span className='bsc-island-glyph'>
-        {current ? <LandmarkGlyph name={current.glyph} /> : null}
+        {entry ? <LandmarkGlyph name={entry.glyph} /> : null}
       </span>
       <span className='bsc-island-collapsed'>{props.hint}</span>
-      {current ? (
+      {entry ? (
         // Keyed so each new region replays the slide-in, the way an island
         // morphs rather than swaps its content.
-        <span key={current.name} className='bsc-island-expanded'>
-          <b className='bsc-island-name'>{current.name}</b>
+        <span key={entry.name} className='bsc-island-expanded'>
+          <b className='bsc-island-name'>{entry.name}</b>
           <span className='bsc-island-tags'>
-            <span className='bsc-island-tag'>{current.landmark}</span>
-            <span className='bsc-island-tag'>{current.food}</span>
+            <span className='bsc-island-tag'>{entry.landmark}</span>
+            <span className='bsc-island-tag'>{entry.food}</span>
           </span>
         </span>
       ) : null}

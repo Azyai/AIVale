@@ -579,33 +579,33 @@ export function ConcentrationGauges(props: {
   return <div ref={setContainer} className='bsc-chart' />
 }
 
+/** Past this roam zoom every place name is shown rather than only the regions
+ * carrying usage — at the default framing that many labels is just noise. */
+const MAP_LABEL_ZOOM = 2.2
+
+/** Zoom a freshly mounted map starts at, restored whenever the geometry swaps. */
+const MAP_INITIAL_ZOOM = 1.14
+
 /**
  * Center: regional choropleth. `mapKey` is a GeoJSON already registered with
  * ECharts (see use-region-geo); it swaps between the national map and a
  * province's city map, so the container is keyed to force a fresh chart.
  */
-export const MAP_LABEL_ZOOM = 2.2
-
-/** Zoom a freshly mounted map starts at; re-reported whenever the geometry
- * swaps so the parent never keeps the previous scope's zoom level. */
-const MAP_INITIAL_ZOOM = 1.14
-
 export function RegionMapChart(props: {
   theme: ScreenChartTheme
   mapKey?: string
   rows: RegionStat[]
   showLabels: boolean
   onSelect?: (name: string) => void
-  onZoom?: (zoom: number) => void
+  onHover?: (name: string | null) => void
   fallback?: ReactNode
 }) {
   const zoomRef = useRef(MAP_INITIAL_ZOOM)
   const centerRef = useRef<[number, number] | undefined>(undefined)
   const revealedRef = useRef(false)
-  const onZoomRef = useRef(props.onZoom)
-  onZoomRef.current = props.onZoom
   const { setContainer, setOption, chartRef } = useEChart({
     onClick: props.onSelect,
+    onHover: props.onHover,
     onZoom: (zoom) => {
       zoomRef.current = zoom
       // Track the pan alongside the zoom so a later setOption can put the
@@ -636,7 +636,6 @@ export function RegionMapChart(props: {
         }
         chartRef.current?.setOption(patch)
       }
-      props.onZoom?.(zoom)
     },
   })
 
@@ -644,7 +643,6 @@ export function RegionMapChart(props: {
     zoomRef.current = MAP_INITIAL_ZOOM
     centerRef.current = undefined
     revealedRef.current = false
-    onZoomRef.current?.(MAP_INITIAL_ZOOM)
   }, [props.mapKey])
 
   // Content-keyed: the 1s clock re-renders the parent with fresh array

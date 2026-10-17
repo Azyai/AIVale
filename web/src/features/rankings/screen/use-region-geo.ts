@@ -34,37 +34,21 @@ const GEO_VERSION = '2'
 // repeated mounts (route changes, period switches) from re-fetching.
 const registeredMaps = new Set<string>()
 
-const EMPTY_NAMES: string[] = []
-
-/** Region names of a registered map — the landmark island's scope list. */
-function featureNames(key: string): string[] {
-  const geo = echarts.getMap(key)?.geoJson as
-    | { features?: Array<{ properties?: { name?: string } }> }
-    | undefined
-  return (geo?.features ?? [])
-    .map((feature) => feature.properties?.name)
-    .filter((name): name is string => typeof name === 'string' && !!name)
-}
-
-async function registerMap(
-  key: string,
-  url: string
-): Promise<{ key: string; names: string[] }> {
+async function registerMap(key: string, url: string): Promise<string> {
   if (!registeredMaps.has(key)) {
     const res = await fetch(url)
     if (!res.ok) throw new Error(`map ${key}: ${res.status}`)
     echarts.registerMap(key, (await res.json()) as MapSource)
     registeredMaps.add(key)
   }
-  return { key, names: featureNames(key) }
+  return key
 }
 
 /**
  * Loads and registers the GeoJSON a map series needs. `adcode` null means the
  * national map, undefined means "not resolvable yet" (no request is made),
  * otherwise it is a province whose city-level map is loaded. `mapKey` is the
- * registered map name to hand the chart, undefined until the geometry is ready;
- * `names` lists every region in that geometry.
+ * registered map name to hand the chart, undefined until the geometry is ready.
  */
 export function useRegionGeo(adcode: number | null | undefined) {
   const key = adcode == null ? CHINA_MAP_KEY : `rankings-${adcode}`
@@ -80,9 +64,5 @@ export function useRegionGeo(adcode: number | null | undefined) {
     gcTime: Number.POSITIVE_INFINITY,
     retry: 1,
   })
-  return {
-    mapKey: query.data?.key,
-    names: query.data?.names ?? EMPTY_NAMES,
-    failed: query.isError,
-  }
+  return { mapKey: query.data, failed: query.isError }
 }

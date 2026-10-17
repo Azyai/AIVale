@@ -7331,6 +7331,6 @@
     "Select a city": "Выберите город",
     "Token 服务 · 模型部署": "Token-сервис · Развёртывание моделей",
     "Scroll to zoom, drag to pan": "Колесо — масштаб, перетаскивание — панорама",
-    "Zoom in to reveal local landmarks and flavors": "Увеличьте масштаб, чтобы увидеть достопримечательности и блюда регионов"
+    "Hover over the map to see local landmarks and flavors": "Наведите курсор на карту, чтобы увидеть достопримечательности и блюда регионов"
   }
 }

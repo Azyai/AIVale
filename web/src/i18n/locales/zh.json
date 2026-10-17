@@ -7331,6 +7331,6 @@
     "Select a city": "请选择城市",
     "Token 服务 · 模型部署": "Token 服务 · 模型部署",
     "Scroll to zoom, drag to pan": "滚轮缩放，拖拽平移",
-    "Zoom in to reveal local landmarks and flavors": "放大地图，查看各地特色建筑与美食"
+    "Hover over the map to see local landmarks and flavors": "鼠标移到地图上，查看各地特色建筑与美食"
   }
 }

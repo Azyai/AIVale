@@ -7331,6 +7331,6 @@
     "Select a city": "市を選択",
     "Token 服务 · 模型部署": "Token サービス · モデルデプロイ",
     "Scroll to zoom, drag to pan": "ホイールでズーム、ドラッグで移動",
-    "Zoom in to reveal local landmarks and flavors": "拡大すると各地の名所と名物が表示されます"
+    "Hover over the map to see local landmarks and flavors": "地図にカーソルを合わせると各地の名所と名物が表示されます"
   }
 }

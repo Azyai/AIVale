@@ -17,7 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -53,9 +52,8 @@ import type {
 } from '../types'
 import { CountUpNumber } from './count-up-number'
 import { LandmarkIsland } from './landmarks'
-import { signatureEntries } from './signatures'
+import { signatureFor } from './signatures'
 import {
-  MAP_LABEL_ZOOM,
   ModelRankChart,
   RegionMapChart,
   RegionRankChart,
@@ -341,7 +339,8 @@ export function RankingsScreen() {
 
   const [province, setProvince] = useState<string | null>(null)
   const [zoomId, setZoomId] = useState<ZoomId | null>(null)
-  const [mapZoom, setMapZoom] = useState(1)
+  /** Region the pointer is resting on; the landmark island follows it. */
+  const [hoverRegion, setHoverRegion] = useState<string | null>(null)
 
   const rankingsQuery = useScreenRankings(period)
   const regionsQuery = useScreenRegions(period, province ?? '')
@@ -366,27 +365,11 @@ export function RankingsScreen() {
   }, [catalogQuery.data, province])
   const geo = useRegionGeo(provinceAdcode)
 
-  // Wheel roam fires continuously, so quantize: React bails out when the value
-  // is unchanged. Floor rather than round — the chart reveals place names at
-  // the raw zoom, so a rounded-up tenth would expand the landmark island over
-  // a map that is still hiding its labels.
-  const handleMapZoom = useCallback((zoom: number) => {
-    setMapZoom((prev) => {
-      const next = Math.floor(zoom * 10) / 10
-      return next === prev ? prev : next
-    })
-  }, [])
-
-  // Landmark island content: regions with usage first, then the rest of the
-  // map in view, so the capsule always talks about what is on screen.
-  const islandEntries = useMemo(
-    () =>
-      signatureEntries({
-        dataNames: mapRows.map((r) => r.name),
-        scopeNames: geo.names,
-        province,
-      }),
-    [mapRows, geo.names, province]
+  // The island talks about wherever the pointer is; with the pointer off the
+  // map it falls back to the province currently opened up.
+  const islandEntry = useMemo(
+    () => signatureFor(hoverRegion ?? province, province),
+    [hoverRegion, province]
   )
 
   const handlePeriodChange = (next: RankingPeriod) => {
@@ -520,9 +503,8 @@ export function RankingsScreen() {
           >
             <div className='bsc-map-wrap'>
               <LandmarkIsland
-                entries={islandEntries}
-                expanded={province != null || mapZoom >= MAP_LABEL_ZOOM}
-                hint={t('Zoom in to reveal local landmarks and flavors')}
+                entry={islandEntry}
+                hint={t('Hover over the map to see local landmarks and flavors')}
               />
               <RegionMapChart
                 theme={theme}
@@ -530,7 +512,7 @@ export function RankingsScreen() {
                 rows={mapRows}
                 showLabels={province != null}
                 onSelect={handleRegionSelect}
-                onZoom={handleMapZoom}
+                onHover={setHoverRegion}
                 fallback={
                   <div className='bsc-chart-placeholder'>
                     {geo.failed

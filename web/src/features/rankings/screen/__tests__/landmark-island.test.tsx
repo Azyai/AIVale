@@ -7,7 +7,7 @@ published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even implied WARRANTY of
+but WITHOUT ANY WARRANTY; without even implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Affero General Public License for more details.
 
@@ -16,108 +16,57 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { act, cleanup, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { LandmarkIsland } from '../landmarks'
 import type { SignatureEntry } from '../signatures'
 
-const HINT = 'zoom to reveal'
-
-const entries = (names: string[]): SignatureEntry[] =>
-  names.map((name) => ({
-    name,
-    glyph: name,
-    landmark: `${name}-地标`,
-    food: `${name}-美食`,
-  }))
+const HINT = 'Hover over the map to see local landmarks and flavors'
+const CANTON: SignatureEntry = {
+  name: '广东省',
+  glyph: '广东省',
+  landmark: '广州塔',
+  food: '广式早茶',
+}
+const CAPITAL: SignatureEntry = {
+  name: '北京市',
+  glyph: '北京市',
+  landmark: '天坛祈年殿',
+  food: '北京烤鸭',
+}
 
 afterEach(cleanup)
 
 describe('LandmarkIsland', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('stays collapsed on the hint while the map is zoomed out', () => {
-    render(
-      <LandmarkIsland entries={entries(['广东省'])} expanded={false} hint={HINT} />
-    )
-    const island = screen.getByTitle(/广东省/)
-    expect(island).toHaveAttribute('data-expanded', 'false')
-    expect(island).toHaveTextContent(HINT)
-  })
-
-  it('shows the focused region landmark and dish once expanded', () => {
-    render(
-      <LandmarkIsland entries={entries(['广东省'])} expanded hint={HINT} />
-    )
-    const island = screen.getByTitle(/广东省/)
-    expect(island).toHaveAttribute('data-expanded', 'true')
-    expect(island).toHaveTextContent('广东省-地标')
-    expect(island).toHaveTextContent('广东省-美食')
-  })
-
-  it('cycles to the next region after the display interval', () => {
-    // The shared setup reports prefers-reduced-motion: reduce, so opt out here
-    // to exercise the rotation itself.
-    const original = window.matchMedia
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: (query: string): MediaQueryList => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: () => undefined,
-        removeListener: () => undefined,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-        dispatchEvent: () => false,
-      }),
-    })
-    try {
-      render(
-        <LandmarkIsland
-          entries={entries(['广东省', '北京市'])}
-          expanded
-          hint={HINT}
-        />
-      )
-      expect(screen.getByTitle(/广东省/)).toHaveTextContent('广东省-地标')
-      act(() => {
-        vi.advanceTimersByTime(4200)
-      })
-      expect(screen.getByTitle(/北京市/)).toHaveTextContent('北京市-美食')
-    } finally {
-      Object.defineProperty(window, 'matchMedia', {
-        configurable: true,
-        value: original,
-      })
-    }
-  })
-
-  it('holds the first region when the visitor prefers reduced motion', () => {
-    render(
-      <LandmarkIsland
-        entries={entries(['广东省', '北京市'])}
-        expanded
-        hint={HINT}
-      />
-    )
-    act(() => {
-      vi.advanceTimersByTime(9000)
-    })
-    expect(screen.getByTitle(/广东省/)).toHaveTextContent('广东省-地标')
-  })
-
-  it('keeps only the hint when no region has a curated signature', () => {
-    render(<LandmarkIsland entries={[]} expanded={false} hint={HINT} />)
+  it('stays collapsed on the hint while nothing is hovered', () => {
+    render(<LandmarkIsland entry={null} hint={HINT} />)
     const island = screen.getByTitle(HINT)
-    expect(island).toHaveTextContent(HINT)
+    expect(island).toHaveAttribute('data-expanded', 'false')
     expect(island.querySelector('svg')).toBeNull()
+    expect(island.querySelector('.bsc-island-expanded')).toBeNull()
+  })
+
+  it('expands onto the region under the pointer with its landmark and dish', () => {
+    render(<LandmarkIsland entry={CANTON} hint={HINT} />)
+    const island = screen.getByTitle('广东省 · 广州塔 · 广式早茶')
+    expect(island).toHaveAttribute('data-expanded', 'true')
+    expect(screen.getByText('广州塔')).toBeInTheDocument()
+    expect(screen.getByText('广式早茶')).toBeInTheDocument()
+    expect(island.querySelector('svg path')).not.toBeNull()
+  })
+
+  it('follows the pointer from one region to the next', () => {
+    const { rerender } = render(<LandmarkIsland entry={CANTON} hint={HINT} />)
+    expect(screen.getByText('广州塔')).toBeInTheDocument()
+    rerender(<LandmarkIsland entry={CAPITAL} hint={HINT} />)
+    expect(screen.queryByText('广州塔')).toBeNull()
+    expect(screen.getByText('天坛祈年殿')).toBeInTheDocument()
+  })
+
+  it('collapses back to the hint when the pointer leaves the map', () => {
+    const { rerender } = render(<LandmarkIsland entry={CANTON} hint={HINT} />)
+    rerender(<LandmarkIsland entry={null} hint={HINT} />)
+    expect(screen.getByTitle(HINT)).toHaveAttribute('data-expanded', 'false')
   })
 })

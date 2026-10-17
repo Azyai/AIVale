@@ -151,16 +151,6 @@ const SIGNATURES: Record<string, Signature> = {
   拉萨市: { landmark: '布达拉宫', food: '酥油茶' },
 }
 
-/** Well-known regions to cycle before any usage data exists. */
-const SHOWCASE = [
-  '北京市',
-  '上海市',
-  '广东省',
-  '浙江省',
-  '四川省',
-  '陕西省',
-] as const
-
 export type SignatureEntry = {
   name: string
   /** Region whose glyph draws this entry (a city borrows its province's). */
@@ -170,34 +160,21 @@ export type SignatureEntry = {
 }
 
 /**
- * Ordered island entries: regions that actually have usage first (the ones a
- * wall screen should advertise), then any other known region of the same
- * scope, then the province itself, then a showcase list so the island is never
- * empty. `scopeNames` is the GeoJSON name list of the map in view.
+ * Signature of the region the pointer is over. `province` is the drilled-down
+ * province, or null at the national level: it supplies the glyph (cities borrow
+ * their province's) and the fallback pair, so pointing at a city we have no
+ * entry for still says something true about the area instead of collapsing the
+ * island mid-gesture. Null when nothing at all is known about the region.
  */
-export function signatureEntries(props: {
-  dataNames: string[]
-  scopeNames: string[]
+export function signatureFor(
+  name: string | null,
   province: string | null
-}): SignatureEntry[] {
-  const glyphFor = (name: string) => props.province ?? name
-  const entry = (name: string): SignatureEntry | null => {
-    const sig = SIGNATURES[name]
-    if (!sig) return null
-    return { name, glyph: glyphFor(name), ...sig }
-  }
-  const seen = new Set<string>()
-  const out: SignatureEntry[] = []
-  const push = (name: string) => {
-    if (seen.has(name)) return
-    const e = entry(name)
-    if (!e) return
-    seen.add(name)
-    out.push(e)
-  }
-  for (const name of props.dataNames) push(name)
-  for (const name of props.scopeNames) push(name)
-  if (props.province) push(props.province)
-  for (const name of SHOWCASE) push(name)
-  return out.slice(0, 8)
+): SignatureEntry | null {
+  if (!name) return null
+  const own = SIGNATURES[name]
+  if (own) return { name, glyph: province ?? name, ...own }
+  const inherited = province ? SIGNATURES[province] : undefined
+  return inherited && province
+    ? { name: province, glyph: province, ...inherited }
+    : null
 }

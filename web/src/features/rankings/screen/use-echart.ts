@@ -34,6 +34,10 @@ export function useEChart(handlers?: {
   onClick?: (name: string) => void
   /** Fires with the absolute zoom of a map series after a wheel / pinch roam. */
   onZoom?: (zoom: number) => void
+  /** Fires with the region the pointer entered, and null when it leaves the
+   * chart altogether. Not cleared between neighbouring regions, so a sweep
+   * across the map reports each one without a gap in between. */
+  onHover?: (name: string | null) => void
 }) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const chartRef = useRef<echarts.ECharts | null>(null)
@@ -51,6 +55,11 @@ export function useEChart(handlers?: {
       const name = (params as { name?: string }).name
       if (name) handlersRef.current?.onClick?.(name)
     })
+    chart.on('mouseover', (params) => {
+      const name = (params as { name?: string }).name
+      if (name) handlersRef.current?.onHover?.(name)
+    })
+    chart.on('globalout', () => handlersRef.current?.onHover?.(null))
     // The roam payload only carries the gesture's zoom delta, so the absolute
     // value has to be read back off the option — coalesced to one read per
     // frame because a wheel spin fires this continuously.
