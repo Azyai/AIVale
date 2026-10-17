@@ -50,17 +50,17 @@ export function BrandOrb(props: { className?: string }) {
 export function BrandLockup() {
   const { t } = useTranslation()
   return (
-    <>
-      <BrandOrb className='size-9 md:size-12' />
+    <span className='flex min-w-0 shrink-0 items-center gap-2.5 md:gap-3'>
+      <BrandOrb className='size-8 md:size-11' />
       <span className='flex min-w-0 flex-col gap-1 leading-none'>
-        <span className='text-foreground truncate text-lg font-bold tracking-tight md:text-2xl'>
+        <span className='text-foreground truncate text-base font-bold tracking-tight md:text-[1.375rem]'>
           京西智库
         </span>
-        <span className='text-muted-foreground hidden truncate text-[10px] tracking-[0.28em] md:block md:text-[11px]'>
+        <span className='text-muted-foreground hidden truncate text-[9px] tracking-[0.28em] md:block md:text-[10px]'>
           {t('Token 服务 · 模型部署')}
         </span>
       </span>
-    </>
+    </span>
   )
 }
 

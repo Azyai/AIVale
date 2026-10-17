@@ -16,8 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { DEFAULT_LOGO } from '@/lib/constants'
+
 export function applyFaviconToDom(url: string) {
   if (typeof document === 'undefined' || !url) return
+  // index.html ships the brand vector favicon plus the .ico fallback; only an
+  // admin-configured logo should replace them. `/api/status` appends a
+  // cache-busting query to the default path, so compare paths only.
+  if (url.split('?')[0] === DEFAULT_LOGO) return
   try {
     const next = new URL(url, window.location.href).href
     const existing =

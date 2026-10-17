@@ -27,8 +27,14 @@ import {
 } from '@/components/ui/sidebar'
 import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
-import { DEFAULT_SYSTEM_NAME, SHOW_SYSTEM_LOGO } from '@/lib/constants'
+import {
+  DEFAULT_LOGO,
+  DEFAULT_SYSTEM_NAME,
+  SHOW_SYSTEM_LOGO,
+} from '@/lib/constants'
 import { cn } from '@/lib/utils'
+
+import { BrandLockup, BrandOrb } from './header-logo'
 
 type SystemBrandProps = {
   defaultName?: string
@@ -43,8 +49,7 @@ type SystemBrandProps = {
 
 /**
  * System brand component
- * Displays current system logo + name (logo image only rendered when
- * SHOW_SYSTEM_LOGO is enabled).
+ * Displays the brand lockup (or an admin-configured logo) plus the system name.
  * - inline: compact pill in the top app bar; clicking navigates to home (/)
  * - sidebar: stacked card in the sidebar header (display only)
  */
@@ -59,6 +64,11 @@ export function SystemBrand(props: SystemBrandProps) {
   const version =
     status?.version || props.defaultVersion || t('Unknown version')
 
+  // Same rule as the public header: the shipped mark is the horizontal lockup,
+  // an uploaded logo keeps the square crop so it is never stretched. `/api/status`
+  // appends a cache-busting query, so compare paths only.
+  const usesBrandLockup = logo.split('?')[0] === DEFAULT_LOGO
+
   if (variant === 'inline') {
     return (
       <Link
@@ -69,23 +79,32 @@ export function SystemBrand(props: SystemBrandProps) {
           'hover:bg-accent focus-visible:ring-ring/40 focus-visible:ring-2'
         )}
       >
-        {SHOW_SYSTEM_LOGO && (
-          <div className='flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg md:size-14'>
-            <img
-              src={logo}
-              alt={t('Logo')}
-              className='size-full rounded-lg object-cover dark:hidden'
-            />
-            <img
-              src={nightLogo}
-              alt={t('Logo')}
-              className='hidden size-full object-contain dark:block'
-            />
-          </div>
+        {SHOW_SYSTEM_LOGO &&
+          (usesBrandLockup ? (
+            <BrandLockup />
+          ) : (
+            <div className='flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg md:size-14'>
+              <img
+                src={logo}
+                alt={t('Logo')}
+                className='size-full rounded-lg object-cover dark:hidden'
+              />
+              <img
+                src={nightLogo}
+                alt={t('Logo')}
+                className='hidden size-full object-contain dark:block'
+              />
+            </div>
+          ))}
+        {/* The lockup already renders the wordmark; the configured platform
+            name only shows for admin-uploaded logos. */}
+        {usesBrandLockup ? (
+          <span className='sr-only'>{name}</span>
+        ) : (
+          <span className='max-w-56 truncate text-base font-semibold tracking-tight md:max-w-xs md:text-[1.375rem]'>
+            {name}
+          </span>
         )}
-        <span className='max-w-56 truncate text-base font-semibold tracking-tight md:max-w-xs md:text-[1.375rem]'>
-          {name}
-        </span>
       </Link>
     )
   }
@@ -98,17 +117,22 @@ export function SystemBrand(props: SystemBrandProps) {
           className='hover:text-sidebar-foreground active:text-sidebar-foreground cursor-default hover:bg-transparent active:bg-transparent'
           render={<div />}
         >
-          {SHOW_SYSTEM_LOGO && (
-            <div className='flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg'>
-              <img
-                src={logo}
-                alt={t('Logo')}
-                className='size-full rounded-lg object-cover'
-              />
-            </div>
-          )}
+          {SHOW_SYSTEM_LOGO &&
+            (usesBrandLockup ? (
+              <BrandOrb className='size-8' />
+            ) : (
+              <div className='flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg'>
+                <img
+                  src={logo}
+                  alt={t('Logo')}
+                  className='size-full rounded-lg object-cover'
+                />
+              </div>
+            ))}
           <div className='grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden'>
-            <span className='truncate font-semibold'>{name}</span>
+            <span className='truncate font-semibold'>
+              {usesBrandLockup ? DEFAULT_SYSTEM_NAME : name}
+            </span>
             <span className='truncate text-xs'>{version}</span>
           </div>
         </SidebarMenuButton>

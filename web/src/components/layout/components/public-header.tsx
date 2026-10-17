@@ -232,6 +232,7 @@ export function PublicHeader(props: PublicHeaderProps) {
             <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1'>
               <Link
                 to={homeUrl}
+                aria-label={displaySiteName}
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
                 {SHOW_SYSTEM_LOGO && (
@@ -239,23 +240,30 @@ export function PublicHeader(props: PublicHeaderProps) {
                     className={cn(
                       'flex shrink-0 items-center transition-all duration-300 group-hover:scale-105',
                       usesBrandLockup
-                        ? 'h-9 md:h-12'
+                        ? 'h-8 md:h-11'
                         : 'size-9 justify-center md:size-14'
                     )}
                   >
                     {logoContent}
                   </div>
                 )}
-                <span
-                  className='max-w-56 truncate text-base font-bold tracking-tight md:max-w-xs md:text-[1.375rem]'
-                  title={displaySiteName}
-                >
-                  {loading ? (
-                    <Skeleton className='h-6 w-28' />
-                  ) : (
-                    displaySiteName
-                  )}
-                </span>
+                {/* The brand lockup already carries the wordmark, so the
+                    configured platform name is assistive-tech only there; an
+                    admin-configured logo keeps its visible name. */}
+                {usesBrandLockup ? (
+                  <span className='sr-only'>{displaySiteName}</span>
+                ) : (
+                  <span
+                    className='max-w-56 truncate text-base font-bold tracking-tight md:max-w-xs md:text-[1.375rem]'
+                    title={displaySiteName}
+                  >
+                    {loading ? (
+                      <Skeleton className='h-6 w-28' />
+                    ) : (
+                      displaySiteName
+                    )}
+                  </span>
+                )}
               </Link>
             </div>
 
