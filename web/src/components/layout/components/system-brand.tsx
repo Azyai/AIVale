@@ -16,7 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import nightLogo from '@/assets/logo-night.png'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -34,7 +33,7 @@ import {
 } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-import { BrandLockup, BrandOrb } from './header-logo'
+import { BrandLockup } from './header-logo'
 
 type SystemBrandProps = {
   defaultName?: string
@@ -64,9 +63,9 @@ export function SystemBrand(props: SystemBrandProps) {
   const version =
     status?.version || props.defaultVersion || t('Unknown version')
 
-  // Same rule as the public header: the shipped mark is the horizontal lockup,
-  // an uploaded logo keeps the square crop so it is never stretched. `/api/status`
-  // appends a cache-busting query, so compare paths only.
+  // Same rule as the public header: the shipped mark is the lockup, an uploaded
+  // logo keeps its own aspect ratio (object-contain, never cropped).
+  // `/api/status` appends a cache-busting query, so compare paths only.
   const usesBrandLockup = logo.split('?')[0] === DEFAULT_LOGO
 
   if (variant === 'inline') {
@@ -81,18 +80,13 @@ export function SystemBrand(props: SystemBrandProps) {
       >
         {SHOW_SYSTEM_LOGO &&
           (usesBrandLockup ? (
-            <BrandLockup />
+            <BrandLockup logoSrc={logo} />
           ) : (
-            <div className='flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg md:size-14'>
+            <div className='flex size-9 shrink-0 items-center justify-center md:size-14'>
               <img
                 src={logo}
                 alt={t('Logo')}
-                className='size-full rounded-lg object-cover dark:hidden'
-              />
-              <img
-                src={nightLogo}
-                alt={t('Logo')}
-                className='hidden size-full object-contain dark:block'
+                className='size-full object-contain'
               />
             </div>
           ))}
@@ -119,13 +113,18 @@ export function SystemBrand(props: SystemBrandProps) {
         >
           {SHOW_SYSTEM_LOGO &&
             (usesBrandLockup ? (
-              <BrandOrb className='size-8' />
+              <img
+                src={logo}
+                alt=''
+                aria-hidden='true'
+                className='size-8 shrink-0 object-contain'
+              />
             ) : (
-              <div className='flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg'>
+              <div className='flex aspect-square size-8 items-center justify-center'>
                 <img
                   src={logo}
                   alt={t('Logo')}
-                  className='size-full rounded-lg object-cover'
+                  className='size-full object-contain'
                 />
               </div>
             ))}

@@ -16,7 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import nightLogo from '@/assets/logo-night.png'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -43,15 +42,20 @@ export function BrandOrb(props: { className?: string }) {
 }
 
 /**
- * Header brand lockup: orb + 京西智库 wordmark (rendered as text so it follows
- * the theme foreground) + tagline. Pure markup — dark mode needs no second
- * asset and there is no raster background to leave residue.
+ * Header brand lockup: original brand mark + 京西智库 wordmark (rendered as
+ * text so it follows the theme foreground) + tagline. The mark is the shipped
+ * image asset, displayed with object-contain so it is never cropped.
  */
-export function BrandLockup() {
+export function BrandLockup({ logoSrc = '/logo.png' }: { logoSrc?: string }) {
   const { t } = useTranslation()
   return (
     <span className='flex min-w-0 shrink-0 items-center gap-2.5 md:gap-3'>
-      <BrandOrb className='size-8 md:size-11' />
+      <img
+        src={logoSrc}
+        alt=''
+        aria-hidden='true'
+        className='size-8 shrink-0 object-contain md:size-11'
+      />
       <span className='flex min-w-0 flex-col gap-1 leading-none'>
         <span className='text-foreground truncate text-base font-bold tracking-tight md:text-[1.375rem]'>
           京西智库
@@ -76,21 +80,14 @@ export function HeaderLogo({
   className,
 }: HeaderLogoProps) {
   return (
-    <>
-      <img
-        src={src}
-        alt={alt}
-        className={cn(
-          'h-6 w-6 rounded-full transition-opacity duration-200 dark:hidden',
-          !loading && logoLoaded ? 'opacity-100' : 'opacity-0',
-          className
-        )}
-      />
-      <img
-        src={nightLogo}
-        alt={alt}
-        className='hidden size-full object-contain dark:block'
-      />
-    </>
+    <img
+      src={src}
+      alt={alt}
+      className={cn(
+        'size-full object-contain transition-opacity duration-200',
+        !loading && logoLoaded ? 'opacity-100' : 'opacity-0',
+        className
+      )}
+    />
   )
 }

@@ -99,19 +99,19 @@ export function PublicHeader(props: PublicHeaderProps) {
   const displaySiteName = customSiteName || systemName
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
 
-  // The shipped brand is a horizontal lockup; an admin-configured logo keeps
-  // the square treatment so uploaded marks are not stretched. `/api/status`
+  // The shipped brand is a mark + wordmark lockup; an admin-configured logo
+  // keeps its own aspect ratio (object-contain, never cropped). `/api/status`
   // appends a cache-busting query to the default path, so compare paths only.
   const usesBrandLockup =
     !customLogo && systemLogo.split('?')[0] === DEFAULT_LOGO
   let logoContent: ReactNode = usesBrandLockup ? (
-    <BrandLockup />
+    <BrandLockup logoSrc={systemLogo} />
   ) : (
     <HeaderLogo
       src={systemLogo}
       loading={loading}
       logoLoaded={logoLoaded}
-      className='size-full rounded-lg object-contain'
+      className='size-full object-contain'
     />
   )
   if (customLogo) logoContent = customLogo

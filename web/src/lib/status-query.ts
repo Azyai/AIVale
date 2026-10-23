@@ -19,7 +19,11 @@ For commercial licensing, please contact support@quantumnous.com
 import { queryOptions, type QueryClient } from '@tanstack/react-query'
 
 import { getStatus } from '@/lib/api'
-import { DEFAULT_SYSTEM_NAME, DEFAULT_LOGO } from '@/lib/constants'
+import {
+  DEFAULT_LOGO,
+  DEFAULT_LOGO_VERSION,
+  DEFAULT_SYSTEM_NAME,
+} from '@/lib/constants'
 import { parseSiteThemeDefaults } from '@/lib/theme-customization'
 import {
   useSystemConfigStore,
@@ -58,6 +62,13 @@ function toNumber(value: unknown, fallback: number): number {
   return fallback
 }
 
+function resolveLogoUrl(configuredLogo: string | undefined): string {
+  const logo = configuredLogo || DEFAULT_LOGO
+  return logo.split('?')[0] === DEFAULT_LOGO
+    ? `${DEFAULT_LOGO}?v=${DEFAULT_LOGO_VERSION}`
+    : logo
+}
+
 /**
  * Map `/api/status` response data to our persisted system config structure
  */
@@ -94,7 +105,7 @@ export function mapStatusDataToConfig(
 
   return {
     systemName: (data.system_name as string | undefined) || DEFAULT_SYSTEM_NAME,
-    logo: (data.logo as string | undefined) || DEFAULT_LOGO,
+    logo: resolveLogoUrl(data.logo as string | undefined),
     footerHtml: data.footer_html as string | undefined,
     demoSiteEnabled: data.demo_site_enabled as boolean | undefined,
     displayTokenStatEnabled: data.display_token_stat_enabled as
