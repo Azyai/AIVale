@@ -24,7 +24,7 @@ For commercial licensing, please contact support@quantumnous.com
 export const DEFAULT_SYSTEM_NAME = '京西智库'
 export const DEFAULT_LOGO = '/logo.png'
 // Bump when replacing public/logo.png so browsers fetch the new asset.
-export const DEFAULT_LOGO_VERSION = '20261023b'
+export const DEFAULT_LOGO_VERSION = '20261025a'
 
 /**
  * Whether the system logo image is rendered in the UI. The logo pipeline
