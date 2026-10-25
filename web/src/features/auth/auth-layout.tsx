@@ -19,9 +19,10 @@ For commercial licensing, please contact support@quantumnous.com
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { BrandLockup } from '@/components/layout/components/header-logo'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSystemConfig } from '@/hooks/use-system-config'
-import { SHOW_SYSTEM_LOGO } from '@/lib/constants'
+import { DEFAULT_LOGO, SHOW_SYSTEM_LOGO } from '@/lib/constants'
 
 type AuthLayoutProps = {
   children: React.ReactNode
@@ -58,29 +59,35 @@ export function AuthLayout({ children }: AuthLayoutProps) {
     .map((tag) => tag.trim())
     .filter(Boolean)
 
+  const usesBrandLockup = logo.split('?')[0] === DEFAULT_LOGO
   const brandMark = (
     <Link
       to='/'
       className='flex items-center gap-2 transition-opacity hover:opacity-80'
     >
-      {SHOW_SYSTEM_LOGO && (
-        <div className='relative h-8 w-8'>
-          {loading ? (
-            <Skeleton className='absolute inset-0 rounded-full' />
-          ) : (
-            <img
-              src={logo}
-              alt={t('Logo')}
-              className='h-8 w-8 object-contain'
-            />
-          )}
-        </div>
-      )}
-      {loading ? (
-        <Skeleton className='h-6 w-24' />
-      ) : (
-        <h1 className='text-xl font-medium'>{systemName}</h1>
-      )}
+      {SHOW_SYSTEM_LOGO &&
+        (usesBrandLockup ? (
+          <BrandLockup className='h-12 md:h-16' />
+        ) : (
+          <>
+            <div className='relative h-8 w-8'>
+              {loading ? (
+                <Skeleton className='absolute inset-0 rounded-full' />
+              ) : (
+                <img
+                  src={logo}
+                  alt={t('Logo')}
+                  className='h-8 w-8 object-contain'
+                />
+              )}
+            </div>
+            {loading ? (
+              <Skeleton className='h-6 w-24' />
+            ) : (
+              <h1 className='text-xl font-medium'>{systemName}</h1>
+            )}
+          </>
+        ))}
     </Link>
   )
 

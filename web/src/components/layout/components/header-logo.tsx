@@ -48,20 +48,24 @@ export function BrandOrb(props: { className?: string }) {
  * supplied logo. Separate light/dark renders keep the text legible on both
  * themes; object-contain means the lockup is never cropped.
  */
-export function BrandLockup() {
+export function BrandLockup({ className }: { className?: string }) {
+  const imgClassName = cn(
+    'h-11 w-auto shrink-0 object-contain md:h-16',
+    className
+  )
   return (
     <>
       <img
         src={logoLockupLight}
         alt=''
         aria-hidden='true'
-        className='h-11 w-auto shrink-0 object-contain dark:hidden md:h-16'
+        className={cn(imgClassName, 'dark:hidden')}
       />
       <img
         src={logoLockupDark}
         alt=''
         aria-hidden='true'
-        className='hidden h-11 w-auto shrink-0 object-contain dark:block md:h-16'
+        className={cn(imgClassName, 'hidden dark:block')}
       />
     </>
   )
