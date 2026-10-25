@@ -105,7 +105,7 @@ export function PublicHeader(props: PublicHeaderProps) {
   const usesBrandLockup =
     !customLogo && systemLogo.split('?')[0] === DEFAULT_LOGO
   let logoContent: ReactNode = usesBrandLockup ? (
-    <BrandLockup logoSrc={systemLogo} />
+    <BrandLockup />
   ) : (
     <HeaderLogo
       src={systemLogo}
@@ -240,7 +240,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                     className={cn(
                       'flex shrink-0 items-center transition-all duration-300 group-hover:scale-105',
                       usesBrandLockup
-                        ? 'h-8 md:h-11'
+                        ? 'h-11 md:h-16'
                         : 'size-9 justify-center md:size-14'
                     )}
                   >

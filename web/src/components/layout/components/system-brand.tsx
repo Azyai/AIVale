@@ -80,7 +80,7 @@ export function SystemBrand(props: SystemBrandProps) {
       >
         {SHOW_SYSTEM_LOGO &&
           (usesBrandLockup ? (
-            <BrandLockup logoSrc={logo} />
+            <BrandLockup />
           ) : (
             <div className='flex size-9 shrink-0 items-center justify-center md:size-14'>
               <img

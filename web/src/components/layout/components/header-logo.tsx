@@ -16,7 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useTranslation } from 'react-i18next'
+import logoLockupDark from '@/assets/logo-lockup-dark.png'
+import logoLockupLight from '@/assets/logo-lockup-light.png'
 
 import { cn } from '@/lib/utils'
 
@@ -42,29 +43,27 @@ export function BrandOrb(props: { className?: string }) {
 }
 
 /**
- * Header brand lockup: original brand mark + 京西智库 wordmark (rendered as
- * text so it follows the theme foreground) + tagline. The mark is the shipped
- * image asset, displayed with object-contain so it is never cropped.
+ * Header brand lockup: the complete mark + original 京西智库 wordmark and
+ * tagline, rendered as a single image so the typography and spacing match the
+ * supplied logo. Separate light/dark renders keep the text legible on both
+ * themes; object-contain means the lockup is never cropped.
  */
-export function BrandLockup({ logoSrc = '/logo.png' }: { logoSrc?: string }) {
-  const { t } = useTranslation()
+export function BrandLockup() {
   return (
-    <span className='flex min-w-0 shrink-0 items-center gap-2.5 md:gap-3'>
+    <>
       <img
-        src={logoSrc}
+        src={logoLockupLight}
         alt=''
         aria-hidden='true'
-        className='size-8 shrink-0 object-contain md:size-11'
+        className='h-11 w-auto shrink-0 object-contain dark:hidden md:h-16'
       />
-      <span className='flex min-w-0 flex-col gap-1 leading-none'>
-        <span className='text-foreground truncate text-base font-bold tracking-tight md:text-[1.375rem]'>
-          京西智库
-        </span>
-        <span className='text-muted-foreground hidden truncate text-[9px] tracking-[0.28em] md:block md:text-[10px]'>
-          {t('Token 服务 · 模型部署')}
-        </span>
-      </span>
-    </span>
+      <img
+        src={logoLockupDark}
+        alt=''
+        aria-hidden='true'
+        className='hidden h-11 w-auto shrink-0 object-contain dark:block md:h-16'
+      />
+    </>
   )
 }
 
