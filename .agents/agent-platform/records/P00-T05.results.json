@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "task": "P00-T05",
+  "status": "passed",
+  "recordedAtUtc": "2026-11-02T12:19:22.926352+00:00",
+  "branch": "feat/agent-platform-integrated-main",
+  "inputCommit": "084981d24a84cfeeb69712a7dacbd3933e6be2c1",
+  "implementationCommits": {
+    "backend": "1dc78e227e41b57f28a0f3d1427e49b6bd300dbe",
+    "frontend": "7de350a7e4cb2e4f7be3f258f006a17f88f6ea2f"
+  },
+  "sourceEvidence": "Validation used the input HEAD plus the working tree recorded by the following hashes; implementation commits now retain those sources.",
+  "goVersion": "go version go1.27.0 windows/amd64",
+  "bunVersion": "1.4.2",
+  "inputs": [
+    {
+      "path": "model/agent_scope.go",
+      "sha256": "8c655ac32d8e1e6dd0cc83e377d3f9d0da1016ac49c86a4ff81cfdaca982e2a8"
+    },
+    {
+      "path": "service/agent/context.go",
+      "sha256": "04570244a114e5baad9e7ebbad85efdbfe84cd7529f226229be42a7146c1226c"
+    },
+    {
+      "path": "service/agent/capabilities.go",
+      "sha256": "2a488ca74af474eb8f59c08e3c10dc24a6e297e07560b081bbe8f0c6a34686d4"
+    },
+    {
+      "path": "types/agent/error.go",
+      "sha256": "5912caab343e4542b850deddbcfc23a0391f46541731776b13cc1797e3e1b6d2"
+    },
+    {
+      "path": "controller/agent_platform.go",
+      "sha256": "9315fbbda14bdd0dfd788e91f3942bc5583cac92df9b90284ee0d7b96ac39e0d"
+    },
+    {
+      "path": "router/agent-router.go",
+      "sha256": "bce24ee399f896a2ded862b9ed7abef47b729cab0b18d472743d9caeca6d2ae8"
+    },
+    {
+      "path": "router/api-router.go",
+      "sha256": "1f7525db8de2ef2fd39f05024f505848571650d2343ea14c25254c0d1dc8a9e4"
+    },
+    {
+      "path": "middleware/agent_platform.go",
+      "sha256": "17b49645e079286c1a504d00563ac65f9a169f70c558809a182911c1fcebfbde"
+    },
+    {
+      "path": "router/agent_platform_test.go",
+      "sha256": "8e70621abd6b7573ae1f3d7644491ad35ef083d8e3203649f78192a80e85f867"
+    },
+    {
+      "path": "web/src/features/agent-platform/types.ts",
+      "sha256": "3d18aa4bb4a44e14efde3390ffc0ee78644a8138073bb1fa4a5a0732478b8cde"
+    },
+    {
+      "path": "web/src/features/agent-platform/api.ts",
+      "sha256": "f5a65ee5925a44887f34ebc854c7ea31d4c18b35cce7c166f0fd8d7d346272dc"
+    },
+    {
+      "path": "web/src/features/agent-platform/__tests__/capabilities.test.ts",
+      "sha256": "1f6f421566cb6758db7a6ee74aa32394219d4c170cda5d11c7f85032d1698e25"
+    },
+    {
+      "path": ".agents/agent-platform/contracts/v1/capabilities.openapi.json",
+      "sha256": "4ce6329180b4aef6d3fcaed8e1579bf8f2e24383c0c27121c99cf95fee5915b2"
+    },
+    {
+      "path": ".agents/agent-platform/contracts/v1/capabilities.examples.json",
+      "sha256": "fb58e4490712985da0764c40b3b6e6bfacff9723231d3a764196b720fc7548ea"
+    },
+    {
+      "path": ".agents/agent-platform/contracts/v1/README.md",
+      "sha256": "1f4171f5d66452fb48fa8def2eda5307d471b015d507383f641798cb0b4ad541"
+    }
+  ],
+  "goValidation": {
+    "topLevelTests": 10,
+    "passedEvents": 64,
+    "failedTests": [],
+    "skippedTests": [],
+    "passedTests": [
+      "TestAgentPlatformCapabilities/missing_configuration",
+      "TestAgentPlatformCapabilities/registered_defaults",
+      "TestAgentPlatformCapabilities/subswitches_cannot_override_platform",
+      "TestAgentPlatformCapabilities/platform_alone",
+      "TestAgentPlatformCapabilities/worker",
+      "TestAgentPlatformCapabilities/mcp",
+      "TestAgentPlatformCapabilities/skills",
+      "TestAgentPlatformCapabilities/scripts_require_skills",
+      "TestAgentPlatformCapabilities/all_enabled",
+      "TestAgentPlatformCapabilities/invalid_total_switch_fails_closed",
+      "TestAgentPlatformCapabilities/invalid_child_switches_fail_closed",
+      "TestAgentPlatformCapabilities",
+      "TestAgentPlatformStatusPreservesLegacyFields",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/api/agent-platform",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/api/agent-platform/workspaces",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/v1/agents/101/runs",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/v1/agent-runs/501/resume",
+      "TestAgentPlatformGateScopesAndDrainControls/PATCH_/v1/agent-runs/501",
+      "TestAgentPlatformGateScopesAndDrainControls/DELETE_/v1/agent-runs/501",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agent-runs/501",
+      "TestAgentPlatformGateScopesAndDrainControls/HEAD_/v1/agent-runs/501",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agent-runs/501/events",
+      "TestAgentPlatformGateScopesAndDrainControls/HEAD_/v1/agent-runs/501/events",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/v1/agent-runs/501/cancel",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agent-runs/501/cancel",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/v1/agent-runs/501/events",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agent-runs/501/events/extra",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agent-runs",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/api/agent-platform-other",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agents-other/101",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/v1/agent-runs-other/501",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/v1/chat/completions",
+      "TestAgentPlatformGateScopesAndDrainControls/POST_/v1/responses",
+      "TestAgentPlatformGateScopesAndDrainControls/GET_/api/team",
+      "TestAgentPlatformGateScopesAndDrainControls",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain/platform",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain/worker",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain/mcp",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain/skills",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain/scripts",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain/unknown",
+      "TestAgentPlatformFeatureAdmissionAndInFlightDrain",
+      "TestAgentPlatformGateIsWiredIntoProductionRouter",
+      "TestAgentPlatformModuleProbe/disabled",
+      "TestAgentPlatformModuleProbe/configured_without_runtime",
+      "TestAgentPlatformModuleProbe/scripts_depend_on_skills",
+      "TestAgentPlatformModuleProbe",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/POST_/api/agent-platform/capabilities",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/PUT_/api/agent-platform/capabilities",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/DELETE_/api/agent-platform/capabilities",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/HEAD_/api/agent-platform/capabilities",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/GET_/api/agent-platform/capabilities/details",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/GET_/api/agent-platform/capabilities-other",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/POST_/api/agent-platform/workspaces",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow/POST_/v1/agents/101/runs",
+      "TestAgentPlatformModuleProbeExceptionIsNarrow",
+      "TestAgentPlatformModuleContextIsInternal",
+      "TestListModelsSupportsOpenAIAndGeminiAuthentication/OpenAI_bearer_token",
+      "TestListModelsSupportsOpenAIAndGeminiAuthentication/Gemini_API_key_header",
+      "TestListModelsSupportsOpenAIAndGeminiAuthentication/Gemini_API_key_query",
+      "TestListModelsSupportsOpenAIAndGeminiAuthentication",
+      "TestGetStatusReturnsEffectiveOIDCDisplayName/custom_name_is_trimmed",
+      "TestGetStatusReturnsEffectiveOIDCDisplayName/whitespace-only_name_falls_back",
+      "TestGetStatusReturnsEffectiveOIDCDisplayName"
+    ],
+    "rawLog": ".local-tests/agent-platform/P00-T05/go-test.jsonl"
+  },
+  "checks": [
+    {
+      "name": "frontend-build",
+      "command": "bun run build:check",
+      "exitCode": 0,
+      "startedAtUtc": "2026-11-02T12:03:10.5879043+00:00",
+      "durationSeconds": 10.312
+    },
+    {
+      "name": "go-root-build",
+      "command": "GOWORK=off go build -p 2 ./...",
+      "exitCode": 0,
+      "startedAtUtc": "2026-11-02T12:06:20.3467559+00:00",
+      "durationSeconds": 20.952
+    },
+    {
+      "name": "go-focused-tests",
+      "command": "GOWORK=off go test -json -count=1 -p 2 -timeout 90s ./router ./controller -run '^(TestAgentPlatform(Capabilities|StatusPreservesLegacyFields|GateScopesAndDrainControls|FeatureAdmissionAndInFlightDrain|GateIsWiredIntoProductionRouter|Module.*)|TestListModelsSupportsOpenAIAndGeminiAuthentication|TestGetStatusReturnsEffectiveOIDCDisplayName)$'",
+      "exitCode": 0,
+      "startedAtUtc": "2026-11-02T12:03:10.5896277+00:00",
+      "durationSeconds": 16.21
+    },
+    {
+      "name": "go-vet",
+      "command": "GOWORK=off go vet -p 2 ./...",
+      "exitCode": 0,
+      "startedAtUtc": "2026-11-02T12:03:10.6142717+00:00",
+      "durationSeconds": 30.036
+    },
+    {
+      "name": "relaykit-independence",
+      "command": "GOWORK=off go build ./...; go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./...",
+      "exitCode": 0,
+      "hostModuleDependency": false,
+      "startedAtUtc": "2026-11-02T12:06:20.3505516+00:00",
+      "durationSeconds": 0.947
+    },
+    {
+      "name": "tokenkit-independence",
+      "command": "GOWORK=off go build ./...; go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./...",
+      "exitCode": 0,
+      "hostModuleDependency": false,
+      "relaykitModuleDependency": false,
+      "startedAtUtc": "2026-11-02T12:06:20.3618362+00:00",
+      "durationSeconds": 0.583
+    }
+  ],
+  "frontendValidation": {
+    "schemaVersion": 1,
+    "task": "P00-T05",
+    "recordedAtUtc": "2026-11-02T12:06:00.118765+00:00",
+    "recordType": "Previously observed frontend validation; no tests rerun during record creation",
+    "workingDirectory": "E:\\Project\\AIVale\\new-api\\web",
+    "status": "passed",
+    "inputs": [
+      {
+        "path": "web/src/features/agent-platform/types.ts",
+        "sha256": "3d18aa4bb4a44e14efde3390ffc0ee78644a8138073bb1fa4a5a0732478b8cde"
+      },
+      {
+        "path": "web/src/features/agent-platform/api.ts",
+        "sha256": "f5a65ee5925a44887f34ebc854c7ea31d4c18b35cce7c166f0fd8d7d346272dc"
+      },
+      {
+        "path": "web/src/features/agent-platform/__tests__/capabilities.test.ts",
+        "sha256": "1f6f421566cb6758db7a6ee74aa32394219d4c170cda5d11c7f85032d1698e25"
+      }
+    ],
+    "checks": [
+      {
+        "name": "typecheck",
+        "command": "bun run typecheck",
+        "exitCode": 0,
+        "toolWallTimeSeconds": 3.3999689,
+        "observedOutput": "$ tsgo -b"
+      },
+      {
+        "name": "lint",
+        "command": "bunx oxlint -c .oxlintrc.json src/features/agent-platform",
+        "exitCode": 0,
+        "toolWallTimeSeconds": 0.4397004,
+        "observedOutput": ""
+      },
+      {
+        "name": "vitest",
+        "command": "bun run test -- src/features/agent-platform/__tests__/capabilities.test.ts --maxWorkers=2",
+        "exitCode": 0,
+        "toolWallTimeSeconds": 2.2225164,
+        "vitestDurationSeconds": 1.53,
+        "testFiles": {
+          "passed": 1,
+          "total": 1
+        },
+        "tests": {
+          "passed": 11,
+          "total": 11
+        },
+        "reportedLocalStartTime": "19:58:01",
+        "reportedLocalDate": "2026-11-02"
+      },
+      {
+        "name": "format",
+        "command": "python -",
+        "stdinScript": "import pathlib,re,subprocess\npaths=[pathlib.Path(p) for p in ['src/features/agent-platform/types.ts','src/features/agent-platform/api.ts','src/features/agent-platform/__tests__/capabilities.test.ts']]\noriginal={p:p.read_bytes() for p in paths}\nfor p,data in original.items():\n    text=data.decode('utf-8')\n    header=re.match(r'^/\\*\\nCopyright \\(C\\)[\\s\\S]*?\\*/\\n+',text).group(0)\n    p.write_text(text[len(header):],encoding='utf-8',newline='\\n')\ntry:\n    result=subprocess.run(['bun','x','oxfmt','-c','.oxfmtrc.json','--check',*[str(p) for p in paths]],check=False)\nfinally:\n    for p,data in original.items():\n        p.write_bytes(data)\nraise SystemExit(result.returncode)\n",
+        "executedFormatterCommand": [
+          "bun",
+          "x",
+          "oxfmt",
+          "-c",
+          ".oxfmtrc.json",
+          "--check",
+          "src\\features\\agent-platform\\types.ts",
+          "src\\features\\agent-platform\\api.ts",
+          "src\\features\\agent-platform\\__tests__\\capabilities.test.ts"
+        ],
+        "method": "Protected-header-safe targeted check: save exact bytes, temporarily remove only the copyright headers in these three files, run oxfmt --check on their bodies, then restore all original bytes in finally. No whole-web format command was run.",
+        "exitCode": 0,
+        "toolWallTimeSeconds": 1.5288036,
+        "formatterReportedDurationMilliseconds": 558,
+        "observedOutput": "All matched files use the correct format."
+      }
+    ],
+    "scope": [
+      "No UI/menu/route registration",
+      "No cache or localStorage fallback",
+      "No background request",
+      "Business failures preserve response origin via requireServerSuccess",
+      "HTTP failures propagate unchanged",
+      "Unknown optional fields are accepted and stripped by Zod"
+    ],
+    "backendShapeReview": {
+      "method": "Read-only source comparison; no additional tests run",
+      "paths": [
+        "controller/agent_platform.go",
+        "service/agent/capabilities.go",
+        "router/agent-router.go",
+        "middleware/agent_platform.go"
+      ],
+      "status": "matches frontend Zod shape",
+      "endpoint": "GET /api/agent-platform/capabilities",
+      "envelope": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "nonempty generated current-request ID",
+        "data": "schema_version 1, five effective boolean switches, runtime_ready boolean"
+      },
+      "runtimeReadyCurrentImplementation": false,
+      "probeGateExemption": "GET exact capabilities route remains available when master switch is off"
+    }
+  },
+  "contractValidation": {
+    "name": "capability-contract-checks",
+    "task": "P00-T05",
+    "status": "passed",
+    "scope": "Local JSON Schema draft 2020-12 components and development examples; not full OpenAPI conformance validation and not a deployed API call.",
+    "recordedAtUtc": "2026-11-02T12:15:15.315009+00:00",
+    "recordingNote": "Recorded after the already observed successful validation; validation was not repeated when writing this record.",
+    "pythonVersion": "3.12.10",
+    "jsonschemaVersion": "4.26.0",
+    "workingDirectory": "E:/Project/AIVale/new-api",
+    "command": "python -",
+    "shellInvocation": "PowerShell here-string containing stdinScript, piped to python -",
+    "stdinScript": "import copy,json\nfrom pathlib import Path\nfrom jsonschema import Draft202012Validator\n\nbase=Path('.agents/agent-platform/contracts/v1')\noas=json.loads((base/'capabilities.openapi.json').read_text(encoding='utf-8'))\nexamples=json.loads((base/'capabilities.examples.json').read_text(encoding='utf-8'))\ncore=json.loads((base/'core.schema.json').read_text(encoding='utf-8'))\nassert oas['openapi']=='3.1.0'\nassert list(oas['paths'])==['/api/agent-platform/capabilities']\noperation=oas['paths']['/api/agent-platform/capabilities']\nassert list(operation)==['get'] and operation['get']['security']==[]\nassert list(operation['get']['responses'])==['200']\nassert 'X-Oneapi-Request-Id' in operation['get']['responses']['200']['headers']\nschemas=copy.deepcopy(oas['components']['schemas'])\nfor schema in schemas.values():\n    Draft202012Validator.check_schema(schema)\nschemas['DisabledAdmissionError']['allOf'][0]['$ref']='#/$defs/errorResponse'\n\ndef validator(name):\n    root={'$schema':'https://json-schema.org/draft/2020-12/schema','$defs':core['$defs'],'components':{'schemas':schemas},'$ref':'#/components/schemas/'+name}\n    Draft202012Validator.check_schema(root)\n    return Draft202012Validator(root)\n\nvalid=0\nfor case in examples['cases']:\n    status=case['response']['status']\n    schema='CapabilityProbeResponse' if status==200 else 'DisabledAdmissionError'\n    validator(schema).validate(case['response']['body'])\n    assert case['response']['headers']['Cache-Control']=='no-store'\n    assert case['response']['headers']['X-Oneapi-Request-Id']==case['response']['body']['request_id']\n    if status==200:\n        inline=operation['get']['responses']['200']['content']['application/json']['examples'][case['name']]['value']\n        assert inline==case['response']['body']\n    else:\n        assert case['registered_operation'] is False and case['request']['method']=='POST'\n    valid+=1\nprobe=validator('CapabilityProbeResponse')\nfixture=examples['cases'][0]['response']['body']\nfuture=copy.deepcopy(fixture)\nfuture['future_optional']='compatible'\nfuture['data']['future_optional']=True\nprobe.validate(future)\nvalid+=1\ninvalid=[]\nfor name in ['missing-data','missing-flag','string-flag','numeric-readiness','unsupported-version','empty-request-id','overlong-request-id','wrong-success']:\n    data=copy.deepcopy(fixture)\n    if name=='missing-data':del data['data']\n    elif name=='missing-flag':del data['data']['mcp_enabled']\n    elif name=='string-flag':data['data']['enabled']='true'\n    elif name=='numeric-readiness':data['data']['runtime_ready']=1\n    elif name=='unsupported-version':data['data']['schema_version']=2\n    elif name=='empty-request-id':data['request_id']=''\n    elif name=='overlong-request-id':data['request_id']='x'*65\n    elif name=='wrong-success':data['success']=False\n    assert list(probe.iter_errors(data)),name\n    invalid.append(name)\nassert schemas['AgentPlatformCapabilities']['properties']['runtime_ready']['type']=='boolean'\nprint(json.dumps({'scope':'Local JSON Schema components and development examples; not a complete OpenAPI conformance check','schema_components_valid':3,'examples_valid':3,'compatible_optional_case_valid':1,'invalid_cases_rejected':invalid,'total_cases':valid+len(invalid),'passed':valid+len(invalid)},ensure_ascii=False))\n",
+    "exitCode": 0,
+    "results": {
+      "schemaComponentsChecked": 3,
+      "schemaComponentsValid": 3,
+      "documentedExamplesAccepted": 3,
+      "compatibleOptionalFieldCasesAccepted": 1,
+      "invalidCasesRejected": [
+        "missing-data",
+        "missing-flag",
+        "string-flag",
+        "numeric-readiness",
+        "unsupported-version",
+        "empty-request-id",
+        "overlong-request-id",
+        "wrong-success"
+      ],
+      "totalBehaviorCases": 12,
+      "behaviorCasesPassed": 12,
+      "behaviorCasesFailed": 0
+    },
+    "structuralChecks": [
+      "OpenAPI version is 3.1.0",
+      "Only the capability path and GET operation are declared",
+      "Operation security is an empty array",
+      "Only the registered GET 200 response is declared",
+      "Response headers include the actual X-Oneapi-Request-Id",
+      "Both OpenAPI success examples equal their standalone example bodies",
+      "Example response correlation headers equal body request_id",
+      "Blocked POST sample is explicitly not a registered operation",
+      "runtime_ready remains a boolean schema for future compatibility"
+    ],
+    "localReferenceResolution": "A memory-only copy places the frozen core $defs in the validator root and rewrites the DisabledAdmissionError reference to #/$defs/errorResponse. No network resolution or on-disk rewrite of core.schema.json is performed.",
+    "fullOpenAPIConformanceToolRun": false,
+    "inputs": [
+      {
+        "path": ".agents/agent-platform/contracts/v1/capabilities.openapi.json",
+        "sha256": "4ce6329180b4aef6d3fcaed8e1579bf8f2e24383c0c27121c99cf95fee5915b2"
+      },
+      {
+        "path": ".agents/agent-platform/contracts/v1/capabilities.examples.json",
+        "sha256": "fb58e4490712985da0764c40b3b6e6bfacff9723231d3a764196b720fc7548ea"
+      },
+      {
+        "path": ".agents/agent-platform/contracts/v1/core.schema.json",
+        "sha256": "cac889f12de13c4cf9b3df9ffe97eb5ce43cc2293912b7d6edc2f96e6934a795"
+      }
+    ]
+  },
+  "developmentCheckNote": "An initial new test fixture assigned into a nil OptionMap and blocked during panic cleanup; the fixture now replaces the map. Final focused tests completed successfully with no skipped tests.",
+  "scope": [
+    "Public read-only global probe and host-owned module boundaries",
+    "No production database schema, persistence behavior or dependency changes",
+    "Probe service and tested anonymous HTTP path use no database; existing API audit middleware may access persistence for credential-bearing requests",
+    "Existing model-list and status handlers plus gate scope are targeted regressions, not a real upstream model call",
+    "Runtime, worker, tenant authorization, UI/navigation, generic error mapping and pagination remain later tasks",
+    "Existing P00-T01 full-suite failures are unchanged; no claim that the entire historical suite passes"
+  ]
+}

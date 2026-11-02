@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.3 默认关闭的平台功能开关交付
+版本：1.4 Agent模块边界与只读能力探测交付
 
 日期：2026 年 11 月 2 日
 
@@ -1707,11 +1707,14 @@ P09工作流节点支持start、end、model、tool、condition、transform、app
 | --- | --- | --- | --- | --- |
 | API-116 / P06 | GET `W/approvals` | run:approve或本人相关run:read | status/assigned_to/page；返回本人可处理或可查看审批 | 与逐Run审批使用同一权限判断，不泄露其他任务材料 |
 | API-117 / P11 | GET `/api/agent-platform/admin/health` | 平台运维权限 | 返回worker心跳、队列积压、错误分类、存储状态 | 不返回客户输入、secret、内部连接串 |
+| P00-T05 基础探测 | GET `/api/agent-platform/capabilities` | 公开全局只读 | schema_version、五项有效开关和runtime_ready | 关闭时仍返回禁用配置；不含租户资源、本人权限或内部连接信息 |
 | API-118 / P01 | GET `W/capabilities` | workspace:read | 功能开关、可用模块、本人操作权限、服务端上限 | 作为界面功能可用性依据，后端仍独立执行限制 |
 | API-119 / P03 | GET `W/overview` | workspace:read | 时间窗；返回授权Agent数、Run数、待处理数及可见成本 | 无账务权者费用字段省略并给出visibility说明 |
 | API-120 / P08 | GET `W/artifacts` | artifact:read | purpose/status/owner/page；返回授权文件元数据 | 与父资源内容读取权限分开，不支持任意存储路径遍历 |
 | API-121 / P05 | POST `W/skills/:skill_id/versions/:version_id/files` | skill:write | path、artifact_id、expected_revision；返回更新manifest | 为草稿加入已扫描附件；复制到新包快照，拒绝越界或跨工作区引用 |
 | API-122 / P06 | POST `W/conversations` | run:create | agent_id、可选title；返回私有conversation_id | 服务端绑定owner与workspace；幂等创建，不执行模型也不扣费 |
+
+P00-T05的全局探测只描述平台配置与运行时就绪，不接收query或header声明的Team/Workspace作用域，不授予任何资源操作权限。它不能替代API-118的工作区级能力与本人权限查询；后者仍须完成P01工作区授权后实现。
 
 ### 6.13 OpenAPI 和 SDK 交付约束
 
@@ -2031,7 +2034,7 @@ P06在既有UI-06 Agent调试/运行页增加会话模式，不增加第二套�
 
 ### 8.1 新增目录与职责
 
-以下均为建议新增路径，不表示文件已存在。路径根固定为 `E:/Project/AIVale/new-api`；实现时优先扩展同领域现有文件，避免为每个动作创建重复包装层。
+以下为实现落点，除任务中明确冻结的最小骨架外，其余仍是后续阶段的建议路径。路径根固定为 `E:/Project/AIVale/new-api`；实现时优先扩展同领域现有文件，避免为每个动作创建重复包装层。
 
 | 位置 | 内容 | 依赖约束 |
 | --- | --- | --- |
@@ -2039,8 +2042,9 @@ P06在既有UI-06 Agent调试/运行页增加会话模式，不增加第二套�
 | `E:/Project/AIVale/new-api/controller/agent*.go` | Agent、版本、Run请求解析及响应 | 薄控制器，事务和执行逻辑在service |
 | `E:/Project/AIVale/new-api/controller/skill*.go` | 导入、发布、文件及版本接口 | 文件处理委托存储/包校验服务 |
 | `E:/Project/AIVale/new-api/controller/mcp*.go` | 连接、工具发现、授权、凭据操作 | 永不输出可用密钥 |
-| `E:/Project/AIVale/new-api/model/agent*.go` | ag_实体及租户限定的数据库操作 | 沿用GORM、现有三库兼容函数 |
-| `E:/Project/AIVale/new-api/service/agent/` | Agent草稿、验证、发布、授权编排 | 不依赖前端或Eino具体事件类型 |
+| `E:/Project/AIVale/new-api/model/agent*.go` | P00-T05先放内部AgentScope值对象；后续为ag_实体及租户限定数据库操作 | AgentScope不是ORM模型，不创建表或迁移；后续持久化沿用GORM及兼容函数 |
+| `E:/Project/AIVale/new-api/service/agent/` | P00-T05先放RequestContext和只读Probe；后续为草稿、验证、发布、授权编排 | 不依赖前端或Eino具体事件类型；探测不访问DB、网络、SDK或启动后台任务 |
+| `E:/Project/AIVale/new-api/types/agent/` | 根模块Agent专属叶子错误wire类型 | 不依赖Gin、数据库、relaykit或tokenkit；完整错误渲染和映射留P00-T06 |
 | `E:/Project/AIVale/new-api/service/agentexecution/` | Run服务、worker、状态机、Eino适配、恢复 | 通过接口访问模型/工具/技能/产物 |
 | `E:/Project/AIVale/new-api/service/skill/` | 包校验、manifest、导入、版本及加载 | 不执行未经隔离的客户脚本 |
 | `E:/Project/AIVale/new-api/service/mcp/` | 官方SDK适配、连接发现、工具schema与调用 | 凭据通过服务端授权的引用解析 |
@@ -2049,11 +2053,13 @@ P06在既有UI-06 Agent调试/运行页增加会话模式，不增加第二套�
 | `E:/Project/AIVale/new-api/middleware/agent_auth.go` | 工作区访问、Agent Key grant、内部能力凭据 | 先身份验证再资源校验，默认拒绝 |
 | `E:/Project/AIVale/new-api/setting/agent_setting/` | 默认限制、角色开关、保留策略 | 服务端执行，不以UI隐藏替代 |
 | `E:/Project/AIVale/new-api/cmd/agent-worker/` | 可选独立worker入口 | 若采用单二进制角色则不重复创建此入口；P00固定一种 |
-| `E:/Project/AIVale/new-api/web/src/features/agent-platform/` | 工作区选择、公共类型和页面壳 | 共用Query、错误、格式化和i18n |
+| `E:/Project/AIVale/new-api/web/src/features/agent-platform/` | P00-T05先放types.ts、api.ts和客户端契约测试；后续为工作区选择和页面壳 | 复用统一api和业务错误检查；导航与UI留P00-T07，不从旧status缓存推断准入 |
 | `E:/Project/AIVale/new-api/web/src/features/agents/` | Agent表单、版本、调试 | 不自行重新实现通用表格或弹窗 |
 | `E:/Project/AIVale/new-api/web/src/features/skills/` | 技能包、文件树、版本对比 | 只展示服务端允许的数据 |
 | `E:/Project/AIVale/new-api/web/src/features/mcp/` | 连接、工具、凭据关联 | 输入secret不进入URL或持久化前端store |
 | `E:/Project/AIVale/new-api/web/src/features/agent-runs/` | 运行列表、时间线、审批、产物、费用 | Query key必须含workspace；流状态与最终结果协调 |
+
+P00-T05的`model.AgentScope`仅含内部TeamID/WorkspaceID值，不具有GORM标签或迁移注册，也不是授权证明。`service/agent.RequestContext`携带标准Context、RequestID及可选Scope，全部字段使用`json:"-"`；Scope只能由后续真实身份和资源授权适配器绑定，当前公开Probe不绑定作用域。根模块`types/agent`先统一既有`AG_RUNTIME_UNAVAILABLE`拒绝响应的wire类型，保持P00-T02冻结形状，不提前实现P00-T06的通用错误映射、ID解析或分页。其他尚无真实调用点的模块不以空目录或返回空数据的假Repository充数。
 
 ### 8.2 稳定接口边界
 
@@ -2076,6 +2082,8 @@ P06在既有UI-06 Agent调试/运行页增加会话模式，不增加第二套�
 新Agent模块必须具备功能总开关、团队准入开关和高风险子功能开关。关闭总开关后新入口返回稳定不可用错误，已有模型网关继续服务。关闭新增运行与停止已在执行的任务是两个独立动作，运维界面应明确选择。
 
 P00-T04将总开关准入检查接入`SetRouter`，仅匹配`/api/agent-platform`、`/v1/agents`、`/v1/agent-runs`及其路径段边界；相似前缀不属于平台命名空间。关闭时新的平台入口返回HTTP 503、既有错误码`AG_RUNTIME_UNAVAILABLE`及`request_id`，包含冻结错误契约的`data.field_errors=[]`与`data.retryable=false`，响应标记`Cache-Control: no-store`，不能靠直接请求绕过菜单隐藏。配置关闭需要管理员调整，不引导客户端自动重试。既有模型接口、Team接口和系统任务继续使用原接线。
+
+P00-T05仅为精确GET `/api/agent-platform/capabilities`增加只读探测豁免，复用现有API group的限流等中间件。关闭总开关时该探测返回HTTP200和禁用配置，HEAD、写方法、子路径及相似路径不获得此豁免，业务入口继续受总开关保护。响应为`success/code/message/request_id/data`五字段，成功码为`OK`，标记`Cache-Control: no-store`；data包含`schema_version:1`、五项有效布尔开关及`runtime_ready:false`。当前没有运行引擎，即使五项配置均开启，就绪状态也保持false；开启配置不注册尚未实现的业务处理器。
 
 关闭准入时仍允许单Run的GET/HEAD、单Run的events GET/HEAD和单Run的cancel POST继续进入后续认证与处理链，以保留已接收工作的查询、事件读取和受控取消路径。这只是功能开关的放行规则，不授予身份、工作区或Run访问权限。P00-T04不注册这些尚未实现的业务处理器；开启总开关也不会令未实现的路由变为可用。MCP、Skills和脚本等后续具体入口必须另挂`RequireAgentFeature`，不能仅依赖总开关。
 
@@ -2467,16 +2475,23 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P00-T05 建立Agent模块目录和边界
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
+- **执行记录**：2026年11月2日，后端内部Scope/Context、叶子错误类型及精确GET只读探测已交付，前端类型与客户端契约通过验证。Go专项10个顶层测试、64个通过事件，无失败或跳过；前端11例、局部Schema行为12例通过，前后端构建/vet及独立模块构建和依赖检查通过。[查看P00-T05验证与交付](records/P00-T05.md)。当前runtime_ready仍为false，未提前交付运行引擎、租户授权或导航页面。
 - **前置依赖**：P00-T02、P00-T04。
 - **目标**：把新增模块接入工程而不改变relay核心。
 - **具体操作**：
-  1. 按第8章建立controller/service/model及前端feature最小骨架。
-  2. 新增统一错误和上下文类型，避免Agent业务类型进入relaykit或tokenkit。
-  3. 注册只读能力探测入口，保持业务路由尚未开放。
-- **交付物与落点**：可编译的模块骨架与能力探测响应。
-- **验收**：工程构建通过；独立模块不新增对主模块的反向依赖，开关关闭时探测返回禁用状态。
-- **回退**：撤销模块注册；已发布的通用错误码保留兼容。
+  1. 确认当前分支、输入提交和P00-T02/P00-T04依赖，核对第8章落点、冻结响应形状及现有API/前端请求封装；不提前实施P00-T06/07或P01持久化模型。
+  2. 建立内部`model.AgentScope`和`service/agent.RequestContext`，将请求元数据与可选已验证作用域留在服务端；不接受客户端作用域作为授权，不加ORM表、迁移或假Repository。
+  3. 建立根模块`types/agent`叶子错误wire类型，将既有功能禁用响应接入该类型并保持冻结字段；不把Agent业务类型加入relaykit/tokenkit，不提前引入通用错误解析与分页。
+  4. 实现只读`service/agent.Probe`，投影五项有效配置并固定schema_version为1、当前runtime_ready为false；不读数据库、调用模型/SDK/网络或启动后台工作。
+  5. 通过薄控制器和`router/agent-router.go`把公开GET全局探测接入现有API group；仅对该方法和精确路径增加总开关豁免，返回完整成功响应及no-store，保留既有单Run控制路径规则。
+  6. 建立前端feature的类型和`getAgentPlatformCapabilities`客户端，复用统一api、requireServerSuccess和运行时形状检查；未知可选响应字段可兼容，缺失/错误类型失败，不使用旧status缓存、存储或后台请求，不添加UI/菜单/hooks。
+  7. 扩展既有`router/agent_platform_test.go`，验证关闭探测、完整响应、依赖、仅GET精确豁免、作用域不外泄及开启后业务仍未注册；在一个客户端测试文件验证成功/失败/畸形响应和HTTP错误传递。
+  8. 执行受影响Go及前端测试、类型/lint/格式检查、工程构建；分别在relaykit/tokenkit使用GOWORK=off构建并检查依赖，确认独立模块没有反向依赖根模块。本批无新增数据库行为，不把未执行的数据库矩阵写成通过。
+  9. 记录实际命令、版本、结果、输入摘要和回退方式，按“后端基础”“前端客户端”“交付记录”三个模块分批Git提交；全部必需检查通过后再更新任务状态，P00-T06继续处理完整错误与分页封装。
+- **交付物与落点**：`model/agent_scope.go`、`service/agent/`、`types/agent/`内部边界；薄控制器和Agent路由；现有gate/集中Go测试扩展；`web/src/features/agent-platform/`类型、客户端及集中测试；`records/P00-T05.*`验收记录及复现说明。
+- **验收**：根工程与独立模块构建通过且无反向依赖；关闭时全局探测HTTP200并返回禁用有效值，业务新准入仍503；仅精确GET豁免，写方法/子路径不能绕过；响应含完整成功字段且不泄露内部Scope或用户权限；全部开关开启仍不把未实现runtime标为就绪或提供虚假业务API；前端客户端拒绝错误形状和失败响应，类型/lint/受影响测试通过。本任务只验收骨架、边界和只读探测，不宣称租户授权、运行引擎或导航页面已交付。
+- **回退**：先保持平台总开关关闭，再撤销探测注册与对应精确豁免、按模块逆序回退提交；保留既有错误码兼容形状，不删除Option或业务数据。前端骨架未接UI，移除客户端不会改变现有导航。
 - **估算与门禁**：0.5 人日；G-BASE、G-API。
 
 <a id="task-p00-t06"></a>
@@ -4271,6 +4286,8 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 后续默认按一个任务推进并在验证后形成一次独立Git提交。按用户本次要求，P00-T03在当前分支按功能模块分批提交：先提交可独立复现的MySQL隔离环境工具，再提交数据库验证入口、测试及交付记录。一个任务可以对应多个边界清楚的提交，不能把未完成验证视为已完成任务。第12.3章的分组用于安排顺序和阶段演示，同组任务仍分别交付；当前步骤完成后保持清晰的任务与提交对应关系。
 
 P00-T04继续按用户要求分为配置核心、HTTP接线与集中验证、交付记录三个模块提交；HTTP模块的冻结错误字段补齐保留为独立修正提交，三个模块共四次提交。所有必需验证通过后才标记任务完成。模块提交不代表提前推进P00-T05或其他后续任务。
+
+P00-T05按后端基础（含只读探测契约与Go验证）、前端客户端、交付记录三个模块提交。该任务只交付目录边界与只读基础能力，P00-T06完整错误与分页、P00-T07导航仍作为后续独立任务推进。
 
 第11章的任务是工作分解单元；开发批次是一次可评审的提交集合。建议一批1至3项，有数据库迁移、计费或权限模型变化时优先一批只做1项。不要为了凑齐三项把不相关的改动合在一起。
 
