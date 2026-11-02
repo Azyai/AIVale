@@ -153,15 +153,17 @@ func TestAgentPlatformGateScopesAndDrainControls(t *testing.T) {
 			assert.Empty(t, response.Header().Get("X-Agent-Test-Handler"))
 			assert.Contains(t, response.Header().Get("Cache-Control"), "no-store")
 			var payload struct {
-				Success   bool   `json:"success"`
-				Code      string `json:"code"`
-				RequestID string `json:"request_id"`
+				Success   bool           `json:"success"`
+				Code      string         `json:"code"`
+				RequestID string         `json:"request_id"`
+				Data      map[string]any `json:"data"`
 			}
 			require.NoError(t, common.Unmarshal(response.Body.Bytes(), &payload))
 			assert.False(t, payload.Success)
 			assert.Equal(t, "AG_RUNTIME_UNAVAILABLE", payload.Code)
 			assert.NotEmpty(t, payload.RequestID)
 			assert.Equal(t, response.Header().Get(common.RequestIdKey), payload.RequestID)
+			assert.Equal(t, map[string]any{"field_errors": []any{}, "retryable": false}, payload.Data)
 		})
 	}
 	common.OptionMapRWMutex.Lock()

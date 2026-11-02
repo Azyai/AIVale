@@ -24,6 +24,7 @@ func RequireAgentFeature(feature agent_setting.Feature) gin.HandlerFunc {
 			"message":    "Agent platform capability is unavailable",
 			"code":       "AG_RUNTIME_UNAVAILABLE",
 			"request_id": c.GetString(common.RequestIdKey),
+			"data":       gin.H{"field_errors": []any{}, "retryable": false},
 		})
 	}
 }
