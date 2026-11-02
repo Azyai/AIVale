@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "task_id": "P00-T01",
+  "base_commit": "506f56e9d554ea5ad7db256a8d1b3e69e7c4e63c",
+  "execution_policy": "Automatic checks use existing offline tests. HTTP templates require an isolated test deployment and are not executed against a live account by this baseline.",
+  "samples": [
+    {
+      "id": "model-chat-request",
+      "name": "OpenAI Chat request and response compatibility",
+      "http_template": {
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "headers": {
+          "Authorization": "Bearer <MODEL_TOKEN>",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "<BASELINE_MODEL_ALIAS>",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hello"
+            }
+          ],
+          "stream": false,
+          "max_completion_tokens": 16
+        }
+      },
+      "offline_commands": [
+        "go test -json -count=2 -p 2 ./relay/channel/openai -run '^(TestOaiResponsesToChatBufferedStreamHandlerReturnsJSONFromSSE|TestOaiResponsesToChatStreamHandlerConvertsSSEOrderAndUsage)$'",
+        "go test -json -count=2 -p 2 ./relay/channel/advancedcustom -run '^TestAdaptorConvertsOpenAIChatRequestToResponsesUpstream$'"
+      ],
+      "environment": {
+        "GOWORK": "off"
+      },
+      "fixtures": [
+        "Existing in-memory SSE fixtures in relay/channel/openai/chat_via_responses_test.go",
+        "Existing gpt-test request conversion fixture in relay/channel/advancedcustom/adaptor_test.go"
+      ],
+      "assertions": [
+        "Buffered SSE conversion returns object=chat.completion, content=buffered text and total usage=3.",
+        "Stream conversion preserves assistant/content/tool_calls/usage/DONE ordering and usage 2/3/5.",
+        "Advanced Custom converts an OpenAI Chat request to Responses while retaining its model and input."
+      ],
+      "coverage_limits": [
+        "These are existing component tests, not a full TokenAuth-to-provider-to-wallet HTTP end-to-end test.",
+        "No live model, real API key, or paid upstream request is used.",
+        "The HTTP template has not been sent by this baseline."
+      ]
+    },
+    {
+      "id": "team-financial-overview",
+      "name": "Team financial overview and per-member subscription quota",
+      "http_template": {
+        "method": "GET",
+        "path": "/api/team/self",
+        "headers": {
+          "Authorization": "Bearer <DASHBOARD_ACCESS_TOKEN>"
+        }
+      },
+      "offline_commands": [
+        "go test -json -count=1 -p 2 ./model -run '^TestTeamSubscriptionPerMemberQuota$'"
+      ],
+      "process_repetitions": 2,
+      "repetition_policy": "Execute twice in separate fresh test processes; this main-based baseline uses -count=1 for each process.",
+      "environment": {
+        "GOWORK": "off"
+      },
+      "fixtures": [
+        "Existing in-memory SQLite fixture in model/subscription_upgrade_test.go",
+        "Users 301, 302 and 303 with a team subscription giving each member an independent quota of 5000"
+      ],
+      "assertions": [
+        "For an isolated HTTP test, success=true and data includes team.id, role, quota, members, token_count and subscriptions.",
+        "Existing model test reserves 100 for user 301 without changing user 303's AmountUsed.",
+        "Removing user 302 cancels that member's subscription and capacity restrictions remain enforced."
+      ],
+      "coverage_limits": [
+        "GET /api/team/self is an overview, not a team consumption ledger endpoint.",
+        "The existing model test does not execute the overview HTTP route or verify team wallet charging.",
+        "/dashboard/billing/usage is token/personal usage, not TeamId-based billing aggregation.",
+        "Dashboard credentials and model tokens are different credential types.",
+        "Do not retain a complete team overview response: invitation fields and member data may be present.",
+        "The HTTP template has not been sent by this baseline."
+      ]
+    }
+  ]
+}
