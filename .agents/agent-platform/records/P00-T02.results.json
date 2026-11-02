@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "task_id": "P00-T02",
+  "status": "complete",
+  "recorded_at": "2026-11-02T18:36:55.329423+08:00",
+  "branch": "feat/agent-platform-integrated-main",
+  "input_commit": "247f28e650828c83fd5d193a1a27b72c188e572c",
+  "main_base_commit": "506f56e9d554ea5ad7db256a8d1b3e69e7c4e63c",
+  "contract_version": "1.0.0",
+  "gate": {
+    "name": "G-API",
+    "result": "passed",
+    "scope": "Offline contract fixtures; actual API implementation is a later task."
+  },
+  "verification": {
+    "command": "python .agents/agent-platform/contracts/validate.py --output .local-tests/agent-platform/P00-T02/results.json",
+    "exit_code": 0,
+    "python": "3.12.10",
+    "jsonschema": "4.26.0",
+    "schema_valid": true,
+    "canonical_example_valid": true,
+    "case_count": 83,
+    "passed": 83,
+    "failed": 0,
+    "positive_cases": 24,
+    "negative_cases": 59,
+    "files_sha256": {
+      "core.schema.json": "cac889f12de13c4cf9b3df9ffe97eb5ce43cc2293912b7d6edc2f96e6934a795",
+      "text-agent.example.json": "aab54836c77091e1cdf3d48e20e2c1bfa152b123ac4e0c3148495a0bc686bbd8",
+      "cases.json": "25c11b8db782165badf064eb667ad6d904b09371390d4f87b64ecbc6d408991b"
+    },
+    "validator_sha256": "afb1229555cedcb4ceb798a3cd111d2e92445771e7d159a351b302c873a12afd"
+  },
+  "attribution": {
+    "team_id": "1",
+    "workspace_id": "10",
+    "agent_id": "101",
+    "agent_version_id": "201",
+    "run_id": "501",
+    "created_by": "20",
+    "caller_token_id": "30",
+    "funding_token_id": "30",
+    "worker_instance_id": "worker-fixture-01",
+    "published_cap_quota": "1000",
+    "effective_limit_quota": "800",
+    "confirmed_usage_quota": "120",
+    "quota_unit": "platform_quota"
+  },
+  "review": {
+    "independent_review": "passed after fixes",
+    "covered_findings": [
+      "UTF-8 output and metadata byte bounds",
+      "Full fixture event and terminal snapshot consistency",
+      "Lossless JSON number parsing while retaining unknown-event fractional payload compatibility"
+    ]
+  },
+  "existing_baseline": {
+    "record_commit": "247f28e650828c83fd5d193a1a27b72c188e572c",
+    "task_id": "P00-T01",
+    "G-BASE": "failed_on_main_base; unchanged by this task"
+  },
+  "runtime_changes": false,
+  "database_changes": false,
+  "application_dependencies_changed": false,
+  "new_routes_registered": false,
+  "next_task": "P00-T03"
+}

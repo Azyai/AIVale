@@ -1,0 +1,873 @@
+{
+  "contract_version": "1.0.0",
+  "cases": [
+    {
+      "name": "id-minimum",
+      "schema": "id",
+      "value": "1",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "id-above-js-safe-remains-string",
+      "schema": "id",
+      "value": "9007199254740993",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "id-int64-maximum",
+      "schema": "id",
+      "value": "9223372036854775807",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "id-reject-number",
+      "schema": "id",
+      "value": 101,
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-zero",
+      "schema": "id",
+      "value": "0",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-negative",
+      "schema": "id",
+      "value": "-1",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-leading-zero",
+      "schema": "id",
+      "value": "01",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-plus",
+      "schema": "id",
+      "value": "+1",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-decimal",
+      "schema": "id",
+      "value": "1.0",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-scientific",
+      "schema": "id",
+      "value": "1e3",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-whitespace",
+      "schema": "id",
+      "value": " 1",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-newline",
+      "schema": "id",
+      "value": "1\n",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-overflow",
+      "schema": "id",
+      "value": "9223372036854775808",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-null",
+      "schema": "id",
+      "value": null,
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "id-reject-bool",
+      "schema": "id",
+      "value": true,
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "quota-zero",
+      "schema": "quota",
+      "value": "0",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "quota-int64-maximum",
+      "schema": "quota",
+      "value": "9223372036854775807",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "quota-reject-number",
+      "schema": "quota",
+      "value": 100,
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "quota-reject-negative",
+      "schema": "quota",
+      "value": "-1",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "quota-reject-decimal",
+      "schema": "quota",
+      "value": "1.5",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "quota-reject-leading-zero",
+      "schema": "quota",
+      "value": "00",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "quota-reject-overflow",
+      "schema": "quota",
+      "value": "9223372036854775808",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "known-state-queued",
+      "schema": "runStatus",
+      "value": "queued",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-running",
+      "schema": "runStatus",
+      "value": "running",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-waiting_approval",
+      "schema": "runStatus",
+      "value": "waiting_approval",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-cancelling",
+      "schema": "runStatus",
+      "value": "cancelling",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-succeeded",
+      "schema": "runStatus",
+      "value": "succeeded",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-failed",
+      "schema": "runStatus",
+      "value": "failed",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-cancelled",
+      "schema": "runStatus",
+      "value": "cancelled",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "known-state-timed_out",
+      "schema": "runStatus",
+      "value": "timed_out",
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "unknown-state-rejected",
+      "schema": "runStatus",
+      "value": "outcome_unknown",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "timestamp-milliseconds",
+      "schema": "timestamp",
+      "value": 1793606400000,
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "timestamp-number-required",
+      "schema": "timestamp",
+      "value": "1793606400000",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "safe-sequence-max",
+      "schema": "sequence",
+      "value": 9007199254740991,
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "unsafe-sequence-number",
+      "schema": "sequence",
+      "value": 9007199254740992,
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "event-sequence-zero",
+      "schema": "sequence",
+      "value": 0,
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "default-pagination",
+      "schema": "paginationQuery",
+      "value": {
+        "page": 1,
+        "page_size": 20
+      },
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "pagination-max-size",
+      "schema": "paginationQuery",
+      "value": {
+        "page": 1,
+        "page_size": 100
+      },
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "omitted-pagination-uses-defaults",
+      "schema": "paginationQuery",
+      "value": {},
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "pagination-reject-page-zero",
+      "schema": "paginationQuery",
+      "value": {
+        "page": 0,
+        "page_size": 20
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "pagination-reject-size-101",
+      "schema": "paginationQuery",
+      "value": {
+        "page": 1,
+        "page_size": 101
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "pagination-reject-legacy-p",
+      "schema": "paginationQuery",
+      "value": {
+        "p": 1,
+        "page_size": 20
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "canonical-text-example",
+      "changes": {},
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "unknown-event-is-forward-compatible",
+      "changes": {
+        "/events/2/type": "vendor.future_notice",
+        "/events/2/payload": {
+          "notice": "safe extension"
+        }
+      },
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "unknown-response-field-is-forward-compatible",
+      "changes": {
+        "/completed/body/data/future_optional_field": "ignored"
+      },
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "public-body-cannot-change-workspace",
+      "changes": {
+        "/create_request/body/workspace_id": "999"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "public-body-cannot-change-actor",
+      "changes": {
+        "/create_request/body/created_by": "999"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "public-body-cannot-change-funding",
+      "changes": {
+        "/create_request/body/funding_token_id": "999"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "budget-alias-rejected",
+      "changes": {
+        "/create_request/body/budget": {
+          "max_cost_quota": "800"
+        }
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "cross-team-context-rejected",
+      "changes": {
+        "/context/actor/team_id": "2"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 404,
+        "code": "AG_RESOURCE_NOT_FOUND"
+      }
+    },
+    {
+      "name": "cross-workspace-agent-rejected",
+      "changes": {
+        "/published_agent/workspace_id": "11"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 404,
+        "code": "AG_RESOURCE_NOT_FOUND"
+      }
+    },
+    {
+      "name": "wrong-agent-version-rejected",
+      "changes": {
+        "/published_agent/version/agent_id": "102"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 404,
+        "code": "AG_RESOURCE_NOT_FOUND"
+      }
+    },
+    {
+      "name": "different-version-request-rejected",
+      "changes": {
+        "/create_request/body/version_id": "202"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 404,
+        "code": "AG_RESOURCE_NOT_FOUND"
+      }
+    },
+    {
+      "name": "different-route-agent-rejected",
+      "changes": {
+        "/create_request/path": "/v1/agents/102/runs"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 404,
+        "code": "AG_RESOURCE_NOT_FOUND"
+      }
+    },
+    {
+      "name": "viewer-cannot-run",
+      "changes": {
+        "/context/actor/role": "viewer"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 403,
+        "code": "AG_PERMISSION_DENIED"
+      }
+    },
+    {
+      "name": "missing-explicit-key-grant",
+      "changes": {
+        "/context/caller/scopes": [
+          "run:read"
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 403,
+        "code": "AG_PERMISSION_DENIED"
+      }
+    },
+    {
+      "name": "ungranted-agent-rejected",
+      "changes": {
+        "/context/caller/allowed_agent_ids": [
+          "102"
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 403,
+        "code": "AG_PERMISSION_DENIED"
+      }
+    },
+    {
+      "name": "disallowed-model-rejected",
+      "changes": {
+        "/context/caller/allowed_models": [
+          "other-model"
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 403,
+        "code": "AG_PERMISSION_DENIED"
+      }
+    },
+    {
+      "name": "funding-attribution-must-match-caller",
+      "changes": {
+        "/accepted/body/data/funding_token_id": "31"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 409,
+        "code": "AG_FUNDING_UNAVAILABLE"
+      }
+    },
+    {
+      "name": "budget-cannot-exceed-published-cap",
+      "changes": {
+        "/create_request/body/limits/max_cost_quota": "1001"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 429,
+        "code": "AG_BUDGET_EXCEEDED"
+      }
+    },
+    {
+      "name": "zero-run-budget-stops-model-execution",
+      "changes": {
+        "/create_request/body/limits/max_cost_quota": "0"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 429,
+        "code": "AG_BUDGET_EXCEEDED"
+      }
+    },
+    {
+      "name": "timeout-cannot-exceed-published-cap",
+      "changes": {
+        "/create_request/body/limits/timeout_seconds": 61
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 429,
+        "code": "AG_BUDGET_EXCEEDED"
+      }
+    },
+    {
+      "name": "unknown-response-state-rejected",
+      "changes": {
+        "/completed/body/data/status": "outcome_unknown"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "known-but-wrong-accepted-state",
+      "changes": {
+        "/accepted/body/data/status": "running"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 409,
+        "code": "AG_INVALID_STATE"
+      }
+    },
+    {
+      "name": "event-sequence-cannot-repeat",
+      "changes": {
+        "/events/1/seq": 1
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "event-cannot-point-at-another-run",
+      "changes": {
+        "/events/2/run_id": "502"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "cursor-must-agree",
+      "changes": {
+        "/resume_cursor/after_seq": 1
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "cursor-run-must-match",
+      "changes": {
+        "/resume_cursor/last_event_id": "502:2"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "cursor-header-must-include-run",
+      "changes": {
+        "/resume_cursor/last_event_id": "2"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "future-conversation-field-not-yet-enabled",
+      "changes": {
+        "/create_request/body/conversation_id": "701"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "terminal-time-cannot-precede-start",
+      "changes": {
+        "/completed/body/data/finished_at": 1793606399999
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "full-event-history-cannot-start-at-terminal",
+      "changes": {
+        "/events": [
+          {
+            "schema_version": 1,
+            "run_id": "501",
+            "seq": 4,
+            "type": "run.succeeded",
+            "created_at": 1793606401500,
+            "payload": {
+              "status": "succeeded"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 409,
+        "code": "AG_INVALID_STATE"
+      }
+    },
+    {
+      "name": "event-terminal-state-must-match-snapshot",
+      "changes": {
+        "/events/3/type": "run.failed",
+        "/events/3/payload/status": "failed"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 409,
+        "code": "AG_INVALID_STATE"
+      }
+    },
+    {
+      "name": "terminal-event-time-must-match-finish",
+      "changes": {
+        "/events/3/created_at": 1793606500000
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "full-event-history-needs-started-event",
+      "changes": {
+        "/events/1/type": "vendor.start_notice"
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 409,
+        "code": "AG_INVALID_STATE"
+      }
+    },
+    {
+      "name": "event-sequence-gaps-allowed",
+      "changes": {
+        "/events/2/seq": 4,
+        "/events/3/seq": 5
+      },
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "metadata-byte-budget",
+      "changes": {
+        "/create_request/body/metadata": {
+          "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "x"
+        }
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 413,
+        "code": "AG_PAYLOAD_TOO_LARGE"
+      }
+    },
+    {
+      "name": "future-event-fractional-payload-is-compatible",
+      "changes": {
+        "/events/2/type": "vendor.ratio",
+        "/events/2/payload": {
+          "ratio": 0.25
+        }
+      },
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "name": "input-utf8-byte-budget",
+      "repeat_changes": {
+        "/create_request/body/input/question": {
+          "text": "汉",
+          "count": 10923
+        }
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 413,
+        "code": "AG_PAYLOAD_TOO_LARGE"
+      }
+    },
+    {
+      "name": "output-utf8-byte-budget",
+      "repeat_changes": {
+        "/completed/body/data/result/text": {
+          "text": "汉",
+          "count": 10923
+        }
+      },
+      "expected": {
+        "valid": false,
+        "http_status": 413,
+        "code": "AG_PAYLOAD_TOO_LARGE"
+      }
+    },
+    {
+      "name": "fraction-must-not-round-to-safe-integer",
+      "schema": "timestamp",
+      "raw_json": "9007199254740991.1",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "nonfinite-json-number-rejected",
+      "schema": "timestamp",
+      "raw_json": "NaN",
+      "expected": {
+        "valid": false,
+        "http_status": 400,
+        "code": "AG_INVALID_ARGUMENT"
+      }
+    },
+    {
+      "name": "exact-integral-json-number",
+      "schema": "timestamp",
+      "raw_json": "1e3",
+      "expected": {
+        "valid": true
+      }
+    }
+  ]
+}

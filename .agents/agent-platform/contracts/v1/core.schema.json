@@ -1,0 +1,1096 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:core:1.0.0",
+  "title": "AIVale text Agent contract fixture v1",
+  "description": "Development-only contract fixture. Context is server-side evidence, not accepted public request data.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P00-T02",
+    "database": {
+      "table_prefix": "ag_",
+      "tenant_id": "team_id",
+      "resource_scope_id": "workspace_id"
+    },
+    "api": {
+      "management_collection": "/api/agent-platform/workspaces",
+      "management_workspace": "/api/agent-platform/workspaces/:workspace_id",
+      "public_create": "/v1/agents/:agent_id/runs",
+      "public_run": "/v1/agent-runs/:run_id",
+      "public_events": "/v1/agent-runs/:run_id/events",
+      "browser_collection": "/agent-platform/workspaces",
+      "browser_workspace": "/agent-platform/w/:workspace_id"
+    },
+    "pagination": {
+      "page_default": 1,
+      "page_size_default": 20,
+      "page_size_max": 100,
+      "sort": [
+        "created_at desc",
+        "id desc"
+      ]
+    },
+    "events": {
+      "wire_id": "<run_id>:<seq>",
+      "seq_min": 1,
+      "seq_max": 9007199254740991,
+      "known_types": [
+        "run.queued",
+        "run.started",
+        "step.started",
+        "step.completed",
+        "step.failed",
+        "output.delta",
+        "output.completed",
+        "tool.started",
+        "tool.completed",
+        "skill.activated",
+        "approval.required",
+        "approval.decided",
+        "run.cancelling",
+        "run.succeeded",
+        "run.failed",
+        "run.cancelled",
+        "run.timed_out",
+        "usage.updated",
+        "artifact.created"
+      ],
+      "unknown_type": "ignore without changing run state",
+      "unknown_run_status": "reject"
+    },
+    "errors": {
+      "AG_INVALID_ARGUMENT": 400,
+      "AG_AUTH_REQUIRED": 401,
+      "AG_PERMISSION_DENIED": 403,
+      "AG_RESOURCE_NOT_FOUND": 404,
+      "AG_DRAFT_REVISION_CONFLICT": 409,
+      "AG_IDEMPOTENCY_CONFLICT": 409,
+      "AG_REQUEST_IN_PROGRESS": 409,
+      "AG_INVALID_STATE": 409,
+      "AG_RESOURCE_IN_USE": 409,
+      "AG_EVENT_CURSOR_EXPIRED": 410,
+      "AG_PAYLOAD_TOO_LARGE": 413,
+      "AG_DEPENDENCY_UNAVAILABLE": 422,
+      "AG_TOOL_SCHEMA_CHANGED": 422,
+      "AG_SKILL_REJECTED": 422,
+      "AG_CONCURRENCY_LIMIT": 429,
+      "AG_BUDGET_EXCEEDED": 429,
+      "AG_FUNDING_UNAVAILABLE": 409,
+      "AG_RUNTIME_UNAVAILABLE": 503,
+      "AG_TOOL_UPSTREAM_ERROR": 502,
+      "AG_STEP_TIMEOUT": 504,
+      "CALL_OUTCOME_UNKNOWN": 409,
+      "AG_RECONCILIATION_PENDING": 503
+    },
+    "schema_error": {
+      "http_status": 400,
+      "code": "AG_INVALID_ARGUMENT"
+    },
+    "body_limits": {
+      "serialized_text_column_bytes": 61440,
+      "instructions_bytes": 32768,
+      "inline_input_bytes": 32768,
+      "inline_output_bytes": 32768,
+      "metadata_bytes": 4096,
+      "event_payload_bytes": 16384
+    },
+    "future_extensions": {
+      "skills_mcp": "P04/P05, not part of the text fixture",
+      "conversation": "P06",
+      "sandbox_script": "P08",
+      "workflow": "P09",
+      "subagent_eval": "P10"
+    },
+    "unknown_request_fields": "reject",
+    "success_envelope": [
+      "success",
+      "code",
+      "message",
+      "request_id",
+      "data"
+    ]
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,18}$",
+      "maxLength": 19,
+      "format": "int64-id"
+    },
+    "quota": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,18})$",
+      "maxLength": 19,
+      "format": "quota-int64"
+    },
+    "safeUnsigned": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "runStatus": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "waiting_approval",
+        "cancelling",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed_out"
+      ]
+    },
+    "workspaceRole": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "developer",
+        "operator",
+        "viewer"
+      ]
+    },
+    "tokenScope": {
+      "type": "string",
+      "enum": [
+        "agent:run",
+        "run:read",
+        "run:cancel",
+        "artifact:read"
+      ]
+    },
+    "usageState": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "partial",
+        "final",
+        "reconciliation_required"
+      ]
+    },
+    "errorCode": {
+      "type": "string",
+      "enum": [
+        "AG_INVALID_ARGUMENT",
+        "AG_AUTH_REQUIRED",
+        "AG_PERMISSION_DENIED",
+        "AG_RESOURCE_NOT_FOUND",
+        "AG_DRAFT_REVISION_CONFLICT",
+        "AG_IDEMPOTENCY_CONFLICT",
+        "AG_REQUEST_IN_PROGRESS",
+        "AG_INVALID_STATE",
+        "AG_RESOURCE_IN_USE",
+        "AG_EVENT_CURSOR_EXPIRED",
+        "AG_PAYLOAD_TOO_LARGE",
+        "AG_DEPENDENCY_UNAVAILABLE",
+        "AG_TOOL_SCHEMA_CHANGED",
+        "AG_SKILL_REJECTED",
+        "AG_CONCURRENCY_LIMIT",
+        "AG_BUDGET_EXCEEDED",
+        "AG_FUNDING_UNAVAILABLE",
+        "AG_RUNTIME_UNAVAILABLE",
+        "AG_TOOL_UPSTREAM_ERROR",
+        "AG_STEP_TIMEOUT",
+        "CALL_OUTCOME_UNKNOWN",
+        "AG_RECONCILIATION_PENDING"
+      ]
+    },
+    "errorResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": false
+        },
+        "code": {
+          "$ref": "#/$defs/errorCode"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "field_errors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "path",
+                  "message"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 100
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "field_errors",
+            "retryable"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_model_calls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_cost_quota": {
+          "$ref": "#/$defs/quota"
+        }
+      },
+      "required": [
+        "max_steps",
+        "max_model_calls",
+        "max_tool_calls",
+        "timeout_seconds",
+        "max_cost_quota"
+      ],
+      "additionalProperties": false
+    },
+    "limitsOverride": {
+      "type": "object",
+      "properties": {
+        "max_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_model_calls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_cost_quota": {
+          "$ref": "#/$defs/quota"
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "additionalProperties": false
+    },
+    "createBody": {
+      "type": "object",
+      "properties": {
+        "version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "input": {
+          "$ref": "#/$defs/input"
+        },
+        "limits": {
+          "$ref": "#/$defs/limitsOverride"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxProperties": 16
+        }
+      },
+      "required": [
+        "input"
+      ],
+      "additionalProperties": false
+    },
+    "agentConfig": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32768
+        },
+        "model_policy": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "max_output_tokens": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "model",
+            "max_output_tokens"
+          ],
+          "additionalProperties": false
+        },
+        "input_schema": {
+          "const": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 20000
+              }
+            },
+            "required": [
+              "question"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "output_schema": {
+          "const": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "skill_bindings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "tool_bindings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "instructions",
+        "model_policy",
+        "input_schema",
+        "output_schema",
+        "skill_bindings",
+        "tool_bindings",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    "runSnapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "created_by": {
+          "$ref": "#/$defs/id"
+        },
+        "caller_token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "funding_token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/runStatus"
+        },
+        "mode": {
+          "const": "production"
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        },
+        "usage_state": {
+          "$ref": "#/$defs/usageState"
+        },
+        "quota_unit": {
+          "const": "platform_quota"
+        },
+        "consumed_quota": {
+          "$ref": "#/$defs/quota"
+        },
+        "reserved_quota": {
+          "$ref": "#/$defs/quota"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "maxLength": 32768
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "agent_id",
+        "agent_version_id",
+        "workspace_id",
+        "created_by",
+        "caller_token_id",
+        "funding_token_id",
+        "status",
+        "mode",
+        "created_at",
+        "started_at",
+        "finished_at",
+        "limits",
+        "usage_state",
+        "quota_unit",
+        "consumed_quota",
+        "reserved_quota",
+        "result"
+      ],
+      "additionalProperties": true
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "seq": {
+          "$ref": "#/$defs/sequence"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.]{0,63}$",
+          "maxLength": 64
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "step_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "maxProperties": 64
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "seq",
+        "type",
+        "created_at",
+        "payload"
+      ],
+      "additionalProperties": true
+    },
+    "cursor": {
+      "type": "object",
+      "properties": {
+        "after_seq": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/safeUnsigned"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_event_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "event-id",
+              "maxLength": 36
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "after_seq",
+        "last_event_id"
+      ],
+      "additionalProperties": false
+    },
+    "paginationQuery": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "default": 1
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "pageData": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "agent_id": {
+                "$ref": "#/$defs/id"
+              },
+              "agent_version_id": {
+                "$ref": "#/$defs/id"
+              },
+              "workspace_id": {
+                "$ref": "#/$defs/id"
+              },
+              "status": {
+                "$ref": "#/$defs/runStatus"
+              }
+            },
+            "required": [
+              "id",
+              "agent_id",
+              "agent_version_id",
+              "workspace_id",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "contract_version": {
+      "const": "1.0.0"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "team_id": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "required": [
+            "id",
+            "team_id"
+          ],
+          "additionalProperties": false
+        },
+        "actor": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "$ref": "#/$defs/id"
+            },
+            "team_id": {
+              "$ref": "#/$defs/id"
+            },
+            "role": {
+              "$ref": "#/$defs/workspaceRole"
+            }
+          },
+          "required": [
+            "user_id",
+            "team_id",
+            "role"
+          ],
+          "additionalProperties": false
+        },
+        "caller": {
+          "type": "object",
+          "properties": {
+            "token_id": {
+              "$ref": "#/$defs/id"
+            },
+            "user_id": {
+              "$ref": "#/$defs/id"
+            },
+            "team_id": {
+              "$ref": "#/$defs/id"
+            },
+            "scopes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/tokenScope"
+              },
+              "maxItems": 4,
+              "uniqueItems": true
+            },
+            "allowed_agent_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "allowed_models": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "token_id",
+            "user_id",
+            "team_id",
+            "scopes",
+            "allowed_agent_ids",
+            "allowed_models"
+          ],
+          "additionalProperties": false
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "instance_id": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{1,96}$"
+            }
+          },
+          "required": [
+            "instance_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "workspace",
+        "actor",
+        "caller",
+        "worker"
+      ],
+      "additionalProperties": false
+    },
+    "published_agent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "const": "single"
+        },
+        "version": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "agent_id": {
+              "$ref": "#/$defs/id"
+            },
+            "workspace_id": {
+              "$ref": "#/$defs/id"
+            },
+            "version_no": {
+              "$ref": "#/$defs/revision"
+            },
+            "status": {
+              "const": "published"
+            },
+            "config": {
+              "$ref": "#/$defs/agentConfig"
+            }
+          },
+          "required": [
+            "id",
+            "agent_id",
+            "workspace_id",
+            "version_no",
+            "status",
+            "config"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "workspace_id",
+        "kind",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "create_request": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "POST"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/v1/agents/[1-9][0-9]{0,18}/runs$"
+        },
+        "headers": {
+          "type": "object",
+          "properties": {
+            "Authorization": {
+              "const": "Bearer <MODEL_TOKEN>"
+            },
+            "Content-Type": {
+              "const": "application/json"
+            },
+            "Idempotency-Key": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            }
+          },
+          "required": [
+            "Authorization",
+            "Content-Type",
+            "Idempotency-Key"
+          ],
+          "additionalProperties": false
+        },
+        "body": {
+          "$ref": "#/$defs/createBody"
+        }
+      },
+      "required": [
+        "method",
+        "path",
+        "headers",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "accepted": {
+      "type": "object",
+      "properties": {
+        "http_status": {
+          "const": 202
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "const": true
+            },
+            "code": {
+              "const": "ACCEPTED"
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 512
+            },
+            "request_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "data": {
+              "$ref": "#/$defs/runSnapshot"
+            }
+          },
+          "required": [
+            "success",
+            "code",
+            "message",
+            "request_id",
+            "data"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "http_status",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "completed": {
+      "type": "object",
+      "properties": {
+        "http_status": {
+          "const": 200
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "const": true
+            },
+            "code": {
+              "const": "OK"
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 512
+            },
+            "request_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "data": {
+              "$ref": "#/$defs/runSnapshot"
+            }
+          },
+          "required": [
+            "success",
+            "code",
+            "message",
+            "request_id",
+            "data"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "http_status",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      },
+      "maxItems": 100,
+      "minItems": 1
+    },
+    "resume_cursor": {
+      "$ref": "#/$defs/cursor"
+    },
+    "page": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/pageData"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "contract_version",
+    "context",
+    "published_agent",
+    "create_request",
+    "accepted",
+    "completed",
+    "events",
+    "resume_cursor",
+    "page"
+  ],
+  "additionalProperties": false
+}

@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.0 设计基线
+版本：1.1 最小契约冻结
 
 日期：2026 年 11 月 2 日
 
@@ -395,6 +395,8 @@ P10的父Agent及评测根Run采用持久化协调等待，不在占用唯一执
 | `服务赋值` | 应用创建记录前必须赋值，不设置数据库默认。特别是 TEXT 不依赖 MySQL 5.7 不支持的默认值。 |
 
 JSON 统一经过 `common.Marshal/Unmarshal`，校验固定 `schema_version`，拒绝未知的安全敏感字段和超出深度、数组长度限制的内容。单个 `TXT` 默认最多 60 KiB UTF-8；事件载荷最多 16 KiB，单段指令最多 32 KiB，凭据密文最多 16 KiB。更大内容转为 `Artifact` 并保存摘要，避免 MySQL TEXT 的容量边界及数据库热点。具体阈值由配置控制，但不得超过对应列的安全上限。
+
+P00-T02冻结新增API的序列化边界：ID必须为`[1-9][0-9]*`的规范十进制字符串，且不大于`9223372036854775807`；拒绝0、前导零、符号、空白、指数、浮点、数字JSON及溢出。旧表中的0哨兵保持原语义，新接口对未知引用使用null而非ID字符串0。quota使用无前导零的非负十进制字符串且不超过int64正上界，零是合法计量值，不等于允许零预算执行收费模型。UTC毫秒、事件seq、游标及revision的JSON数字必须在JavaScript安全整数范围内；seq与revision至少1、after_seq至少0，超界拒绝，不舍入。数据库I64存储能力不等于JSON数字可无损表达其全部范围。
 
 唯一键中的名称先规范化，避免 SQLite、MySQL、PostgreSQL 的排序规则差异。Workspace/Agent/Skill slug 采用小写 ASCII，最长 64；MCP 工具名可能较长，另存 `tool_name_hash` 作唯一索引。索引名最长 55 字符，组合索引避免大段 UTF-8 名称。类型与唯一性仍须在三种真实数据库上验证。
 
@@ -1373,7 +1375,7 @@ Agent 由可编辑草稿与不可变发布版本组成。`agent_id` 是稳定身
 | API-024 / P02 | POST `W/agents/:agent_id/restore-draft` | agent:write | version_id、expected_revision | 把历史版本复制为新草稿；不改变已发布版本 |
 | API-025 / P02 | POST `W/agents/:agent_id/activate-version` | agent:publish | version_id、expected_revision、reason | 重新检查依赖仍允许使用，再改当前发布指针 |
 | API-026 / P02 | POST `W/agents/:agent_id/archive` | agent:write | reason | 阻止新Run；在途任务按政策完成或管理员取消，不静默删除 |
-| API-027 / P03 | POST `W/agents/:agent_id/debug-runs` | agent:write与run:create | draft_revision、input、funding_token_id、budget | 保存临时不可变调试快照再创建Run，mode=debug，正常计费 |
+| API-027 / P03 | POST `W/agents/:agent_id/debug-runs` | agent:write与run:create | draft_revision、input、funding_token_id、limits | 保存临时不可变调试快照再创建Run，mode=debug，正常计费 |
 | API-028 / P03 | POST `W/agents/:agent_id/runs` | run:create | version_id或current、input、funding_token_id；P06再加conversation_id | 始终解析为具体version_id；返回202 Run |
 | API-029 / P02 | GET `W/model-options` | agent:write或run:create | 可选funding_token_id；输出兼容模型和能力 | 模型不可用/无tool能力要标出原因；不暴露渠道Key |
 
@@ -1489,7 +1491,7 @@ P03先支持单轮任务，conversation_id及会话列表/消息接口到P06一�
 
 Run 状态只能为 `queued/running/waiting_approval/cancelling/succeeded/failed/cancelled/timed_out`。对结果不确定的步骤用 step 的 `outcome_unknown` 表达，Run 进入 failed 且 error_code=CALL_OUTCOME_UNKNOWN，usage_state=reconciliation_required；失败是终态，不能用resume恢复。管理员核实证据并关联回执，处置完成且重新获得授权后才可创建新的重试Run；不能自动重发未知结果的外部写操作。父任务结果与模型用量结算分开，用 `usage_state=pending/partial/final/reconciliation_required` 表达账务完整性。
 
-**事件契约。** 事件由服务端持久化后才对外发送；每个 Run 的 `seq` 单调递增，重连按 seq 去重。终态也必须以持久化事件返回。消息文本分片可按短时间或大小聚合后写入事件表，避免每个token一行；客户端不依赖分片大小。after_seq与Last-Event-ID同时提供时必须指向同一序号，不一致返回400。事件包含可展示结果、工具摘要及状态，不存储或公开模型内部思维链。
+**事件契约。** seq为1至`9007199254740991`的安全整数，after_seq为0至同一上界的安全整数；SSE的id及Last-Event-ID采用`<run_id>:<seq>`，header中的seq至少1，不能只传裸序号。事件由服务端持久化后才对外发送；每个 Run 的 `seq` 单调递增，重连按 seq 去重。终态也必须以持久化事件返回。消息文本分片可按短时间或大小聚合后写入事件表，避免每个token一行；客户端不依赖分片大小。after_seq与Last-Event-ID同时提供时必须指向同一序号，不一致返回400。事件包含可展示结果、工具摘要及状态，不存储或公开模型内部思维链。
 
 ```text
 id: 501:12
@@ -1742,6 +1744,18 @@ P06为公开Token补充完整会话路径。会话始终绑定Workspace、Agent�
 | API-132 / P06 | POST `/v1/agent-conversations/:conversation_id/archive` | Token agent:run及同caller会话归属 | reason；返回archived | 幂等归档后禁止续写，活动Run先按政策完成/取消，不隐式删除费用 |
 
 调用顺序为创建会话→在API-030提交同Agent的conversation_id→按Run事件观察结果→用API-131恢复历史。每次Run解析为固定Agent版本，响应和消息显示实际version_id；客户希望整段会话固定版本时持续显式提交该version_id。首期同会话仅允许一个活动Run，其他提交返回冲突，不并发覆盖上下文。父Token被撤销后，历史读取和新调用同样停止。
+
+### 6.16 P00 T02冻结的最小契约
+
+[contracts/v1/README.md](contracts/v1/README.md)定义最小文本Agent闭环，机器可读版本为`1.0.0`，与设计文档版本单独演进。`core.schema.json`冻结类型、枚举、前缀、错误码和分页；`text-agent.example.json`串起同一个Workspace、已发布Agent版本、创建请求、接受响应、完成快照、事件和分页结果；`cases.json`包含合法与拒绝案例。
+
+公开Run请求只接受input、可选version_id、limits及非秘密metadata；workspace、created_by、caller_token_id、funding_token_id来自服务端授权上下文，不能由公开body覆盖。样例中的context为开发旁证，不是对外请求参数。公开资金Token必须等于认证caller；浏览器调试才显式选择有权使用的同Team资金Token。预算字段唯一名称为limits，映射至Run.budget_limit_quota的成员为limits.max_cost_quota，不接受budget别名。
+
+未知Run状态违反八状态契约，拒绝或停止按成功状态处理；已知状态下非法操作返回409 AG_INVALID_STATE。未知事件类型及响应中的未来可选字段允许忽略，不改变当前Run状态。ID格式错误为400 AG_INVALID_ARGUMENT，格式正确但不可见资源为404 AG_RESOURCE_NOT_FOUND；样例中的权限、预算和归属拒绝使用第6.11章同一错误目录。
+
+验证命令为`python .agents/agent-platform/contracts/validate.py --output .local-tests/agent-platform/P00-T02/results.json`。工具仅验证离线契约样例及预期拒绝行为；Python开发依赖固定在contracts/requirements.txt，不进入Go或前端运行依赖。JSON Schema使用本地引用，int64-id、quota-int64、event-id格式须启用工具中的FormatChecker，不能仅检查pattern而忽略溢出。
+
+此处冻结的是后续实现依据，P00-T02不注册API、不实施数据库迁移、不接运行引擎，也不代表运行时鉴权与财务结算已经验收。P00-T06及后续接口批次必须将这些类型和拒绝案例落实到真实DTO及服务端边界。
 
 <a id="chapter-7"></a>
 
@@ -2358,7 +2372,8 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P00-T02 冻结最小业务与协议契约
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
+- **执行记录**：2026年11月2日，冻结最小文本Agent契约v1.0.0；[查看P00-T02验证与交付](records/P00-T02.md)。G-API离线契约检查已通过；既有G-BASE失败不在本任务中改写。
 - **前置依赖**：P00-T01。
 - **目标**：让首批开发共用资源命名、状态和权限语义。
 - **具体操作**：
@@ -4206,6 +4221,8 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 ## 12 批次执行与交付管理
 
 ### 12.1 每批执行规则
+
+后续默认按一个任务推进并在验证后形成一次独立Git提交。第12.3章的分组用于安排顺序和阶段演示，同组任务仍分别提交；当前步骤完成后保持清晰的任务与提交对应关系。
 
 第11章的任务是工作分解单元；开发批次是一次可评审的提交集合。建议一批1至3项，有数据库迁移、计费或权限模型变化时优先一批只做1项。不要为了凑齐三项把不相关的改动合在一起。
 

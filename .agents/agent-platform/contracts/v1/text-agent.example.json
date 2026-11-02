@@ -1,0 +1,249 @@
+{
+  "contract_version": "1.0.0",
+  "context": {
+    "workspace": {
+      "id": "10",
+      "team_id": "1"
+    },
+    "actor": {
+      "user_id": "20",
+      "team_id": "1",
+      "role": "developer"
+    },
+    "caller": {
+      "token_id": "30",
+      "user_id": "20",
+      "team_id": "1",
+      "scopes": [
+        "agent:run",
+        "run:read",
+        "run:cancel"
+      ],
+      "allowed_agent_ids": [
+        "101"
+      ],
+      "allowed_models": [
+        "baseline-text-model"
+      ]
+    },
+    "worker": {
+      "instance_id": "worker-fixture-01"
+    }
+  },
+  "published_agent": {
+    "id": "101",
+    "workspace_id": "10",
+    "kind": "single",
+    "version": {
+      "id": "201",
+      "agent_id": "101",
+      "workspace_id": "10",
+      "version_no": 1,
+      "status": "published",
+      "config": {
+        "schema_version": 1,
+        "name": "文本摘要助手",
+        "instructions": "仅根据用户提供的文本，用一句话概括；缺少信息时明确说明。",
+        "model_policy": {
+          "model": "baseline-text-model",
+          "max_output_tokens": 1024
+        },
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "question": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            }
+          },
+          "required": [
+            "question"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false
+        },
+        "skill_bindings": [],
+        "tool_bindings": [],
+        "limits": {
+          "max_steps": 4,
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "timeout_seconds": 60,
+          "max_cost_quota": "1000"
+        }
+      }
+    }
+  },
+  "create_request": {
+    "method": "POST",
+    "path": "/v1/agents/101/runs",
+    "headers": {
+      "Authorization": "Bearer <MODEL_TOKEN>",
+      "Content-Type": "application/json",
+      "Idempotency-Key": "text-fixture-20261102-0001"
+    },
+    "body": {
+      "version_id": "201",
+      "input": {
+        "question": "AIVale将模型、智能体和可复用能力统一提供给客户。请概括。"
+      },
+      "limits": {
+        "max_cost_quota": "800",
+        "timeout_seconds": 30
+      },
+      "metadata": {
+        "business_job_id": "text-fixture-0001"
+      }
+    }
+  },
+  "accepted": {
+    "http_status": 202,
+    "body": {
+      "success": true,
+      "code": "ACCEPTED",
+      "message": "",
+      "request_id": "req-text-agent-fixture",
+      "data": {
+        "id": "501",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "workspace_id": "10",
+        "created_by": "20",
+        "caller_token_id": "30",
+        "funding_token_id": "30",
+        "status": "queued",
+        "mode": "production",
+        "created_at": 1793606400000,
+        "started_at": null,
+        "finished_at": null,
+        "limits": {
+          "max_steps": 4,
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "timeout_seconds": 30,
+          "max_cost_quota": "800"
+        },
+        "usage_state": "pending",
+        "quota_unit": "platform_quota",
+        "consumed_quota": "0",
+        "reserved_quota": "0",
+        "result": null
+      }
+    }
+  },
+  "completed": {
+    "http_status": 200,
+    "body": {
+      "success": true,
+      "code": "OK",
+      "message": "",
+      "request_id": "req-text-agent-fixture",
+      "data": {
+        "id": "501",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "workspace_id": "10",
+        "created_by": "20",
+        "caller_token_id": "30",
+        "funding_token_id": "30",
+        "status": "succeeded",
+        "mode": "production",
+        "created_at": 1793606400000,
+        "started_at": 1793606400100,
+        "finished_at": 1793606401500,
+        "limits": {
+          "max_steps": 4,
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "timeout_seconds": 30,
+          "max_cost_quota": "800"
+        },
+        "usage_state": "final",
+        "quota_unit": "platform_quota",
+        "consumed_quota": "120",
+        "reserved_quota": "0",
+        "result": {
+          "text": "平台为客户统一提供模型与智能体能力。"
+        }
+      }
+    }
+  },
+  "events": [
+    {
+      "schema_version": 1,
+      "run_id": "501",
+      "seq": 1,
+      "type": "run.queued",
+      "created_at": 1793606400000,
+      "payload": {
+        "status": "queued"
+      }
+    },
+    {
+      "schema_version": 1,
+      "run_id": "501",
+      "seq": 2,
+      "type": "run.started",
+      "created_at": 1793606400100,
+      "payload": {
+        "status": "running"
+      }
+    },
+    {
+      "schema_version": 1,
+      "run_id": "501",
+      "seq": 3,
+      "type": "output.delta",
+      "created_at": 1793606401000,
+      "payload": {
+        "delta": "平台为客户统一提供模型与智能体能力。"
+      }
+    },
+    {
+      "schema_version": 1,
+      "run_id": "501",
+      "seq": 4,
+      "type": "run.succeeded",
+      "created_at": 1793606401500,
+      "payload": {
+        "status": "succeeded"
+      }
+    }
+  ],
+  "resume_cursor": {
+    "after_seq": 2,
+    "last_event_id": "501:2"
+  },
+  "page": {
+    "success": true,
+    "code": "OK",
+    "message": "",
+    "request_id": "req-text-agent-fixture",
+    "data": {
+      "items": [
+        {
+          "id": "501",
+          "agent_id": "101",
+          "agent_version_id": "201",
+          "workspace_id": "10",
+          "status": "succeeded"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "page_size": 20
+    }
+  }
+}
