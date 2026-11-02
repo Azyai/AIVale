@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting/agent_setting"
+	agenttypes "github.com/QuantumNous/new-api/types/agent"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,12 +20,10 @@ func RequireAgentFeature(feature agent_setting.Feature) gin.HandlerFunc {
 			return
 		}
 		c.Header("Cache-Control", "no-store")
-		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
-			"success":    false,
-			"message":    "Agent platform capability is unavailable",
-			"code":       "AG_RUNTIME_UNAVAILABLE",
-			"request_id": c.GetString(common.RequestIdKey),
-			"data":       gin.H{"field_errors": []any{}, "retryable": false},
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, agenttypes.ErrorResponse{
+			Success: false, Code: agenttypes.RuntimeUnavailable,
+			Message: "Agent platform capability is unavailable", RequestID: c.GetString(common.RequestIdKey),
+			Data: agenttypes.ErrorData{FieldErrors: []agenttypes.FieldError{}, Retryable: false},
 		})
 	}
 }
@@ -46,7 +45,8 @@ func AgentPlatformGate() gin.HandlerFunc {
 				break
 			}
 		}
-		if !reserved || isAgentRunControl(c.Request.Method, route) {
+		probe := c.Request.Method == http.MethodGet && route == "/api/agent-platform/capabilities"
+		if !reserved || probe || isAgentRunControl(c.Request.Method, route) {
 			c.Next()
 			return
 		}

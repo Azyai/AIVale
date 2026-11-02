@@ -11,6 +11,8 @@
 | `core.schema.json` | 公共类型、状态、错误码和最小样例结构 |
 | `text-agent.example.json` | 同一个 Agent 从公开请求、受理到文本完成的固定样例 |
 | `cases.json` | 合法边界、非法输入及归属冲突的预期结果 |
+| `capabilities.openapi.json` | P00-T05全局只读能力探测的OpenAPI 3.1描述及局部响应Schema |
+| `capabilities.examples.json` | 探测禁用、配置开启但未就绪、禁用gate拒绝未支持写方法的开发样例 |
 | `../validate.py` | 离线校验 Schema、样例及正反案例 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -88,3 +90,19 @@ Run 状态只有八种：`queued`、`running`、`waiting_approval`、`cancelling
 conversation、workflow、Skills、MCP、脚本、产物和子 Agent 是后续扩展，不通过预填假字段加入首个闭环。扩大输入类型、改变费用单位、ID 形式、终态或事件序号规则属于不兼容修改，应提升主版本并提供迁移；新增可选响应字段或可忽略事件可以按兼容规则演进。请求端仍严格拒绝未支持的危险字段。
 
 后续 P00-T06 实现错误和分页封装时复用本契约及正反案例，并补真实 Go/API 验证；不得以本目录的离线通过替代已经上线接口的行为验收。
+
+## P00-T05 全局只读能力探测
+
+[OpenAPI描述](capabilities.openapi.json)只发布公开的GET `/api/agent-platform/capabilities`，不发布业务资源或写方法。它位于现有API中间件链内，只描述全局有效配置及运行时就绪，不返回Team/Workspace、用户权限或内部连接信息，不从query/header接受租户作用域，也不授予任何操作权限。未来工作区级`W/capabilities`仍需独立完成资源授权，不能用这个公开探测替代。
+
+仅精确GET该路径获得平台总开关豁免。总开关关闭时探测仍返回HTTP200和禁用有效值；HEAD、写方法和子路径不获得该豁免。响应为`success/code/message/request_id/data`，成功码为`OK`，响应头为`Cache-Control: no-store`及`X-Oneapi-Request-Id`（值与JSON的request_id一致）。data包含schema_version=1、五个有效布尔开关和runtime_ready。当前运行引擎未实现，全部配置开启时runtime_ready仍为false；该字段的Schema类型保持boolean，允许后续真实实现报告就绪，不能通过开关本身推断就绪。
+
+成功响应允许未来增加可选字段，当前客户端仍检查必需字段及类型。[开发样例](capabilities.examples.json)中的`disabled200`和`configured_not_ready200`对应已注册GET；`blocked_write503`只说明总开关关闭时，命名空间gate如何拒绝未支持的POST。该POST没有被注册为API，不能据此生成写操作客户端。其错误body复用冻结`core.schema.json#/$defs/errorResponse`，并固定`AG_RUNTIME_UNAVAILABLE`、空field_errors和retryable=false。总开关开启也不会创建业务处理器；当前尚未实现的新建工作区/Run入口仍为404。
+
+在已经启动本地开发应用后，可以执行以下只读请求：
+
+```powershell
+curl.exe --include --request GET http://127.0.0.1:3000/api/agent-platform/capabilities
+```
+
+这里提供的是可执行命令和开发契约样例；编写文档不会启动应用、调用该地址或证明生产部署状态。局部Schema/样例使用本地jsonschema校验，不等同于完整OpenAPI规范工具检查，也不替代实际路由与前端客户端测试。原`core.schema.json` v1.0.0保持冻结，P00-T02验证入口继续只负责原有场景。

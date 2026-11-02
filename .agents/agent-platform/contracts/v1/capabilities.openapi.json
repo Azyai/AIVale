@@ -1,0 +1,196 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale Agent platform capability probe",
+    "version": "1.0.0",
+    "description": "P00-T05 read-only foundation contract. Business resources and execution operations are not published by this document."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "Local development example; this document does not start or contact an application."
+    }
+  ],
+  "paths": {
+    "/api/agent-platform/capabilities": {
+      "get": {
+        "operationId": "getAgentPlatformCapabilities",
+        "summary": "Read global configuration and runtime readiness",
+        "description": "This public metadata probe remains readable when platform admission is disabled. It does not accept a tenant scope or grant action permissions. Only this exact GET operation is exempt from the platform gate.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Current global effective flags and readiness. P00-T05 reports runtime_ready=false even when every configuration switch is enabled.",
+            "headers": {
+              "Cache-Control": {
+                "description": "The probe result must not be stored.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "description": "Server-generated correlation ID, equal to the JSON request_id.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityProbeResponse"
+                },
+                "examples": {
+                  "disabled200": {
+                    "summary": "Admission is disabled",
+                    "value": {
+                      "success": true,
+                      "code": "OK",
+                      "message": "",
+                      "request_id": "p00-t05-disabled-fixture",
+                      "data": {
+                        "schema_version": 1,
+                        "enabled": false,
+                        "worker_enabled": false,
+                        "mcp_enabled": false,
+                        "skills_enabled": false,
+                        "scripts_enabled": false,
+                        "runtime_ready": false
+                      }
+                    }
+                  },
+                  "configured_not_ready200": {
+                    "summary": "Configuration is enabled, runtime is not implemented",
+                    "value": {
+                      "success": true,
+                      "code": "OK",
+                      "message": "",
+                      "request_id": "p00-t05-configured-fixture",
+                      "data": {
+                        "schema_version": 1,
+                        "enabled": true,
+                        "worker_enabled": true,
+                        "mcp_enabled": true,
+                        "skills_enabled": true,
+                        "scripts_enabled": true,
+                        "runtime_ready": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentPlatformCapabilities": {
+        "type": "object",
+        "description": "Global effective configuration and readiness only. No tenant identifiers, user permissions or worker liveness are reported.",
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "worker_enabled": {
+            "type": "boolean"
+          },
+          "mcp_enabled": {
+            "type": "boolean"
+          },
+          "skills_enabled": {
+            "type": "boolean"
+          },
+          "scripts_enabled": {
+            "type": "boolean"
+          },
+          "runtime_ready": {
+            "type": "boolean",
+            "description": "Always false in the P00-T05 foundation. A later implemented runtime may report true without changing the shape version."
+          }
+        },
+        "required": [
+          "schema_version",
+          "enabled",
+          "worker_enabled",
+          "mcp_enabled",
+          "skills_enabled",
+          "scripts_enabled",
+          "runtime_ready"
+        ],
+        "additionalProperties": true
+      },
+      "CapabilityProbeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "code": {
+            "type": "string",
+            "const": "OK"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentPlatformCapabilities"
+          }
+        },
+        "required": [
+          "success",
+          "code",
+          "message",
+          "request_id",
+          "data"
+        ],
+        "additionalProperties": true
+      },
+      "DisabledAdmissionError": {
+        "description": "Fixture schema for disabled admission only; it does not declare a POST operation or a GET 503 response.",
+        "allOf": [
+          {
+            "$ref": "./core.schema.json#/$defs/errorResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "const": "AG_RUNTIME_UNAVAILABLE"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "field_errors": {
+                    "const": []
+                  },
+                  "retryable": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "x-development-examples": "./capabilities.examples.json",
+  "x-compatibility": "Unknown optional success fields are allowed. schema_version remains 1 while the declared field types remain compatible."
+}

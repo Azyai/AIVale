@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "purpose": "Development-only contract examples for P00-T05; not captured production requests or evidence of a deployed service.",
+  "cases": [
+    {
+      "name": "disabled200",
+      "registered_operation": true,
+      "request": {
+        "method": "GET",
+        "path": "/api/agent-platform/capabilities"
+      },
+      "conditions": {
+        "effective_flags": {
+          "enabled": false,
+          "worker_enabled": false,
+          "mcp_enabled": false,
+          "skills_enabled": false,
+          "scripts_enabled": false
+        },
+        "runtime_implemented": false
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-Oneapi-Request-Id": "p00-t05-disabled-fixture"
+        },
+        "body": {
+          "success": true,
+          "code": "OK",
+          "message": "",
+          "request_id": "p00-t05-disabled-fixture",
+          "data": {
+            "schema_version": 1,
+            "enabled": false,
+            "worker_enabled": false,
+            "mcp_enabled": false,
+            "skills_enabled": false,
+            "scripts_enabled": false,
+            "runtime_ready": false
+          }
+        }
+      }
+    },
+    {
+      "name": "configured_not_ready200",
+      "registered_operation": true,
+      "request": {
+        "method": "GET",
+        "path": "/api/agent-platform/capabilities"
+      },
+      "conditions": {
+        "effective_flags": {
+          "enabled": true,
+          "worker_enabled": true,
+          "mcp_enabled": true,
+          "skills_enabled": true,
+          "scripts_enabled": true
+        },
+        "runtime_implemented": false
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-Oneapi-Request-Id": "p00-t05-configured-fixture"
+        },
+        "body": {
+          "success": true,
+          "code": "OK",
+          "message": "",
+          "request_id": "p00-t05-configured-fixture",
+          "data": {
+            "schema_version": 1,
+            "enabled": true,
+            "worker_enabled": true,
+            "mcp_enabled": true,
+            "skills_enabled": true,
+            "scripts_enabled": true,
+            "runtime_ready": false
+          }
+        }
+      }
+    },
+    {
+      "name": "blocked_write503",
+      "registered_operation": false,
+      "request": {
+        "method": "POST",
+        "path": "/api/agent-platform/capabilities"
+      },
+      "conditions": {
+        "platform_admission_enabled": false,
+        "note": "The POST operation is not registered. This example describes the disabled namespace gate response, not a supported write API."
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-Oneapi-Request-Id": "p00-t05-blocked-fixture"
+        },
+        "body": {
+          "success": false,
+          "code": "AG_RUNTIME_UNAVAILABLE",
+          "message": "Agent platform capability is unavailable",
+          "request_id": "p00-t05-blocked-fixture",
+          "data": {
+            "field_errors": [],
+            "retryable": false
+          }
+        }
+      }
+    }
+  ]
+}

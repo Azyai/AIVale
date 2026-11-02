@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"context"
 	"maps"
 	"net"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/jsplugin"
+	agentservice "github.com/QuantumNous/new-api/service/agent"
 	"github.com/QuantumNous/new-api/setting/agent_setting"
 	"github.com/gin-gonic/gin"
 	mysqldriver "github.com/go-sql-driver/mysql"
@@ -261,6 +263,110 @@ func TestAgentPlatformGateIsWiredIntoProductionRouter(t *testing.T) {
 	response = httptest.NewRecorder()
 	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/status", nil))
 	assert.Equal(t, http.StatusOK, response.Code)
+	response = httptest.NewRecorder()
+	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/agent-platform/capabilities", nil))
+	assert.Equal(t, http.StatusOK, response.Code, "the public probe remains available when admission is closed")
+}
+
+func TestAgentPlatformModuleProbe(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	// The probe must work before persistence is available.
+	previousDB, previousLogDB := model.DB, model.LOG_DB
+	model.DB, model.LOG_DB = nil, nil
+	t.Cleanup(func() { model.DB, model.LOG_DB = previousDB, previousLogDB })
+	engine := gin.New()
+	engine.Use(middleware.RequestId(), middleware.AgentPlatformGate())
+	SetApiRouter(engine)
+	tests := []struct {
+		name    string
+		options map[string]string
+		want    map[string]any
+	}{
+		{name: "disabled", want: map[string]any{
+			"schema_version": float64(1), "enabled": false, "worker_enabled": false, "mcp_enabled": false,
+			"skills_enabled": false, "scripts_enabled": false, "runtime_ready": false,
+		}},
+		{name: "configured without runtime", options: map[string]string{
+			"agent_setting.enabled": "true", "agent_setting.worker_enabled": "true", "agent_setting.mcp_enabled": "true",
+			"agent_setting.skills_enabled": "true", "agent_setting.scripts_enabled": "true",
+		}, want: map[string]any{
+			"schema_version": float64(1), "enabled": true, "worker_enabled": true, "mcp_enabled": true,
+			"skills_enabled": true, "scripts_enabled": true, "runtime_ready": false,
+		}},
+		{name: "scripts depend on skills", options: map[string]string{
+			"agent_setting.enabled": "true", "agent_setting.scripts_enabled": "true",
+		}, want: map[string]any{
+			"schema_version": float64(1), "enabled": true, "worker_enabled": false, "mcp_enabled": false,
+			"skills_enabled": false, "scripts_enabled": false, "runtime_ready": false,
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withAgentPlatformOptions(t, test.options)
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/api/agent-platform/capabilities?team_id=999&workspace_id=999", nil)
+			request.Header.Set("X-Workspace-ID", "999")
+			engine.ServeHTTP(response, request)
+			require.Equal(t, http.StatusOK, response.Code)
+			assert.Equal(t, "no-store", response.Header().Get("Cache-Control"))
+			var payload map[string]any
+			require.NoError(t, common.Unmarshal(response.Body.Bytes(), &payload))
+			assert.Len(t, payload, 5)
+			assert.Equal(t, true, payload["success"])
+			assert.Equal(t, "OK", payload["code"])
+			assert.Equal(t, "", payload["message"])
+			assert.NotEmpty(t, payload["request_id"])
+			assert.Equal(t, response.Header().Get(common.RequestIdKey), payload["request_id"])
+			assert.Equal(t, test.want, payload["data"], "global probe must not expose a tenant scope or claim runtime readiness")
+		})
+	}
+}
+
+func TestAgentPlatformModuleProbeExceptionIsNarrow(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	withAgentPlatformOptions(t, nil)
+	engine := gin.New()
+	engine.Use(middleware.RequestId(), middleware.AgentPlatformGate())
+	SetApiRouter(engine)
+	for _, request := range []struct{ method, path string }{
+		{http.MethodPost, "/api/agent-platform/capabilities"},
+		{http.MethodPut, "/api/agent-platform/capabilities"},
+		{http.MethodDelete, "/api/agent-platform/capabilities"},
+		{http.MethodHead, "/api/agent-platform/capabilities"},
+		{http.MethodGet, "/api/agent-platform/capabilities/details"},
+		{http.MethodGet, "/api/agent-platform/capabilities-other"},
+		{http.MethodPost, "/api/agent-platform/workspaces"},
+		{http.MethodPost, "/v1/agents/101/runs"},
+	} {
+		t.Run(request.method+" "+request.path, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			engine.ServeHTTP(response, httptest.NewRequest(request.method, request.path, nil))
+			assert.Equal(t, http.StatusServiceUnavailable, response.Code)
+		})
+	}
+	common.OptionMapRWMutex.Lock()
+	common.OptionMap = map[string]string{"agent_setting.enabled": "true"}
+	common.OptionMapRWMutex.Unlock()
+	for _, path := range []string{"/api/agent-platform/workspaces", "/v1/agents/101/runs"} {
+		response := httptest.NewRecorder()
+		engine.ServeHTTP(response, httptest.NewRequest(http.MethodPost, path, nil))
+		assert.Equal(t, http.StatusNotFound, response.Code, "opening configuration must not fabricate unimplemented business handlers")
+	}
+}
+
+func TestAgentPlatformModuleContextIsInternal(t *testing.T) {
+	withAgentPlatformOptions(t, nil)
+	request := agentservice.RequestContext{
+		Context: context.Background(), RequestID: "p00-t05-fixture",
+		Scope: &model.AgentScope{TeamID: 1, WorkspaceID: 10},
+	}
+	encoded, err := common.Marshal(request)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{}`, string(encoded), "internal context must not become a client-provided DTO")
+	result := agentservice.Probe(request)
+	assert.Equal(t, request.RequestID, result.RequestID)
+	assert.False(t, result.Capabilities.Enabled)
+	assert.False(t, result.Capabilities.RuntimeReady)
 }
 
 func TestAgentPlatformOptionMySQL(t *testing.T) {
