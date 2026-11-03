@@ -40,9 +40,11 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 
 `GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的工作区写入、Run、审批、MCP 或脚本处理器；公开探测不替代未来的工作区权限探测。
 
-已注册的`GET /api/agent-platform/workspaces`与`GET /api/agent-platform/workspaces/:workspace_id`只返回当前主体获准读取的工作区元数据，拒绝PAT和模型Token。列表在服务端授权范围内筛选、COUNT和分页，名称`q`按区分大小写的字面子串匹配。响应采用显式白名单和`no-store`，角色/状态对应的`effective_permissions`仅是当次工作区层权限摘要，不授予资源执行权；前端仍为导航壳，不能据此宣称客户工作区管理流程或运行引擎已经交付。
+已注册的`GET /api/agent-platform/workspaces`与`GET /api/agent-platform/workspaces/:workspace_id`只返回当前主体获准读取的工作区元数据，拒绝PAT和模型Token。列表在服务端授权范围内筛选、COUNT和分页，名称`q`按区分大小写的字面子串匹配。响应采用显式白名单和`no-store`，角色/状态对应的`effective_permissions`仅是当次工作区层权限摘要，不授予资源执行权；前端仍为导航壳，不能据此宣称客户工作区管理页面或运行引擎已经交付。
 
 单步骤适配器只执行服务端显式注入的处理函数，不接入主启动链、读取模型凭据或客户文件。内部资源引用不是授权；本地测试可以验证运行与协作取消，但不能据此将`runtime_ready`改为`true`或开放真实客户执行。完整状态机、租约、模型计量、远程MCP及技能存储分别按后续任务交付。
+
+P01-T04进一步接入工作区创建、编辑与归档三个管理写接口。创建限当前Team owner，并原子建立初始管理员；修改与归档需预期revision，两个POST使用持久化幂等收据。工作区变更和安全审计事实同事务保存，日志库仅为后续投影。归档保留数据，当前仅开放运行资源接入前的场景；活动计数或未来Run/Schedule依赖未满足时拒绝，不能由归档成功推断已实现排空、停止计划或历史运行页面。
 
 ## 3. 租户、身份与资源
 

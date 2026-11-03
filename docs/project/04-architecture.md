@@ -15,7 +15,7 @@
 | Agent 最小基础 | `setting/agent_setting/`、`service/agent/`、`types/agent/`、能力探测接口 | 当前是开关、内部上下文及只读探测，不是运行引擎 |
 | 运行适配基础 | 根`go.mod`固定Eino `v0.9.22`与官方MCP Go SDK `v1.8.0` | 仅内部单步骤适配及本地协议PoC；完整Run引擎与真实连接仍按后续阶段实现 |
 
-当前`service/agent/capabilities.go`仍固定返回`runtime_ready:false`。前端`features/agent-platform/`已有受动态开关控制的工作台导航壳；`service/agentexecution/`仅提供显式构造的Eino单步骤适配器与内部窄接口，不接入API或Worker启动。P01已具工作区持久化、管理访问判定及列表/详情两个只读GET；工作区写入、Run队列、租约/检查点、远程MCP、技能存储及沙箱仍需按计划实现，不能由依赖存在或本地PoC推断已可供客户使用。
+当前`service/agent/capabilities.go`仍固定返回`runtime_ready:false`。前端`features/agent-platform/`已有受动态开关控制的工作台导航壳；`service/agentexecution/`仅提供显式构造的Eino单步骤适配器与内部窄接口，不接入API或Worker启动。P01已具工作区持久化、管理访问判定及读写生命周期API；Run队列、租约/检查点、远程MCP、技能存储及沙箱仍需按计划实现，不能由依赖存在或本地PoC推断已可供客户使用。
 
 ## 2. 模块化单体与进程边界
 
@@ -44,11 +44,11 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 
 | 位置 | 职责与边界 | 当前状态 |
 | --- | --- | --- |
-| `router/`、`middleware/` | 注册路径、接入鉴权与功能 gate；不实现领域事务 | Agent gate及工作区guard已接入；P01-T03两个只读GET复用UserAuth并限定管理会话，默认总开关关闭 |
-| `controller/agent*.go` | 请求解析、调用 service、HTTP 状态和响应封装 | 当前有能力探测及工作区列表/详情的严格解析和白名单DTO转换，其他按任务扩展 |
+| `router/`、`middleware/` | 注册路径、接入鉴权与功能 gate；不实现领域事务 | Agent gate及工作区guard已接入；P01-T03两个只读GET及P01-T04三个写入口复用UserAuth并限定管理会话，默认总开关关闭 |
+| `controller/agent*.go` | 请求解析、调用 service、HTTP 状态和响应封装 | 当前有能力探测及工作区读写生命周期的严格解析和白名单DTO转换，其他按任务扩展 |
 | `dto/`、`types/agent/` | 边界 DTO、Agent 错误 wire 类型 | 已有；Agent 类型保持根模块叶子依赖 |
 | `model/agent*.go` | 持久化实体及带归属条件的数据库操作 | `AgentScope`仍仅值对象；P01-T01新增Workspace/成员ORM和带Team范围的基础仓储，不代表动作授权 |
-| `service/agent/` | 草稿、验证、发布与授权编排 | 当前有RequestContext/Probe、工作区层AuthorizeWorkspace及实时授权的ListWorkspaces/GetWorkspace；草稿和发布仍规划 |
+| `service/agent/` | 草稿、验证、发布与授权编排 | 当前有RequestContext/Probe、工作区层AuthorizeWorkspace、读服务及事务内授权的创建/编辑/归档；草稿和发布仍规划 |
 | `service/agentexecution/` | 单步骤适配及未来Run、状态机、租约与恢复 | 当前仅P00-T08的单步接口/Eino适配；持久化执行及恢复仍规划 |
 | `service/skill/`、`service/mcp/` | 技能包与工具连接适配 | 规划，不把供应商任务插件当客户 Skills |
 | `service/agentartifact/` | 产物存储、授权读取、清理 | 规划，不把既有禁用存储实现称为可用 |
@@ -110,6 +110,10 @@ JSON 响应保留 `success/message/data`，新接口增加稳定的 `code/reques
 P01-T03的`GET /api/agent-platform/workspaces`和`GET /api/agent-platform/workspaces/:workspace_id`使用公共ID、分页和固定错误工具；详情不接受查询参数，列表只接受单值`page/page_size/sort/q`，畸形编码、重复及未知参数拒绝。名称筛选`q`修剪空白后按区分大小写的字面子串匹配，最多128个Unicode字符及512个UTF-8字节；`%/_/!`和反斜线均无通配含义。
 
 工作区响应只暴露冻结Schema字段；ID为字符串，时间、revision及分页数字遵守JavaScript安全整数边界，空列表带明确`empty_reason`。`effective_permissions`由实时角色与状态计算，仅包含不需要附加资源条件的工作区层动作，不是后续执行授权。两入口均`Cache-Control: no-store`，错误保持固定安全wire；只读接口注册不表示写入、私密资源读取或运行API已完成。
+
+P01-T04另注册创建、编辑和归档三个管理写接口，复用同一typed管理会话和默认关闭的平台gate；明确登记session-only。新增严格JSON对象codec由显式调用启用，不改变旧解码器；请求限1MiB，仅JSON/无压缩，拒重复解码键、未知/大小写变体、null、非法Unicode和拼接文档。revision按原整数词法校验，禁止浮点中转。
+
+创建返回201不可变创建收据，归档返回200不可变归档收据，编辑复用工作区详情DTO；客户端按授权GET刷新当前资源状态。两个POST要求单值可见ASCII幂等Key，只存摘要并发布到期时间响应头；过期记录当前保留，不复用为新操作。每次重放仍实时检查会话、租户和管理权，不能从响应缓存绕过撤权。精确字段与状态见计划6.3.1及独立workspace-writes契约。
 
 ## 6. Context、并发与失败传播
 

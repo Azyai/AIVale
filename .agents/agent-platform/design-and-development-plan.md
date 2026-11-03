@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.11 工作区只读接口与可见范围查询
+版本：1.12 工作区写入生命周期与事务审计
 
 日期：2026 年 11 月 3 日
 
@@ -445,7 +445,7 @@ P00-T02冻结新增API的序列化边界：ID必须为`[1-9][0-9]*`的规范十�
 | `ag_run_steps` | P03 | 步骤 | Run → Step |
 | `ag_run_events` | P03 | 事件流 | Run → 顺序事件 |
 | `ag_idempotency_keys` | P01 | 请求去重 | 请求主体 + 操作 + Key |
-| `ag_outbox` | P03 | 可靠通知 | 主事务 → 异步处理 |
+| `ag_outbox` | P01-T04审计 / P03运行 | 可靠通知 | 主事务 → 日志投影及后续异步处理 |
 | `ag_gateway_calls` | P03 | 网关调用账本 | Run/Step → 实际模型调用 |
 | `ag_usage_items` | P03 | 用量投影 | 网关/工具/执行环境 → Run |
 | `ag_budget_reservations` | P03 | Run 预算 | Run → 单次调用预留 |
@@ -693,7 +693,7 @@ P09 的 Workflow 通过 `Agent.kind=workflow` 暴露给统一运行接口；所�
 
 #### 5.7.1 ag_idempotency_keys
 
-字段组：B、U、T、W。阶段 P01-T06随Token授权建立，P02用于发布去重，P03扩展用于运行受理。
+字段组：B、U、T、W。P01-T04先为工作区创建/归档建立，P01-T06复用于Token授权，P02用于发布去重，P03扩展用于运行受理。创建工作区的scope包含当前Team与主体；只在新Workspace真实ID生成后同事务保存completed收据，不用0表示未创建对象。
 
 | 字段 | 类型 | 空 | 默认 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -712,7 +712,7 @@ P09 的 Workflow 通过 `Agent.kind=workflow` 暴露给统一运行接口；所�
 
 #### 5.7.2 ag_outbox
 
-字段组：B、U、T、W。阶段 P03。
+字段组：B、U、T、W。P01-T04先用于工作区变更审计事实，P03复用并实现运行可靠投递；提前建表不等于后台worker或运行outbox已完成。
 
 | 字段 | 类型 | 空 | 默认 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -730,6 +730,10 @@ P09 的 Workflow 通过 `Agent.kind=workflow` 暴露给统一运行接口；所�
 | `delivered_at` | MS | Y | NULL | 交付时间 |
 
 唯一 `(event_key)`；索引 `(status, available_at, id)`。Outbox 与业务变更同事务写入，投递采用至少一次语义；消费者再以业务唯一键去重。超过阈值进入 dead 并告警，可以重投同一事件，不能重新生成 Run。已投递记录按短期留存清理，dead 记录处理前保留。
+
+P01-T04仅写`workspace_audit`事件，与工作区、初始管理员和适用幂等收据原子提交；payload只含可信主体/Team/Workspace、动作、revision前后、request_id、时间及固定changed_fields，不包含名称、描述、原始原因或凭据。提交后向现有关系型日志库投影，固定EventID唯一约束防重；失败保留pending，显式有界恢复入口仅处理该kind，不创建后台worker。ClickHouse当前日志表没有同等唯一保证，此阶段保留pending，不声称已投影。未投递事实不清理，P03实现通用租约/退避/dead与后台恢复时继续验收。
+
+三个写入口的失败另使用现有审计实体记录security拒绝事件，避免普通UserAuth没有管理审计兜底造成漏记。仅记录可信/未知主体、静态动作、HTTP状态、服务端request_id及规范化的尝试对象ID，不复制原始URL、body、query、Key、SID、IP或User-Agent；独立短Context，日志故障按既有best-effort诊断处理，不生成成功事件或额外业务副作用。平台gate在其前，GET和成功写入不重复记录拒绝事件。
 
 ### 5.8 模型调用账本与预算
 
@@ -1206,10 +1210,10 @@ P10增加独立子Run时，`parent_run_id`构成同Workspace有界树，`root_ru
 
 | 迁移批次 | 新表或字段 | 前置 | 本批最小验证 |
 | --- | --- | --- | --- |
-| DB-P01-01 | workspaces、workspace_members、token_grants、idempotency_keys | 旧Team/Token可用 | 同团队授权、跨团队拒绝、旧Token默认无新权限、授权POST去重 |
+| DB-P01-01 | workspaces、workspace_members；T04增加idempotency_keys与审计outbox；T06增加token_grants | 旧Team/Token可用 | 按实际任务分别验证工作区、事务幂等/审计及Token授权，不把提前建表等同运行投递完成 |
 | DB-P02-01 | agents、agent_versions | DB-P01-01 | 草稿revision竞争、发布序号唯一、引用归属 |
 | DB-P02-02 | runs | DB-P02-01 | 调试快照固定、Run元数据、使用已有幂等表验证同Key同资源与异Hash冲突；尚不执行 |
-| DB-P03-01 | run_steps、run_events、outbox | DB-P02-02 | Run状态CAS、事件seq、旧epoch拒绝、提交后投递失败补发 |
+| DB-P03-01 | run_steps、run_events；扩展复用outbox | DB-P02-02 | Run状态CAS、事件seq、旧epoch拒绝、通用投递/恢复及提交后失败补发 |
 | DB-P03-02 | gateway_calls、usage_items、budget_reservations | DB-P03-01 | 调用唯一、预留竞争、重复usage不重复汇总 |
 | DB-P04-01 | credentials、mcp_connections | P03基础闭环 | 凭据write-only、连接归属与轮换revision |
 | DB-P04-02 | mcp_tools、agent_tool_bindings | DB-P04-01 | 完整发现提交、schema变化、绑定快照 |
@@ -1375,6 +1379,22 @@ P01-T03只注册API-001与API-003，受默认关闭的总开关控制，且只�
 page默认1、page_size默认20且最大100；sort复用第6.1节，只允许created_at/id和asc/desc，ID稳定补序。q单值、合法UTF-8/无NUL，修剪前最多128字符/512字节，修剪后区分大小写地匹配名称字面子串，特殊字符无通配含义。未知、重复、空分页、非法编码及溢出拒绝；详情不接受query。名称过滤及授权范围先于COUNT和分页，三库语义一致，末页不执行巨大OFFSET。详情对跨租户、归档、不存在和不可见统一404，失效会话401；全部业务和认证响应使用新固定envelope及no-store。公开精确契约见`.agents/agent-platform/contracts/v1/workspaces.{schema,openapi,examples}.json`。
 
 归档不同于物理删除。第一期管理接口不提供工作区一键彻底清空；资料删除、账务留存和审计留存按第 5 章分类执行。
+
+#### 6.3.1 P01-T04工作区写接口冻结
+
+API-002/004/005沿用相同默认关闭总开关及显式Bearer管理会话，PAT、模型Token和Cookie均不作为替代身份。三接口不接受query，JSON请求最多1MiB，仅application/json及可选UTF-8 charset、无压缩或identity；严格单对象，拒未知/重复解码键、大小写变体、null、非法UTF-8/Unicode与拼接JSON。新增严格codec仅供显式调用，不改变旧接口解码语义。
+
+| 操作 | 精确输入 | 成功data与行为 |
+| --- | --- | --- |
+| 创建 | required name，optional description（缺省空）、slug（小写ASCII；缺省服务生成）；required Idempotency-Key | 201不可变收据`{id,slug,status:"active",revision:1,created_at}`；需要当前详情时再GET。仅当前Team双事实owner，工作区和creator显式active admin原子建立，运行限额保持0 |
+| 编辑 | required expected_revision，name/description至少一项 | 200既有工作区详情；仅owner或显式active admin，允许active/suspended空间；只更新白名单，revision成功加1，旧revision409，slug/Team/策略等不可改 |
+| 归档 | required expected_revision、reason（修剪后非空，最多512码点/2048字节）；required Idempotency-Key | 200不可变收据`{id,status:"archived",revision,archived_at,blocking_run_count:0}`；保留成员、slug与历史，不虚构已停止的计划数量 |
+
+expected_revision为JSON规范整数1..9007199254740991，拒字符串/小数/指数和溢出。Key为单值16–128个可见ASCII字符，不修剪、只存摘要。两个POST成功及同请求重放附`Idempotency-Key-Expires-At` UTC毫秒响应头；至少保留24小时，当前不清理或覆盖过期行，过期后仍重放同请求、异请求409，不复用旧Key制造新操作。PATCH依靠revision CAS，不要求Key。
+
+创建scope包含Team/主体/方法/路由；归档另含实际Workspace，request_hash包含规范化目标与输入。每次重放先校验当前会话/租户/管理权：创建目标归档或失权不返回旧收据；已归档对象只有仍有管理权且同Key同请求才可重放原归档收据。一般GET对归档仍404。业务、适用幂等收据和审计事实同事务，提交后才返回成功，错误data不附current_revision或内部阻塞详情。
+
+本阶段没有Run/Schedule实体，归档只支持运行资源接入前：active_run_count>0返回409，异常负计数拒绝；元数据读取失败不当作无资源。若`ag_runs/ag_schedules/ag_schedule_fires`存在，缺相应领域归档适配时返回503关闭归档，待P02/P03/P07补齐真实资源判定和停止触发流程后再放行，不把零计数当作未来全部资源均安全的证明。公开写契约独立为`workspace-writes.{schema,openapi,examples}.json`，读协议不改。
 
 ### 6.4 Agent 定义和发布接口
 
@@ -2380,6 +2400,14 @@ P00-T03的范围调整不改变上述最低兼容版本声明。本次环境只�
 
 三阶段每个引擎1500秒上限覆盖启动240秒、三阶段各330秒和停止90秒。工具先校验本地必需输入，交付门禁再次核对原始日志与收据；成功仅为`scope=selected_p01_workspace_read`、`acceptance=selected_workspace_read`。真实版本、命令和详细结果只保留本地；P00历史全量及完整PAT路由目录开放项不因本任务关闭。
 
+#### 10.2.5 P01-T04工作区写生命周期门禁
+
+使用`--profile workspace-write --base-ref <开发前提交> --task P01-T04`，仍为基础21项、管理会话适配1项、真实三库3项，共25项。每个引擎`--write`隐含read/access，按迁移→工作区访问→只读HTTP→写生命周期顺序使用同四隔离目标；旧三阶段结果不能代替新增写验证。
+
+fresh/upgrade各要求新增两表只在主库、索引/唯一约束、三次连接启动后的schema与数据稳定；真实生产路由验证owner创建与管理员原子性、角色隔离、幂等scope/实时重放/过期保留、revision及并发竞争、归档/未来依赖保护、审计脱敏/投影失败恢复、事务故障回滚、严格输入/Schema、旧夹具保留及安全错误。29项布尔证据、精确整数startup_passes=3、正整数实际HTTP请求数及完整原始Go事件都必须具备。
+
+四阶段分别有退出码、同运行编号与版本、唯一摘要，门禁从原始日志重建收据核对；每引擎1800秒覆盖启动240秒、四阶段各330秒和停止90秒。失败、跳过、缺阶段/场景、零请求、源码变化或收尾未确认不放行。成功仅为selected_p01_workspace_write/selected_workspace_write，不关闭P00历史全量及PAT目录开放项，不证明生产发布、最低数据库版本或ClickHouse日志投影通过。
+
 ### 10.3 固定验收数据
 
 建立测试Team A/B；A有两个Workspace A1/A2。分别创建owner、developer、operator、viewer以及已移出成员。为A/B各建有效、过期、撤销、模型受限、额度不足的Token；Agent grant独立配置。
@@ -2759,15 +2787,24 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P01-T04 实现工作区创建编辑归档
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
 - **前置依赖**：P01-T03。
 - **目标**：提供可恢复的空间生命周期。
 - **具体操作**：
-  1. 实现创建/修改的服务端校验和乐观并发控制。
-  2. 创建时记录创建人和默认管理员，避免无管理员空间。
-  3. 归档只禁止新建与运行；有活动任务时按契约拒绝或等待排空。
-- **交付物与落点**：写接口、审计事件及归档行为。
-- **验收**：重复创建及过期revision被拒绝；归档后旧运行记录仍可按权限查看。
+  1. 核对API-002/004/005、严格JSON/ID/错误和前批权限事实；先冻结6.3.1，保留历史全量/PAT开放项，不修改无关Team、网关或账务。
+  2. 为创建和归档的真实去重提前建立计划内ag_idempotency_keys，为事务审计提前建立ag_outbox；主库加法迁移、显式字段/中文说明及固定索引，T06/P03后续复用而非重复建表。
+  3. 实现写事务实时身份与角色读取，固定User→Session→TeamMember→Team→Workspace→显式成员锁序，精确SID/枚举；不信任旧Scope，不接受已有事务快照，不先授权再裸ID写入。
+  4. 校验name/description/slug，缺省slug生成；仅当前Team双事实owner创建，工作区和creator显式active admin成员同事务，CreatedBy/GrantedBy明确，运行相关默认上限0、空策略。
+  5. 规范化实际目标与输入计算请求摘要，Key只保存hash；相同scope/key/request重放不可变收据，异请求409，重放仍实时授权。新WorkspaceID生成后才写完成收据，不保存0哨兵。
+  6. 编辑只允许name/description和必需revision；按Team/ID/未归档/合法状态/revision条件更新，成功+1并校验安全整数上界，过期409且不覆盖其他操作者内容。
+  7. 归档使用独立收据及revision CAS，活动计数阻断；当前仅支持运行资源接入前，发现未来Run/Schedule表或元数据失败关闭放行，不假造停止计划/排空。保留成员、slug和历史事实，一般读取仍不可见。
+  8. 将每次成功变更的安全审计事实与业务及适用幂等结果原子保存；提交后投影关系型日志，失败保留pending，有界恢复只处理workspace_audit。另为三写失败记录脱敏security拒绝事件，复用现有审计写入，独立短Context且不复制原请求资料；成功与GET不重复记拒绝日志。不记录原始工作区名称/描述/原因、会话或Key，不声称ClickHouse幂等投影已完成。
+  9. 在common codec显式新增严格对象解析，HTTP限1MiB/JSON/无压缩；拒重复解码键、未知/大小写变体、null、Unicode错误、拼接文档及非法revision。三写接现有typed管理会话及平台gate，PAT目录明确session-only，所有结果固定envelope/no-store。
+  10. 单独冻结写Schema/OpenAPI/公开示例，复用读详情DTO；建立四阶段workspace-write配置及工具行为验证，保留已有读测试并仅适配已新增路由事实。
+  11. 真实三库完成fresh/upgrade、三次连接启动、主日志隔离、唯一冲突与并发、管理员/幂等/审计故障回滚、实时撤权、归档保护及投影恢复；核对29项行为、实际请求数、原始事件及正常收尾，最终输入一致才完成。
+  12. 本地记录命令、版本、覆盖与未验证边界，更新任务及镜像；按持久化服务、HTTP与契约、交付工具、规范模块提交，测试和详细结果不入Git。
+- **交付物与落点**：三个写接口、写事务model/service、计划内幂等/outbox两表及加法迁移、安全审计事实与有界投影恢复、独立公开写契约和四阶段交付配置。
+- **验收**：真实三库重复同请求不产生第二个工作区/成员/成功事件，同Key异请求及旧revision409；并发同revision仅一个成功。owner/admin边界、退组/停用/降权与会话撤销实时生效，跨租户不泄漏；管理员、幂等或审计事实失败全部回滚，日志投影故障保留可恢复pending。归档保留数据、slug和成员，活动计数/未来资源依赖阻断，不宣称尚未实现的历史Run读取或停止计划已通过；所选完整门禁执行并收尾。
 - **回退**：取消新空间入口；通过显式恢复操作解除归档，不物理删表。
 - **估算与门禁**：1 人日；G-DB、G-API、G-AUTH。
 
@@ -2792,10 +2829,10 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 #### P01-T06 增加运行Key授权表幂等表与解析
 
 - [ ] 完成并记录验收证据
-- **前置依赖**：P01-T02。
+- **前置依赖**：P01-T02、P01-T04（复用已建立的幂等表）。
 - **目标**：为现有API Key增加Agent资源权限。
 - **具体操作**：
-  1. 新增ag_token_grants及ag_idempotency_keys，关联现有Token授权并为P01授权创建、P02发布提供持久化请求去重；幂等作用域包含主体、workspace和操作。
+  1. 新增ag_token_grants，复用P01-T04已建立的ag_idempotency_keys，关联现有Token授权并为P01授权创建、P02发布提供持久化请求去重；幂等作用域包含主体、workspace和操作。
   2. 区分模型权限与agent:run、run:read、run:cancel、artifact:read，默认不扩展旧Key能力。
   3. 建立运行主体解析，校验Token所属team与授权资源同域；P01先用workspace范围验证，Agent资源授权在P02有对应实体后接入，运行入口仍关闭。
 - **交付物与落点**：授权表、幂等表、scope解析和权限判定函数。
@@ -3015,7 +3052,7 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 - **前置依赖**：P02-T08。
 - **目标**：让任务创建、步骤推进与通知具有持久化依据。
 - **具体操作**：
-  1. 新增ag_run_steps、ag_run_events、ag_outbox，事件以run_id与seq唯一。
+  1. 新增ag_run_steps、ag_run_events，复用P01-T04已建立的ag_outbox并补齐运行可靠投递，事件以run_id与seq唯一。
   2. 在同一事务写Run变更和待投递消息，Redis只承担唤醒而不成为唯一事实源。
   3. 实现发件箱投递确认和重复投递去重，未执行模型调用。
 - **交付物与落点**：三表迁移、事务写入与可重复投递入口。

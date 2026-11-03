@@ -18,7 +18,7 @@
 | 工作区元数据API | `middleware/agent_workspace_read.go`、`controller/agent_workspace.go`、`service/agent/workspace_read.go` | P01-T03列表/详情只读GET限定现有管理会话；每次实时查询身份及对象范围，响应使用白名单和no-store |
 | 功能准入 | `middleware/agent_platform.go`、`setting/agent_setting/config.go` | 开关控制入口可用性，不能替代认证与授权 |
 
-当前Agent路由包括全局只读`GET /api/agent-platform/capabilities`及工作区列表/详情两个GET：`/api/agent-platform/workspaces`、`/api/agent-platform/workspaces/:workspace_id`。工作区入口受默认关闭的总开关及管理会话认证控制，PAT/模型Token不得进入；全局探测仍只返回配置且`runtime_ready:false`。工作区写入、Agent grant、Worker身份和凭据管理按后续任务实施，不能将计划中的权限矩阵描述为当前全部生效。
+当前Agent路由包括全局只读`GET /api/agent-platform/capabilities`及工作区列表/详情两个GET：`/api/agent-platform/workspaces`、`/api/agent-platform/workspaces/:workspace_id`。工作区入口受默认关闭的总开关及管理会话认证控制，PAT/模型Token不得进入；全局探测仍只返回配置且`runtime_ready:false`。工作区创建/编辑/归档另由P01-T04实现；Agent grant、Worker身份和凭据管理按后续任务实施，不能将计划中的权限矩阵描述为当前全部生效。
 
 ## 2. 认证复用与入口区分
 
@@ -60,7 +60,13 @@ P01-T03的列表COUNT、筛选和分页在SQL可见范围内完成，详情同�
 
 响应的`current_role`与`effective_permissions`由当次有效角色/工作区状态生成，只列当前不需附加资源条件的工作区动作；它们不能替代后续请求、私密内容或运行执行的服务端授权，也不应缓存成永久许可。
 
-四角色的24动作候选范围见计划6.2，候选不等于最终许可：元数据读取不包含私密正文，run:create/内容/取消/审批、credential:use、Token grant、费用与Artifact父资源等还缺真实资源条件的动作，本入口一律拒绝；后续领域服务必须实现相应持久化授权和策略交集，不接受body中的sharing/binding/approval布尔值直接放行。暂停工作区仅允许已有读取及必要workspace/member管理；新写配置、发布和执行拒绝。归档本批全部拒绝，未来历史读取例外单独设计。
+四角色的24动作候选范围见计划6.2，候选不等于最终许可：元数据读取不包含私密正文，run:create/内容/取消/审批、credential:use、Token grant、费用与Artifact父资源等还缺真实资源条件的动作，本入口一律拒绝；后续领域服务必须实现相应持久化授权和策略交集，不接受body中的sharing/binding/approval布尔值直接放行。暂停工作区仅允许已有读取及必要workspace/member管理；新写配置、发布和执行拒绝。常规读/写授权对归档资源拒绝，T04仅为当前管理者提供特定同Key归档收据重放；未来历史资源读取例外单独设计。
+
+P01-T04三写只接受已有显式Bearer管理会话，拒Cookie降级、PAT和模型Token；JSON内容类型和严格单对象边界避免表单/simple content-type替代。创建为当前Team双事实owner，编辑/归档为当前owner或显式active admin，权限和业务写入在同一短事务校验并持锁；请求Team/role/旧Scope不参与授权。
+
+幂等收据不是授权缓存。同Key重放也须当前会话和团队/对象管理权有效，归档结果的特殊重放不能令已退组、降权或停用者取得旧响应。业务、适用幂等结果及审计事实原子提交；日志投影失败保留耐久pending，不把已提交写入伪装成未发生。审计payload采用固定白名单，不保存原始JSON/名称/描述/归档原因、会话SID或Key；不可变收据与审计事件内容分开。
+
+三写失败另有security拒绝审计，身份仅来自受信typed认证事实，未认证主体保留未知；仅记录静态动作、HTTP状态、服务端request_id及规范化尝试对象ID，不复制原请求的URL、body、query、IP、User-Agent或认证材料。复用现有审计写入但使用独立短Context；GET和成功变更不重复生成拒绝事件，平台gate关闭先行拒绝。拒绝日志为现有best-effort诊断路径，不能冒充已提交业务的耐久审计事实。
 
 ## 4. 撤销、缓存与运行身份
 

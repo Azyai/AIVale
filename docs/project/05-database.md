@@ -9,7 +9,7 @@
 | 主数据库 | `model/main.go` 通过 `SQL_DSN` 选择 SQLite、MySQL 或 PostgreSQL；`model.DB` 保存业务事实 |
 | 日志数据库 | 未配置 `LOG_SQL_DSN` 时复用主库，否则使用独立 `model.LOG_DB`；日志库另支持 ClickHouse |
 | 持久化与迁移 | 使用 GORM，现有启动链包含 `migrateDB`、`AutoMigrate` 和显式迁移函数；常规迁移由主节点执行，但应逐项检查实际启动前置操作 |
-| Agent 数据边界 | `AgentScope`仍是内部值对象；P01-T01在`model/agent_workspace.go`实现`ag_workspaces`、`ag_workspace_members`及基础仓储，其余规划表继续按阶段实现；持久化不证明动作授权 |
+| Agent 数据边界 | `AgentScope`仍是内部值对象；P01-T01在`model/agent_workspace.go`实现`ag_workspaces`、`ag_workspace_members`及基础仓储，P01-T04另为真实写操作前移幂等/outbox两表，其余规划表继续按阶段实现；持久化不证明动作授权 |
 | 缓存 | Redis 和进程缓存用于加速、唤醒和可重建投影，不作为 Run、权限撤销或费用的唯一事实源 |
 
 不得把其他项目的 Flyway、MyBatis、自动代码生成或“生产禁止所有启动迁移”直接写成本项目现状。调整迁移执行方式须作为独立设计与实现任务，不能只修改规范即视为落地。
@@ -143,6 +143,16 @@ P01-T03新增只读投影，不增表或列。列表先以当前管理会话、�
 名称`q`使用参数化、区分大小写的字面子串匹配：SQLite `instr`、MySQL二进制`LOCATE`、PostgreSQL `strpos`；百分号、下划线、感叹号及反斜线保持字面意义。排序只映射固定字段/方向，默认`created_at desc,id desc`；COUNT为零或偏移超出总量直接返回空页，不执行无意义的巨大OFFSET。查询次数有常数上限，禁止逐工作区重新查询造成N+1。
 
 DAO显式选择元数据列，列表不选择description，不读取策略、预算、凭据或审计主体供前端使用；公开DTO另行选择字段并检查ID、毫秒时间和revision边界。工作区只读门禁使用`--profile workspace-read`，真实三库均须在同一组隔离目标上顺序完成迁移、访问判定、生产HTTP路由读取三阶段；结果要求见第07规范，不能由本节描述视为验证已经完成。
+
+### 8.4 工作区写事务与审计事实
+
+P01-T04提前建立计划内ag_idempotency_keys和ag_outbox，后续Token授权及运行投递复用，不因提前建表宣称相关阶段完成。创建、初始管理员、适用幂等完成收据和workspace_audit事件同主库事务，任一持久化失败全部回滚。创建在真实WorkspaceID生成后才保存完成收据，scope包含当前Team/主体/操作；不能用0表示不存在工作区。
+
+写事务按User、Session、TeamMember、Team、Workspace、显式成员固定锁序校验当前事实，标准锁复用lockForUpdate；不在外部授权后按旧Scope裸写。编辑/归档条件包含Team、ID、合法状态及expected_revision，检查影响行数与安全整数上界。SQLite等竞争只能在确认回滚后有限重试整个操作，未知提交结果不能盲重发；不能依靠进程锁替代唯一约束和CAS。
+
+归档不删除成员、slug或历史；活动计数大于零拒绝，损坏计数拒绝。当前没有运行/调度归档适配，元数据查询失败或出现ag_runs/ag_schedules/ag_schedule_fires等依赖表时关闭归档放行，待对应领域补真实停止触发和资源检查。
+
+审计outbox只保存最小引用、主体、动作、revision、request_id与时间，不存原始名称/描述/原因、凭据或请求体。提交后关系型日志投影使用固定EventID唯一约束防重，失败留pending，通过有界入口恢复；只处理workspace_audit且不持业务事务锁。ClickHouse当前缺少同等唯一保证，本阶段不投影并保留pending，不据关系库结果宣称CH投影已验证。尚未实现后台通用outbox worker，未投递事实不清理。
 
 ## 9. 留存、归档与删除
 
