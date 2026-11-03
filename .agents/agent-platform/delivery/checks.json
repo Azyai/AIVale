@@ -90,6 +90,33 @@
       "workspace-access-sqlite",
       "workspace-access-mysql",
       "workspace-access-postgresql"
+    ],
+    "workspace-read": [
+      "frontend-install",
+      "frontend-typecheck",
+      "frontend-build",
+      "root-build",
+      "root-vet",
+      "relaykit-build",
+      "relaykit-vet",
+      "tokenkit-build",
+      "tokenkit-vet",
+      "module-verify",
+      "git-diff-check",
+      "git-cached-diff-check",
+      "agent-boundary-tests",
+      "agent-runtime-tests",
+      "auth-regression-tests",
+      "host-json-limit-tests",
+      "authz-tests",
+      "legacy-model-stream-tests",
+      "legacy-model-adaptor-tests",
+      "legacy-model-router-tests",
+      "agent-web-tests",
+      "workspace-auth-adapter-tests",
+      "workspace-read-sqlite",
+      "workspace-read-mysql",
+      "workspace-read-postgresql"
     ]
   },
   "checks": [
@@ -813,6 +840,137 @@
         "middleware/agent_workspace.go"
       ],
       "access": true
+    },
+    {
+      "id": "workspace-read-sqlite",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "sqlite",
+        "--access",
+        "--read"
+      ],
+      "timeout_seconds": 1500,
+      "kind": "database",
+      "engine": "sqlite",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        "service/agent/workspace_access_database_test.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/agent_workspace.go",
+        "model/agent_workspace_read.go",
+        "service/agent/workspace_read.go",
+        "controller/agent_workspace.go",
+        "dto/agent_workspace.go",
+        "router/agent-router.go",
+        "middleware/agent_workspace_read.go",
+        "middleware/access_token_routes.go",
+        ".agents/agent-platform/contracts/v1/workspaces.schema.json",
+        ".agents/agent-platform/contracts/v1/workspaces.openapi.json",
+        ".agents/agent-platform/contracts/v1/workspaces.examples.json",
+        "router/agent_workspace_read_database_test.go",
+        ".agents/agent-platform/contracts/v1/core.schema.json",
+        ".agents/agent-platform/contracts/v1/transport.schema.json"
+      ],
+      "access": true,
+      "read": true
+    },
+    {
+      "id": "workspace-read-mysql",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "mysql",
+        "--access",
+        "--read"
+      ],
+      "timeout_seconds": 1500,
+      "kind": "database",
+      "engine": "mysql",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        ".agents/agent-platform/mysql/environment.ps1",
+        "service/agent/workspace_access_database_test.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/agent_workspace.go",
+        "model/agent_workspace_read.go",
+        "service/agent/workspace_read.go",
+        "controller/agent_workspace.go",
+        "dto/agent_workspace.go",
+        "router/agent-router.go",
+        "middleware/agent_workspace_read.go",
+        "middleware/access_token_routes.go",
+        ".agents/agent-platform/contracts/v1/workspaces.schema.json",
+        ".agents/agent-platform/contracts/v1/workspaces.openapi.json",
+        ".agents/agent-platform/contracts/v1/workspaces.examples.json",
+        "router/agent_workspace_read_database_test.go",
+        ".agents/agent-platform/contracts/v1/core.schema.json",
+        ".agents/agent-platform/contracts/v1/transport.schema.json"
+      ],
+      "access": true,
+      "read": true
+    },
+    {
+      "id": "workspace-read-postgresql",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "postgresql",
+        "--access",
+        "--read"
+      ],
+      "timeout_seconds": 1500,
+      "kind": "database",
+      "engine": "postgresql",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        ".agents/agent-platform/postgres/environment.ps1",
+        "service/agent/workspace_access_database_test.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/agent_workspace.go",
+        "model/agent_workspace_read.go",
+        "service/agent/workspace_read.go",
+        "controller/agent_workspace.go",
+        "dto/agent_workspace.go",
+        "router/agent-router.go",
+        "middleware/agent_workspace_read.go",
+        "middleware/access_token_routes.go",
+        ".agents/agent-platform/contracts/v1/workspaces.schema.json",
+        ".agents/agent-platform/contracts/v1/workspaces.openapi.json",
+        ".agents/agent-platform/contracts/v1/workspaces.examples.json",
+        "router/agent_workspace_read_database_test.go",
+        ".agents/agent-platform/contracts/v1/core.schema.json",
+        ".agents/agent-platform/contracts/v1/transport.schema.json"
+      ],
+      "access": true,
+      "read": true
     }
   ],
   "workspace_scope": {
@@ -832,6 +990,22 @@
       "model/agent_workspace_access.go",
       "service/agent/workspace_access.go",
       "middleware/agent_workspace.go"
+    ]
+  },
+  "workspace_read_scope": {
+    "tasks": [
+      "P01-T03"
+    ],
+    "allowed_impact_paths": [
+      "model/agent_workspace_read.go",
+      "service/agent/workspace_read.go",
+      "service/agent/workspace_access.go",
+      "controller/agent_workspace.go",
+      "dto/agent_workspace.go",
+      "router/agent-router.go",
+      "middleware/agent_workspace_read.go",
+      "middleware/access_token_routes.go",
+      "model/agent_workspace_access.go"
     ]
   }
 }

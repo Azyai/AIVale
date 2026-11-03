@@ -18,7 +18,7 @@ import uuid
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / '.agents/agent-platform/delivery'))
-from gate import database_log_result, stop_process, workspace_access_log_result
+from gate import database_log_result, stop_process, workspace_access_log_result, workspace_read_log_result
 
 
 def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int) -> int:
@@ -35,13 +35,15 @@ def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int
             raise
 
 
-def execute(engine: str, output: Path, access: bool = False) -> dict:
+def execute(engine: str, output: Path, access: bool = False, read: bool = False) -> dict:
+    access = access or read
     run_id = datetime.now(timezone.utc).strftime('%y%m%d%H%M%S') + uuid.uuid4().hex[:8]
     report = {
         'schema_version': 1, 'engine': engine, 'run_id': run_id, 'status': 'incomplete',
         'started_at_utc': datetime.now(timezone.utc).isoformat(),
         'cleanup': {'stopped': False}, 'go_exit_code': None,
         'access_requested': access,
+        'read_requested': read,
     }
     owned_output = None
     state_path = None
@@ -66,6 +68,8 @@ def execute(engine: str, output: Path, access: bool = False) -> dict:
             raise ValueError('Go and the required local workspace database test must exist.')
         if access and not (REPO / 'service/agent/workspace_access_database_test.go').is_file():
             raise ValueError('The required local workspace access database test is missing.')
+        if read and not (REPO / 'router/agent_workspace_read_database_test.go').is_file():
+            raise ValueError('The required local workspace HTTP read database test is missing.')
         env = os.environ.copy()
         env['GOWORK'] = 'off'
         env['TEST_AGENT_WORKSPACE_ENGINE'] = engine
@@ -123,8 +127,22 @@ def execute(engine: str, output: Path, access: bool = False) -> dict:
                 report['status'] = 'failed'
                 raise ValueError('The real workspace access test failed; inspect ignored Go logs.')
             actual_access = workspace_access_log_result(output / 'access-go-test.stdout.log', engine, run_id)
+            if actual_access['tests']['top_level_passed'] != 1 or actual_access['evidence']['version'] != report['evidence']['version']:
+                raise ValueError('Workspace access must match the migration database version and exact test.')
             report['access_tests'] = actual_access['tests']
             report['access_evidence'] = actual_access['evidence']
+        if read:
+            read_argv = [shutil.which('go'), 'test', '-mod=readonly', '-count=1', '-json', '-timeout=5m', './router', '-run', '^TestAgentWorkspaceReadDatabaseMatrix$']
+            report['read_go_argv'] = read_argv
+            report['read_go_exit_code'] = run_logged(read_argv, env, output, 'read-go-test', 330)
+            if report['read_go_exit_code'] != 0:
+                report['status'] = 'failed'
+                raise ValueError('The real workspace HTTP read test failed; inspect ignored Go logs.')
+            actual_read = workspace_read_log_result(output / 'read-go-test.stdout.log', engine, run_id)
+            if actual_read['tests']['top_level_passed'] != 1 or actual_read['evidence']['version'] != report['evidence']['version']:
+                raise ValueError('Workspace HTTP read must match the migration database version and exact test.')
+            report['read_tests'] = actual_read['tests']
+            report['read_evidence'] = actual_read['evidence']
         report['status'] = 'passed'
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         report['reason'] = str(error) or type(error).__name__
@@ -161,8 +179,9 @@ def main() -> int:
     parser.add_argument('--engine', choices=('sqlite', 'mysql', 'postgresql'), required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--access', action='store_true', help='After migration validation, execute P01-T02 live workspace authorization cases.')
+    parser.add_argument('--read', action='store_true', help='Execute migration, access and P01-T03 real workspace HTTP read stages in order.')
     args = parser.parse_args()
-    report = execute(args.engine, args.output, args.access)
+    report = execute(args.engine, args.output, args.access, args.read)
     print(json.dumps({key: report.get(key) for key in ('engine', 'status', 'run_id', 'reason', 'cleanup')}, ensure_ascii=False))
     return {'passed': 0, 'failed': 1, 'incomplete': 2}[report['status']]
 

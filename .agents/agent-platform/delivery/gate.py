@@ -72,7 +72,7 @@ def snapshot(repo: Path, base: str, checks: list[dict], config: dict) -> dict:
 
 
 def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
-    if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in ('build', 'foundation', 'workspace', 'workspace-access'):
+    if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in ('build', 'foundation', 'workspace', 'workspace-access', 'workspace-read'):
         raise ValueError('Unsupported configuration or profile.')
     checks = config['checks']
     ids = [check['id'] for check in checks]
@@ -111,12 +111,14 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
         raise ValueError('Build-only profiles cannot claim local test execution.')
     if profile == 'foundation' and not any(check['kind'] in ('go_tests', 'vitest') for check in selected):
         raise ValueError('Foundation acceptance requires actual test checks.')
-    if profile in ('workspace', 'workspace-access'):
+    if profile in ('workspace', 'workspace-access', 'workspace-read'):
         engines = [check.get('engine') for check in selected if check['kind'] == 'database']
         if sorted(engines) != ['mysql', 'postgresql', 'sqlite']:
             raise ValueError('Workspace acceptance requires exactly one live check per database engine.')
-        if profile == 'workspace-access' and any(check.get('access') is not True for check in selected if check['kind'] == 'database'):
+        if profile in ('workspace-access', 'workspace-read') and any(check.get('access') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace access requires the live access stage on every database engine.')
+        if profile == 'workspace-read' and any(check.get('read') is not True for check in selected if check['kind'] == 'database'):
+            raise ValueError('Workspace read requires the live HTTP read stage on every database engine.')
     return selected
 
 
@@ -232,7 +234,27 @@ def validate_workspace_access_evidence(evidence: dict, engine: str, run_id: str)
             raise ValueError('Workspace access lacks the full role/action matrix or required revocation and isolation evidence.')
 
 
-def database_result(path: Path, engine: str, access: bool = False) -> dict:
+def validate_workspace_read_evidence(evidence: dict, engine: str, run_id: str) -> None:
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Workspace read evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Workspace read must execute on fresh and upgraded databases.')
+    fields = (
+        'route_registration', 'feature_gate', 'management_session_only', 'visible_scope',
+        'owner_scope', 'explicit_membership', 'scoped_count_pagination', 'literal_name_search',
+        'stable_order_empty_page', 'detail_scope', 'invalid_inputs', 'live_revocation',
+        'dto_boundary', 'effective_permissions', 'no_store', 'safe_errors', 'fixtures_only',
+        'context_database_errors',
+        'contracts_validated',
+    )
+    for scenario in scenarios:
+        requests = scenario.get('http_requests')
+        if type(requests) is not int or requests < 1 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('Workspace read lacks executed HTTP requests or required behavior evidence.')
+
+
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False) -> dict:
     report = json.loads(path.read_text(encoding='utf-8-sig'))
     if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
         raise ValueError('The live database runner did not complete successfully.')
@@ -252,6 +274,14 @@ def database_result(path: Path, engine: str, access: bool = False) -> dict:
             raise ValueError('Workspace access receipt differs from the actual Go events and summary.')
         if actual_access['tests']['top_level_passed'] != 1 or actual_access['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Workspace access must use the same real database version and exact top-level test.')
+    if read:
+        if not access or report.get('read_requested') is not True or report.get('read_go_exit_code') != 0:
+            raise ValueError('The live HTTP read stage and its access prerequisites were not executed successfully.')
+        actual_read = workspace_read_log_result(path.parent / 'read-go-test.stdout.log', engine, report['run_id'])
+        if report.get('read_tests') != actual_read['tests'] or report.get('read_evidence') != actual_read['evidence']:
+            raise ValueError('Workspace read receipt differs from the actual Go events and summary.')
+        if actual_read['tests']['top_level_passed'] != 1 or actual_read['evidence']['version'] != actual['evidence']['version']:
+            raise ValueError('Workspace read must use the same real database version and exact top-level test.')
     return report
 
 
@@ -285,6 +315,12 @@ def database_log_result(path: Path, engine: str, run_id: str) -> dict:
 def workspace_access_log_result(path: Path, engine: str, run_id: str) -> dict:
     result = go_test_summary(path, 'TestAgentWorkspaceAccessDatabaseMatrix', 'AGENT_WORKSPACE_ACCESS_DATABASE_RESULT ')
     validate_workspace_access_evidence(result['evidence'], engine, run_id)
+    return result
+
+
+def workspace_read_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentWorkspaceReadDatabaseMatrix', 'AGENT_WORKSPACE_READ_DATABASE_RESULT ')
+    validate_workspace_read_evidence(result['evidence'], engine, run_id)
     return result
 
 
@@ -332,16 +368,21 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
             access = check.get('access', False)
-            database = database_result(database_output / 'result.json', check['engine'], access)
+            read = check.get('read', False)
+            database = database_result(database_output / 'result.json', check['engine'], access, read)
             result['tests'] = dict(database['tests'])
             if access:
                 result['tests'] = {key: value + database['access_tests'][key] for key, value in result['tests'].items()}
+            if read:
+                result['tests'] = {key: value + database['read_tests'][key] for key, value in result['tests'].items()}
             result['database'] = {
                 'engine': check['engine'], 'version': database['evidence']['version'],
                 'run_id': database['run_id'], 'result': str(database_output / 'result.json'),
             }
             if access:
                 result['database']['access_verified'] = True
+            if read:
+                result['database']['read_verified'] = True
         result['status'] = 'passed'
         return result
     except KeyboardInterrupt:
@@ -387,7 +428,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
     report = {
         'schema_version': 1, 'task': task, 'profile': profile,
         'status': 'incomplete', 'acceptance': 'not_run',
-        'scope': {'foundation': 'selected_p00_foundation', 'workspace': 'selected_p01_workspace', 'workspace-access': 'selected_p01_workspace_access', 'build': 'build_only'}[profile],
+        'scope': {'foundation': 'selected_p00_foundation', 'workspace': 'selected_p01_workspace', 'workspace-access': 'selected_p01_workspace_access', 'workspace-read': 'selected_p01_workspace_read', 'build': 'build_only'}[profile],
         'full_repository_acceptance': False,
         'historical_full_baseline': 'unresolved; selected checks do not close P00-T01 history',
         'database': {'status': 'not_applicable'}, 'checks': [],
@@ -423,7 +464,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
         database_paths = database_impact_paths(initial['changed_paths'])
-        if schema_change or database_paths or profile in ('workspace', 'workspace-access'):
+        if schema_change or database_paths or profile in ('workspace', 'workspace-access', 'workspace-read'):
             report['database'] = {
                 'status': 'incomplete', 'trigger_paths': database_paths,
                 'explicit_schema_change': schema_change,
@@ -432,8 +473,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
             }
             if profile == 'foundation':
                 raise ValueError('Schema/database-impacting scope requires the missing live three-engine gate.')
-        if profile in ('workspace', 'workspace-access'):
-            scope = config['workspace_scope' if profile == 'workspace' else 'workspace_access_scope']
+        if profile in ('workspace', 'workspace-access', 'workspace-read'):
+            scope = config[{'workspace': 'workspace_scope', 'workspace-access': 'workspace_access_scope', 'workspace-read': 'workspace_read_scope'}[profile]]
             unsupported = sorted(set(database_paths) - set(scope['allowed_impact_paths']))
             if task not in scope['tasks'] or unsupported:
                 raise ValueError('Workspace checks cover only their declared task and database-impact paths; unsupported paths: ' + ', '.join(unsupported))
@@ -457,8 +498,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         report['status'] = 'passed'
         if profile == 'foundation':
             report['acceptance'] = 'selected_foundation'
-        elif profile in ('workspace', 'workspace-access'):
-            report['acceptance'] = 'selected_workspace' if profile == 'workspace' else 'selected_workspace_access'
+        elif profile in ('workspace', 'workspace-access', 'workspace-read'):
+            report['acceptance'] = {'workspace': 'selected_workspace', 'workspace-access': 'selected_workspace_access', 'workspace-read': 'selected_workspace_read'}[profile]
             report['database'] = {
                 'status': 'passed', 'trigger_paths': database_paths,
                 'explicit_schema_change': schema_change,
@@ -480,7 +521,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', choices=('build', 'foundation', 'workspace', 'workspace-access'), default='foundation')
+    parser.add_argument('--profile', choices=('build', 'foundation', 'workspace', 'workspace-access', 'workspace-read'), default='foundation')
     parser.add_argument('--base-ref', required=True, help='Reviewed Git baseline; tracked, staged and untracked changes are included.')
     parser.add_argument('--task', required=True, help='Plan task, for example P00-T09.')
     parser.add_argument('--schema-change', action='store_true', help='Add a database-impacting scope; this never waives detected changes.')
