@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.4 Agent模块边界与只读能力探测交付
+版本：1.5 共享响应、错误与分页传输契约
 
 日期：2026 年 11 月 2 日
 
@@ -1293,7 +1293,6 @@ P10增加独立子Run时，`parent_run_id`构成同Workspace有界树，`root_ru
   "message": "草稿已被其他操作修改，请刷新后合并。",
   "request_id": "req_01...",
   "data": {
-    "current_revision": 8,
     "field_errors": [],
     "retryable": false
   }
@@ -1301,6 +1300,14 @@ P10增加独立子Run时，`parent_run_id`构成同Workspace有界树，`root_ru
 ```
 
 **分页和排序。** 新管理列表统一接收 `page=1&page_size=20`，页码最小 1、每页 1–100；返回 `data={items,total,page,page_size}`，空列表为 `items:[]`。旧 `common.GetPageQuery` 使用 `p` 查询参数，不直接套用后声称已经支持 `page`；给新命名空间定义明确解析器或局部兼容适配，保持旧路由行为。排序字段必须从白名单选择，默认 `created_at desc,id desc`；筛选 `q/status/created_by/from/to` 均有长度和时间范围上限。高频事件和消息使用 `after_seq/limit` 游标；不使用深页 offset 追尾。
+
+P00-T06将公共core契约显式演进为1.1.0：在原错误目录外增加`500 AG_INTERNAL_ERROR`用于未知内部故障，原错误码和wire形状不变。统一适配器对200/201使用`OK`，202使用`ACCEPTED`，不合法状态/code组合不被静默改成成功。request_id从可信服务端上下文取得，缺失或非法时生成，长度1–64并同步`X-Oneapi-Request-Id`，不读取客户端同名header。错误data严格只有field_errors/retryable，不能附加任意内部details；上面的冲突样例不再携带current_revision，客户端通过有授权的资源GET刷新revision。
+
+分页URL只接受`page/page_size/sort`；未提供才默认1/20，page为规范正十进制且不超过`9007199254740991`，page_size为1–100。显式空值、重复参数、旧p、未知键、前导零、符号或指数形式拒绝。sort以`field:direction`及逗号分隔，field仅created_at/id，direction仅asc/desc；只接受单个id、单个created_at或created_at后跟id的组合，ID必须末项，省略时补id:desc。默认输入为`created_at:desc,id:desc`，不把原始字符串拼接到SQL。业务筛选由后续具体控制器按契约先解析并移出，再使用共享分页工具。
+
+`PageQuery`保存验证后的私有字段，排序防御复制；offset用checked int64内部计算，不作为JSON字段公开。分页响应的total非负且不超过JSON安全整数，nil items输出[]，不静默截断；坏仓储数据或无效服务端查询归为内部500，不归咎于客户400。P00-T06没有增加分页业务路由，解析和分页输出通过本地HTTP harness验证，不以固定空数据冒充业务接口。
+
+未知内部异常返回固定安全消息，受控错误只暴露目录分类及服务端静态校验文案；SQL、secret、绝对路径和上游原文不进入公开message/field_errors。普通Context取消不推断步骤超时或账务结果。新Agent保留命名空间采用局部兜底：响应尚未提交时转安全500，已提交时仅中止且不追加错误JSON；保留命名空间外的旧全站Recovery不在本任务重写范围。安全设计参考OWASP ASVS 5.0.0的输入校验与安全错误处理要求，不构成整站合规声明。
 
 **修改冲突。** 可编辑草稿、连接配置、工作区政策和计划配置返回整数 `revision`。修改必须携带 `expected_revision`，服务端条件更新失败返回 409；服务端不能用“最后一次写入覆盖”消除冲突。公开运行和终态记录不提供任意 PATCH。
 
@@ -1694,6 +1701,7 @@ P09工作流节点支持start、end、model、tool、condition、transform、app
 | 504 AG_STEP_TIMEOUT | 外部步骤超时 | 查询状态；写操作不能直接重放 | 取决于结果证据 |
 | 409 CALL_OUTCOME_UNKNOWN | 请求可能生效但无可靠回执 | 转人工处理，保留证据 | 禁止盲目重试 |
 | 503 AG_RECONCILIATION_PENDING | 用量或结算状态未能确定 | 显示待核账，不展示最终费用 | 后台对账任务 |
+| 500 AG_INTERNAL_ERROR | 未分类的内部故障 | 显示安全通用消息和request_id供联系支持 | 默认不自动重试 |
 
 接口实现与验收至少覆盖：跨工作区ID替换、旧Token无新scope、已经撤销的角色、二次提交不同body、revision冲突、SSE断线、secret不回显、未知执行结果、重复Webhook、超过预算并发争用。对修改鉴权和会话的实现，按仓库要求核对适用的 OWASP ASVS 控制项，并记录版本与用例；本设计不宣称当前实现已通过安全认证。参考 [Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) 与 [Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)。
 
@@ -2044,7 +2052,8 @@ P06在既有UI-06 Agent调试/运行页增加会话模式，不增加第二套�
 | `E:/Project/AIVale/new-api/controller/mcp*.go` | 连接、工具发现、授权、凭据操作 | 永不输出可用密钥 |
 | `E:/Project/AIVale/new-api/model/agent*.go` | P00-T05先放内部AgentScope值对象；后续为ag_实体及租户限定数据库操作 | AgentScope不是ORM模型，不创建表或迁移；后续持久化沿用GORM及兼容函数 |
 | `E:/Project/AIVale/new-api/service/agent/` | P00-T05先放RequestContext和只读Probe；后续为草稿、验证、发布、授权编排 | 不依赖前端或Eino具体事件类型；探测不访问DB、网络、SDK或启动后台任务 |
-| `E:/Project/AIVale/new-api/types/agent/` | 根模块Agent专属叶子错误wire类型 | 不依赖Gin、数据库、relaykit或tokenkit；完整错误渲染和映射留P00-T06 |
+| `E:/Project/AIVale/new-api/types/agent/` | 根模块Agent专属错误目录、wire类型、分页值对象 | 不依赖Gin、数据库、relaykit或tokenkit；公开分类与内部cause分离 |
+| `E:/Project/AIVale/new-api/pkg/agentapi/` | 新Agent HTTP成功/错误适配、ID与分页参数解析 | 依赖common包装及types/agent；由controller和middleware共同调用，不能反向依赖controller/service/model |
 | `E:/Project/AIVale/new-api/service/agentexecution/` | Run服务、worker、状态机、Eino适配、恢复 | 通过接口访问模型/工具/技能/产物 |
 | `E:/Project/AIVale/new-api/service/skill/` | 包校验、manifest、导入、版本及加载 | 不执行未经隔离的客户脚本 |
 | `E:/Project/AIVale/new-api/service/mcp/` | 官方SDK适配、连接发现、工具schema与调用 | 凭据通过服务端授权的引用解析 |
@@ -2060,6 +2069,8 @@ P06在既有UI-06 Agent调试/运行页增加会话模式，不增加第二套�
 | `E:/Project/AIVale/new-api/web/src/features/agent-runs/` | 运行列表、时间线、审批、产物、费用 | Query key必须含workspace；流状态与最终结果协调 |
 
 P00-T05的`model.AgentScope`仅含内部TeamID/WorkspaceID值，不具有GORM标签或迁移注册，也不是授权证明。`service/agent.RequestContext`携带标准Context、RequestID及可选Scope，全部字段使用`json:"-"`；Scope只能由后续真实身份和资源授权适配器绑定，当前公开Probe不绑定作用域。根模块`types/agent`先统一既有`AG_RUNTIME_UNAVAILABLE`拒绝响应的wire类型，保持P00-T02冻结形状，不提前实现P00-T06的通用错误映射、ID解析或分页。其他尚无真实调用点的模块不以空目录或返回空数据的假Repository充数。
+
+P00-T06在上述基础上把现有能力探测和功能禁用拒绝接入共享HTTP适配器；纯ID/分页工具留给后续真实资源接口复用。本批不新增客户CRUD、鉴权或数据库行为，叶子类型不导入宿主common JSON链；JSON ID的解码在pkg/agentapi使用common包装完成。公开传输Schema和样例保留版本管理，本地测试/夹具与详细验收结果按docs/project/07–09保留在忽略目录，不重新提交历史records。
 
 ### 8.2 稳定接口边界
 
@@ -2498,16 +2509,22 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P00-T06 建立新接口的错误与分页封装
 
-- [ ] 完成并记录验收证据
+- [x] 完成；实现与公开契约已同步，本地验证摘要见相应Git提交正文及交付说明，详细证据仅保存在忽略目录。
 - **前置依赖**：P00-T05。
 - **目标**：使所有新管理接口采用一个响应契约。
 - **具体操作**：
-  1. 复用现有success/message/data形式，新增稳定code和request_id。
-  2. 实现字符串ID解析、页大小上限和合法排序白名单。
-  3. 将内部错误转换为安全错误消息，不返回SQL、密钥或完整上游响应。
-- **交付物与落点**：新接口响应/分页工具和确定性契约用例。
-- **验收**：有效请求返回约定结构；超限分页、负ID和非法排序被拒绝且无内部信息泄漏。
-- **回退**：回退新模块调用，不改旧接口响应。
+  1. 核对P00-T05依赖、当前规范和冻结wire形状；按第6.1节将core演进为1.1.0，显式增加内部500码及sort输入约定，同步公开版本与样例，不发布虚构业务操作。
+  2. 在types/agent实现固定安全错误目录，隔离内部cause，保留wrapped错误分类；未知/nil/未知码安全回落，不把raw错误文本或未确认运行结果变成公开领域事实。
+  3. 在pkg/agentapi统一成功与错误HTTP适配、服务端关联ID和no-store；按200/201/202语义保留code，先安全编码再写响应，并接入现有探测与准入拒绝。
+  4. 为Agent保留命名空间增加局部失败兜底，未写响应转安全500，已写响应只中止，不向旧接口扩散新响应政策或泄露panic内容。
+  5. 实现路径字符串和JSON字符串ID解析，先校验规范ASCII形式再检查int64范围；数字JSON、null、负数及非规范形式不能经浮点恢复后接受。
+  6. 实现严格page/page_size/sort解析、受控排序枚举、私有PageQuery及checked offset；实现泛型分页输出，校验total与结果数量并把nil items规范为[]，区分客户400与坏服务端数据500。
+  7. 在本地集中用例和HTTP harness验证有效响应、非法边界、重复/未知参数、字段泄漏、包装错误、关联ID与局部panic；不添加假资源路由，不把工具验证说成真实租户列表或数据库验证。
+  8. 执行适用的本地回归、构建、静态检查及独立模块检查；测试、执行日志与详细结果只存忽略目录，缺少本地用例时明确未验证，不能把CI构建当验收。
+  9. 按互相依赖的完整模块分批中文Git提交，将必要契约与使用方同步；提交正文和交付说明只记真实验证摘要，完成后再标记本任务，不提交验收报告。
+- **交付物与落点**：types/agent固定错误与分页类型；pkg/agentapi边界适配工具；现有探测/gate接线；公开transport Schema/样例及说明。本地确定性用例和验收证据保持Git忽略。
+- **验收**：现有探测与准入拒绝保持冻结响应，成功状态/code正确，request_id有效；ID和分页边界拒绝，排序不接受原始SQL；未知内部错误与局部panic不回显SQL、密钥或原始上游消息；空分页输出[]且坏服务端数据不伪装客户错误；旧接口响应、功能关闭策略及未实现业务边界保持。
+- **回退**：保持平台总开关关闭，按模块逆序回退共享工具接线；不修改旧接口或删除配置/业务数据。公共错误码和版本演进按兼容规则保留，不以整体撤销历史业务提交回退。
 - **估算与门禁**：0.5 人日；G-API、G-SEC。
 
 <a id="task-p00-t07"></a>
