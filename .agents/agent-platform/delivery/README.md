@@ -27,6 +27,7 @@ python .agents/agent-platform/delivery/gate.py --profile build --base-ref HEAD -
 | `workspace` | 上述21项，加工作区 SQLite/MySQL/PostgreSQL 三个真实隔离环境验证 | 仅配置声明的 P01-T01 模型/迁移及所选基础，`acceptance=selected_workspace`；不代表后续角色鉴权或其他数据库变更已验证 |
 | `workspace-access` | 基础21项、管理会话适配验证，以及三个引擎各自的迁移和访问判定两阶段验证，共25项 | 仅P01-T02的工作区层访问判定，`acceptance=selected_workspace_access`；不授予后续资源正文、凭据或运行许可 |
 | `workspace-read` | 基础21项、管理会话适配验证，以及三个引擎各自的迁移、访问判定、真实生产路由三阶段验证，共25项 | 仅P01-T03工作区列表/详情和所选基础，`acceptance=selected_workspace_read`；不是工作区写操作或完整认证验收 |
+| `workspace-write` | 基础21项、管理会话适配，以及三个引擎各自迁移、访问、只读HTTP、写生命周期四阶段验证，共25项 | 仅P01-T04工作区创建/编辑/归档和所选基础，`acceptance=selected_workspace_write`；不代表后续Run或通用outbox已交付 |
 
 现有公共 CI 继续只做构建和静态检查。它没有本地测试源码，不因 `build` 返回 0 而完成验收。
 
@@ -59,6 +60,10 @@ P01-T03使用`--profile workspace-read --task P01-T03`及开发前基准。三�
 每个fresh/upgrade场景必须记录全部19项行为及正整数实际HTTP请求数；不以固定请求数代替行为断言。门禁重新读取三阶段原始Go事件，与收据、唯一场景摘要、引擎/运行编号/版本逐项核对。缺阶段、缺文件、零请求、跳过或收尾不全均不能通过；三阶段完整检查每引擎上限1500秒。历史完整PAT路由目录开放项单独保留，本配置不把所选绿色用例外推为全量通过。
 
 P00-T03 的 MySQL-only 约定只覆盖它原有的隔离启动环境。把 `--task` 改成 `P00-T03` 不能豁免新的 schema 或其他数据库变更。`build` 可编译数据库相关代码，但仍明确未执行验收。
+
+P01-T04使用`--profile workspace-write --task P01-T04`及开发前基准，限定本批写链路、主库加法迁移与严格JSON codec影响路径。三个数据库检查必须同时声明access/read/write；执行器`--write`隐含前两阶段，在同一四隔离目标上增加实际生产写路由。两个新表只在主库、索引/唯一约束、三次连接启动稳定、owner及初始管理员原子性、幂等scope/重放撤权/过期保留、revision及并发、归档保护、事务审计与日志故障恢复均须真实验证。
+
+写阶段各fresh/upgrade要求29项行为全true、startup_passes为精确整数3、http_requests为精确正整数。门禁重建四阶段原始Go事件并核对收据、唯一摘要、引擎/运行编号/版本及正常收尾；缺任一阶段、跳过、错误或输入变化均不能放行。完整单引擎上限1800秒覆盖启动240秒、四阶段各330秒及停止90秒。此配置不宣称归档已完成Run排空/停止计划、通用后台投递、ClickHouse审计投影或最低数据库版本验收。
 
 增加新领域或修改固定命令时，先补相关门禁和本地行为验证，再更新配置及计划；固定的 P00 用例不能代替跨租户、迁移、账务、运行恢复、真实网络或视觉验收。
 
