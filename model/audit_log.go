@@ -90,6 +90,17 @@ func RecordAuditLog(c *gin.Context, entry AuditLog) {
 			}
 		}
 	}
+	// Legacy audit persistence was independent of request cancellation. Preserve
+	// that behavior; callers of the explicit helper may impose their own limit.
+	RecordAuditLogWithContext(context.WithoutCancel(ctx), entry)
+}
+
+// RecordAuditLogWithContext writes an audit entry whose metadata has already
+// been selected by the caller. It does not copy request headers or bodies.
+func RecordAuditLogWithContext(ctx context.Context, entry AuditLog) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if entry.CreatedAt == 0 {
 		entry.CreatedAt = common.GetTimestamp()
 	}
@@ -105,7 +116,7 @@ func RecordAuditLog(c *gin.Context, entry AuditLog) {
 		logger.LogError(ctx, fmt.Sprintf("audit actor role unavailable (request_id=%s, actor_role=%d)", entry.RequestId, entry.ActorRole))
 		entry.ActorRole = 0 // Unknown actors remain visible to root only.
 	}
-	if entry.Username == "" {
+	if entry.Username == "" && entry.UserId > 0 {
 		entry.Username, _ = GetUsernameById(entry.UserId, false)
 	}
 	ua := []rune(entry.UserAgent)
@@ -131,7 +142,7 @@ func RecordAuditLog(c *gin.Context, entry AuditLog) {
 			EncodedOther string `gorm:"column:other;type:json"`
 		}{AuditLog: entry, EncodedOther: string(encoded)}
 	}
-	if err := LOG_DB.Table("audit_logs").Create(row).Error; err != nil {
+	if err := LOG_DB.WithContext(ctx).Table("audit_logs").Create(row).Error; err != nil {
 		logger.LogError(ctx, fmt.Sprintf("audit log write failed (request_id=%s): %v", entry.RequestId, err))
 	}
 }

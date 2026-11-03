@@ -371,6 +371,8 @@ func migrateDB() error {
 		&TeamMember{},
 		&AgentWorkspace{},
 		&AgentWorkspaceMember{},
+		&AgentIdempotencyKey{},
+		&AgentOutbox{},
 		&CustomOAuthProvider{},
 		&UserOAuthBinding{},
 		&PerfMetric{},
