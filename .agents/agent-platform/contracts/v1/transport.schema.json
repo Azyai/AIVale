@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:transport:1.1.0",
+  "title": "AIVale Agent shared transport contract 1.1.0",
+  "description": "Public transport examples and reusable shapes. No resource or execution operation is registered by this schema.",
+  "$defs": {
+    "successResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "enum": [
+            "OK",
+            "ACCEPTED"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {}
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": true
+    },
+    "pageData": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100
+        },
+        "total": {
+          "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/safeUnsigned"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size"
+      ],
+      "additionalProperties": false
+    },
+    "httpSuccess": {
+      "type": "object",
+      "properties": {
+        "http_status": {
+          "enum": [
+            200,
+            201,
+            202
+          ]
+        },
+        "body": {
+          "$ref": "#/$defs/successResponse"
+        }
+      },
+      "required": [
+        "http_status",
+        "body"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "http_status": {
+                "const": 202
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "body": {
+                "properties": {
+                  "code": {
+                    "const": "ACCEPTED"
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "body": {
+                "properties": {
+                  "code": {
+                    "const": "OK"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "httpError": {
+      "type": "object",
+      "properties": {
+        "http_status": {
+          "type": "integer",
+          "minimum": 400,
+          "maximum": 599
+        },
+        "body": {
+          "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+        }
+      },
+      "required": [
+        "http_status",
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "contract_version": {
+      "const": "1.1.0"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "json_id": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/id"
+    },
+    "pagination_query": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/paginationQuery"
+    },
+    "normalized_sort": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "enum": [
+              "created_at",
+              "id"
+            ]
+          },
+          "direction": {
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "required": [
+          "field",
+          "direction"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "empty_page_response": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/successResponse"
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "OK"
+            },
+            "data": {
+              "$ref": "#/$defs/pageData"
+            }
+          }
+        }
+      ]
+    },
+    "created_response": {
+      "$ref": "#/$defs/httpSuccess"
+    },
+    "accepted_response": {
+      "$ref": "#/$defs/httpSuccess"
+    },
+    "invalid_argument_response": {
+      "$ref": "#/$defs/httpError"
+    },
+    "internal_error_response": {
+      "$ref": "#/$defs/httpError"
+    }
+  },
+  "required": [
+    "contract_version",
+    "purpose",
+    "json_id",
+    "pagination_query",
+    "normalized_sort",
+    "empty_page_response",
+    "created_response",
+    "accepted_response",
+    "invalid_argument_response",
+    "internal_error_response"
+  ],
+  "additionalProperties": false
+}

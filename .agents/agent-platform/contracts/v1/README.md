@@ -1,6 +1,6 @@
 # Agent 平台最小业务与协议契约
 
-契约版本为 **1.0.0**，对应开发任务 **P00-T02**。本目录冻结首个纯文本 Agent 闭环的命名、数据类型、归属和接口形状，作为后续数据库、Go DTO、前端类型与接口实现的共同输入。
+当前公共契约版本为 **1.1.0**。首个纯文本Agent契约由 **P00-T02** 建立，**P00-T06** 在同一v1目录显式补充通用内部错误与分页排序约定。它是后续数据库、Go DTO、前端类型与接口实现的共同输入。
 
 本任务交付契约材料，相关业务 API 尚未上线。Schema 和样例校验不能代替服务端鉴权、真实计费、数据库兼容性或安全合规验证。
 
@@ -13,6 +13,8 @@
 | `cases.json`（仅本地） | 合法边界、非法输入及归属冲突的测试预期，不随 Git 分发 |
 | `capabilities.openapi.json` | P00-T05全局只读能力探测的OpenAPI 3.1描述及局部响应Schema |
 | `capabilities.examples.json` | 探测禁用、配置开启但未就绪、禁用gate拒绝未支持写方法的开发样例 |
+| `transport.schema.json` | P00-T06共享成功、分页响应及公开传输样例Schema，不发布新的业务路由 |
+| `transport.examples.json` | 长期公开的ID、分页、成功与安全错误示例，不是某次验收记录或测试专用反例集 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -36,7 +38,7 @@ Schema 根结构是开发用的完整场景，不是生产请求 DTO。后续实
 | quota | 非负十进制字符串，最大 int64；`0` 是合法数量，但不能支付正费用调用，不代表无限额度 |
 | 时间 | UTC Unix 毫秒数值；旧表秒字段由适配层显式转换，不更改旧字段含义 |
 | 整数边界 | 时间、seq、cursor、revision 使用 JSON 安全整数，最大 `9007199254740991`，不得经过浮点舍入恢复原值 |
-| 分页 | `page` 默认 1、`page_size` 默认 20，上限 100；返回 `items/total/page/page_size`，空结果为数组 `[]` |
+| 分页 | `page` 默认1且不超过JSON安全整数，`page_size` 默认20、范围1–100；返回 `items/total/page/page_size`，total非负且不超过JSON安全整数，空结果为数组 `[]` |
 | 事件 | seq 从 1 开始、Run 内严格递增，允许序号间有空隙；cursor 从 0 开始重放；先持久化再发送 |
 | 修改版本 | revision 从 1 开始；修改带 expected_revision，冲突返回 409，不采用最后写入覆盖 |
 
@@ -89,7 +91,7 @@ Run 状态只有八种：`queued`、`running`、`waiting_approval`、`cancelling
 
 conversation、workflow、Skills、MCP、脚本、产物和子 Agent 是后续扩展，不通过预填假字段加入首个闭环。扩大输入类型、改变费用单位、ID 形式、终态或事件序号规则属于不兼容修改，应提升主版本并提供迁移；新增可选响应字段或可忽略事件可以按兼容规则演进。请求端仍严格拒绝未支持的危险字段。
 
-后续 P00-T06 实现错误和分页封装时复用本契约及正反案例，并补真实 Go/API 验证；不得以本目录的离线通过替代已经上线接口的行为验收。
+P00-T06的共享工具复用本契约；测试源码、负向案例和详细结果仅保留本地。离线Schema校验不能代替真实Go/HTTP边界验证，也不代表尚未发布的业务接口已经可调用。
 
 ## P00-T05 全局只读能力探测
 
@@ -105,4 +107,37 @@ conversation、workflow、Skills、MCP、脚本、产物和子 Agent 是后续�
 curl.exe --include --request GET http://127.0.0.1:3000/api/agent-platform/capabilities
 ```
 
-这里提供的是可执行命令和开发契约样例；编写文档不会启动应用、调用该地址或证明生产部署状态。局部Schema/样例使用本地jsonschema校验，不等同于完整OpenAPI规范工具检查，也不替代实际路由与前端客户端测试。原`core.schema.json` v1.0.0保持冻结，P00-T02验证入口继续只负责原有场景。
+这里提供的是可执行命令和开发契约样例；编写文档不会启动应用、调用该地址或证明生产部署状态。局部Schema/样例校验不等同于完整OpenAPI规范工具检查，也不替代实际路由与前端客户端测试。该探测的`schema_version=1`、OpenAPI文档自身版本1.0.0及请求响应形状保持不变；共享core契约版本演进见下节。
+
+## P00-T06 共享传输契约与版本演进
+
+1.1.0在原22个错误码之外增加`AG_INTERNAL_ERROR`，HTTP状态500，固定安全消息为`The request could not be completed`。未知或未经分类的内部错误不能冒充平台关闭的503。原错误码、HTTP状态和`success/code/message/request_id/data`形状不变；公开文本场景仅同步顶层contract_version，业务内容不变。严格固定旧版本的Schema消费者应显式升级到1.1.0；不能把新目录与旧版本声明混用。
+
+根模块的`types/agent`定义固定错误目录及安全wire类型，`pkg/agentapi`负责HTTP适配。受控错误允许通过普通Go包装保留错误分类，未知错误返回通用500；内部cause、SQL、密钥、绝对路径和原始上游内容不进入message或field_errors。字段错误只由服务端声明的字段名和静态规则文案构造，不能传入被拒绝值或`err.Error()`；长度限制以合法Unicode字符计，path/message各不超过256，field_errors最多100，空数组保持`[]`。retryable默认false，只有后续操作具备幂等与结果证据时才能另行定义重试政策；普通Context取消不自动构成步骤超时、未知执行结果或账务待核对。
+
+HTTP响应由同一适配器设置服务端request_id及`X-Oneapi-Request-Id`，值长1–64；从可信请求上下文读取有效值，缺失或非法时重新生成，不信任客户端同名header。200/201成功使用`OK`，202使用`ACCEPTED`，适配器不静默修正不合法的状态/code组合。能力探测及功能禁用拒绝采用该公共工具，旧模型协议与旧管理接口不进行全站响应迁移。
+
+Agent保留命名空间内的局部兜底在响应尚未提交时返回通用500；已写出响应后仅中止，不能追加另一份JSON或泄露panic内容。该边界不等于重写全站Recovery或证明全站日志/审计合规。安全设计依据为OWASP ASVS 5.0.0的输入正向校验与安全错误要求，参见 [Input Validation](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html) 与 [Error Handling](https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html)；本契约不声明通过整站ASVS认证。
+
+### ID与分页输入
+
+`ParseID`先验证ASCII十进制词法和长度，再按有符号int64转换。`ParseJSONID`经common包装将JSON解为字符串后应用同一规则；JSON数字、null、对象或数组不能先转换浮点再恢复ID。传输层解析不代表资源归属或操作授权。
+
+分页工具只拥有`page/page_size/sort`三个查询参数。未提供参数才采用默认1/20；显式空值、重复参数、旧`p`或未知键拒绝，数字必须是无前导零的正十进制形式。端点需要的业务筛选参数应先由该控制器按自身契约解析并移出，再调用共享分页解析器，不能将工具对未知参数的拒绝改为全量忽略。
+
+sort使用`字段:方向`，多项以逗号连接；仅允许以下八个输入值，精确区分大小写，不接受空白、重复字段或SQL片段：
+
+```text
+id:asc
+id:desc
+created_at:asc
+created_at:desc
+created_at:asc,id:asc
+created_at:asc,id:desc
+created_at:desc,id:asc
+created_at:desc,id:desc
+```
+
+默认`created_at:desc,id:desc`；省略ID时补`id:desc`稳定次序，ID必须是最后一项。解析器返回受控字段和方向枚举，模型层只能映射这些枚举，不能将原始sort字符串拼到SQL。
+
+`PageQuery`以私有字段保存验证结果，排序切片防御复制；零值不是有效查询。offset使用checked int64运算，它是内部数据库偏移，不作为JSON数字公开，可能大于JavaScript安全整数。`NewPage`将nil items规范成空数组，检查total安全整数、页大小及结果数量；无效服务端查询或仓储数据作为内部500处理，不伪装成客户400，也不静默截断结果。当前仍没有分页业务处理器；共享工具通过本地HTTP harness验证，不以虚构路由或固定空列表冒充业务实现。

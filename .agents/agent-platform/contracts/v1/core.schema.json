@@ -1,10 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:aivale:agent-platform:core:1.0.0",
+  "$id": "urn:aivale:agent-platform:core:1.1.0",
   "title": "AIVale text Agent contract fixture v1",
   "description": "Development-only contract fixture. Context is server-side evidence, not accepted public request data.",
   "x-contract": {
-    "version": "1.0.0",
+    "version": "1.1.0",
+    "revision_task_id": "P00-T06",
     "task_id": "P00-T02",
     "database": {
       "table_prefix": "ag_",
@@ -79,7 +80,8 @@
       "AG_TOOL_UPSTREAM_ERROR": 502,
       "AG_STEP_TIMEOUT": 504,
       "CALL_OUTCOME_UNKNOWN": 409,
-      "AG_RECONCILIATION_PENDING": 503
+      "AG_RECONCILIATION_PENDING": 503,
+      "AG_INTERNAL_ERROR": 500
     },
     "schema_error": {
       "http_status": 400,
@@ -206,7 +208,8 @@
         "AG_TOOL_UPSTREAM_ERROR",
         "AG_STEP_TIMEOUT",
         "CALL_OUTCOME_UNKNOWN",
-        "AG_RECONCILIATION_PENDING"
+        "AG_RECONCILIATION_PENDING",
+        "AG_INTERNAL_ERROR"
       ]
     },
     "errorResponse": {
@@ -672,6 +675,20 @@
           "minimum": 1,
           "maximum": 100,
           "default": 20
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "id:asc",
+            "id:desc",
+            "created_at:asc",
+            "created_at:desc",
+            "created_at:asc,id:asc",
+            "created_at:asc,id:desc",
+            "created_at:desc,id:asc",
+            "created_at:desc,id:desc"
+          ],
+          "default": "created_at:desc,id:desc"
         }
       },
       "required": [],
@@ -740,7 +757,7 @@
   "type": "object",
   "properties": {
     "contract_version": {
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "context": {
       "type": "object",

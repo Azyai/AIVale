@@ -1,0 +1,87 @@
+{
+  "contract_version": "1.1.0",
+  "purpose": "Public shared-tool examples, not a captured execution result or a declaration of registered list/create/run APIs. All identifiers are illustrative.",
+  "json_id": "9223372036854775807",
+  "pagination_query": {
+    "page": 2,
+    "page_size": 20,
+    "sort": "created_at:asc"
+  },
+  "normalized_sort": [
+    {
+      "field": "created_at",
+      "direction": "asc"
+    },
+    {
+      "field": "id",
+      "direction": "desc"
+    }
+  ],
+  "empty_page_response": {
+    "success": true,
+    "code": "OK",
+    "message": "",
+    "request_id": "example-page",
+    "data": {
+      "items": [],
+      "total": 0,
+      "page": 1,
+      "page_size": 20
+    }
+  },
+  "created_response": {
+    "http_status": 201,
+    "body": {
+      "success": true,
+      "code": "OK",
+      "message": "",
+      "request_id": "example-created",
+      "data": {
+        "id": "123"
+      }
+    }
+  },
+  "accepted_response": {
+    "http_status": 202,
+    "body": {
+      "success": true,
+      "code": "ACCEPTED",
+      "message": "",
+      "request_id": "example-accepted",
+      "data": {
+        "id": "123"
+      }
+    }
+  },
+  "invalid_argument_response": {
+    "http_status": 400,
+    "body": {
+      "success": false,
+      "code": "AG_INVALID_ARGUMENT",
+      "message": "Request parameters are invalid",
+      "request_id": "example-invalid-page",
+      "data": {
+        "field_errors": [
+          {
+            "path": "page_size",
+            "message": "Page size must be a canonical integer between 1 and 100"
+          }
+        ],
+        "retryable": false
+      }
+    }
+  },
+  "internal_error_response": {
+    "http_status": 500,
+    "body": {
+      "success": false,
+      "code": "AG_INTERNAL_ERROR",
+      "message": "The request could not be completed",
+      "request_id": "example-internal-error",
+      "data": {
+        "field_errors": [],
+        "retryable": false
+      }
+    }
+  }
+}
