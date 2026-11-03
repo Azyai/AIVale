@@ -1,0 +1,233 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P01-T04",
+  "description": "Synthetic development examples; not execution or acceptance evidence. POST expiry header examples refer to the original persisted receipt expiry.",
+  "examples": [
+    {
+      "name": "workspace-create-demo-0001",
+      "schema": "createResponse",
+      "http_status": 201,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-create-demo-0001",
+        "data": {
+          "id": "101",
+          "slug": "demo-workspace",
+          "status": "active",
+          "revision": 1,
+          "created_at": 1793664000000
+        }
+      },
+      "request": {
+        "name": "Demo workspace",
+        "description": "Synthetic development example",
+        "slug": "demo-workspace"
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750400000"
+      }
+    },
+    {
+      "name": "workspace-create-replay-0001",
+      "schema": "createResponse",
+      "http_status": 201,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-create-replay-0001",
+        "data": {
+          "id": "101",
+          "slug": "demo-workspace",
+          "status": "active",
+          "revision": 1,
+          "created_at": 1793664000000
+        }
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750400000"
+      }
+    },
+    {
+      "name": "workspace-edit-demo-0001",
+      "schema": "updateResponse",
+      "http_status": 200,
+      "request": {
+        "name": "Updated workspace",
+        "expected_revision": 1
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-edit-demo-0001",
+        "data": {
+          "id": "101",
+          "slug": "demo-workspace",
+          "name": "Updated workspace",
+          "status": "active",
+          "current_role": "admin",
+          "created_at": 1793664000000,
+          "updated_at": 1793664001000,
+          "revision": 2,
+          "effective_permissions": [
+            "agent:publish",
+            "agent:read",
+            "agent:write",
+            "credential:manage",
+            "mcp:manage",
+            "mcp:read",
+            "member:manage",
+            "run:read",
+            "schedule:manage",
+            "schedule:read",
+            "skill:publish",
+            "skill:read",
+            "skill:write",
+            "workspace:manage",
+            "workspace:read"
+          ],
+          "description": "Synthetic development example"
+        }
+      }
+    },
+    {
+      "name": "workspace-archive-demo-0001",
+      "schema": "archiveResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-archive-demo-0001",
+        "data": {
+          "id": "101",
+          "status": "archived",
+          "revision": 3,
+          "archived_at": 1793664002000,
+          "blocking_run_count": 0
+        }
+      },
+      "request": {
+        "expected_revision": 2,
+        "reason": "Development workspace retired"
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750400000"
+      }
+    },
+    {
+      "name": "workspace-archive-replay-0001",
+      "schema": "archiveResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-archive-replay-0001",
+        "data": {
+          "id": "101",
+          "status": "archived",
+          "revision": 3,
+          "archived_at": 1793664002000,
+          "blocking_run_count": 0
+        }
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750400000"
+      }
+    },
+    {
+      "name": "workspace-write-denied-0001",
+      "schema": "errorResponse",
+      "http_status": 403,
+      "response": {
+        "success": false,
+        "code": "AG_PERMISSION_DENIED",
+        "message": "This operation is not permitted",
+        "request_id": "workspace-write-denied-0001",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "workspace-stale-revision-0001",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "response": {
+        "success": false,
+        "code": "AG_DRAFT_REVISION_CONFLICT",
+        "message": "The draft revision has changed",
+        "request_id": "workspace-stale-revision-0001",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "workspace-key-conflict-0001",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "response": {
+        "success": false,
+        "code": "AG_IDEMPOTENCY_CONFLICT",
+        "message": "The idempotency key conflicts with another request",
+        "request_id": "workspace-key-conflict-0001",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "workspace-active-runs-0001",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "response": {
+        "success": false,
+        "code": "AG_RESOURCE_IN_USE",
+        "message": "The resource is still in use",
+        "request_id": "workspace-active-runs-0001",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "workspace-large-body-0001",
+      "schema": "errorResponse",
+      "http_status": 413,
+      "response": {
+        "success": false,
+        "code": "AG_PAYLOAD_TOO_LARGE",
+        "message": "The request exceeds the allowed size",
+        "request_id": "workspace-large-body-0001",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "workspace-runtime-boundary-0001",
+      "schema": "errorResponse",
+      "http_status": 503,
+      "response": {
+        "success": false,
+        "code": "AG_RUNTIME_UNAVAILABLE",
+        "message": "Agent platform capability is unavailable",
+        "request_id": "workspace-runtime-boundary-0001",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    }
+  ]
+}

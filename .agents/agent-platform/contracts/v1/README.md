@@ -4,6 +4,8 @@
 
 P01-T03在共享1.1.0契约上新增独立版本1.0.0的工作区只读接口描述，正式注册API-001/003；其他远期业务仍不因契约存在而开放。Schema和样例校验不能代替服务端鉴权、真实计费、数据库兼容性或安全合规验证。
 
+P01-T04以独立1.0.0版本的`workspace-writes.*`补充API-002/004/005工作区创建、编辑和运行域尚未接入前的归档；不改既有读取或探测响应。新建/归档返回不可变收据，编辑返回既有详情形状；运行执行与计划排空仍未开放。
+
 ## 文件与验证入口
 
 | 文件 | 用途 |
@@ -18,6 +20,9 @@ P01-T03在共享1.1.0契约上新增独立版本1.0.0的工作区只读接口描
 | `workspaces.schema.json` | P01-T03工作区列表/详情显式DTO、字符串ID与安全数值、空态及字段白名单；独立版本1.0.0，不改旧core/probe协议 |
 | `workspaces.openapi.json` | API-001/003的管理会话身份、page/page_size/sort/q、错误与no-store规则；不声明写接口或API-118 |
 | `workspaces.examples.json` | 合成的列表/详情、无团队/无结果/空页及固定错误开发示例，不是执行报告 |
+| `workspace-writes.schema.json` | P01-T04创建/编辑/归档请求、最小不可变收据和固定响应；编辑复用既有详情Schema |
+| `workspace-writes.openapi.json` | API-002/004/005的管理会话、严格JSON、revision、幂等键及归档限制 |
+| `workspace-writes.examples.json` | 合成的创建/重放、编辑、归档及安全错误开发示例，不是执行报告 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -99,6 +104,22 @@ Run 状态只有八种：`queued`、`running`、`waiting_approval`、`cancelling
 conversation、workflow、Skills、MCP、脚本、产物和子 Agent 是后续扩展，不通过预填假字段加入首个闭环。扩大输入类型、改变费用单位、ID 形式、终态或事件序号规则属于不兼容修改，应提升主版本并提供迁移；新增可选响应字段或可忽略事件可以按兼容规则演进。请求端仍严格拒绝未支持的危险字段。
 
 P00-T06的共享工具复用本契约；测试源码、负向案例和详细结果仅保留本地。离线Schema校验不能代替真实Go/HTTP边界验证，也不代表尚未发布的业务接口已经可调用。
+
+## P01-T04 工作区生命周期写入
+
+三个写入口继续受默认关闭的平台总开关控制，只接受现有显式Bearer管理会话；不从Cookie、PAT、模型Token、body或自定义租户头建立身份。创建仅限当前Team双事实owner；编辑/归档要求当前owner或显式active admin，active/suspended工作区可管理。具体状态与范围仍在业务事务中重新检查，HTTP认证结果不能替代实时授权。
+
+请求只接受`application/json`及可选`charset=utf-8`，Content-Encoding为空/identity，不接受任何query。body最多1MiB，必须是唯一完整对象，字段名精确匹配白名单；拒绝重复解码key（含转义后重名）、未知字段、大小写变体、null、非法UTF-8、未成对surrogate及拼接JSON。`expected_revision`须为1到`9007199254740991`的规范正整数JSON词法，不能传字符串、小数或指数。标准JSON Schema只判断解析后的数值，不能独立验证源词法或UTF-8字节上限；这些约束由HTTP边界与服务执行，Schema中相应`x-*`仅记录补充规则。
+
+创建body为必需name、可选description/slug。name在修剪前最多128码点/512字节，修剪后非空；description最多4096字节并保留首尾空白；二者须合法UTF-8且无NUL。slug若提供，必须是1–64位规范小写ASCII，不静默修剪或转小写；缺省值由服务生成一次。名称允许重复，Team内slug唯一且归档后不回收。201 data只含`id/slug/status=active/revision=1/created_at`，不回放易变化的名称、描述或权限；需要当前信息时请求授权GET。
+
+编辑只接受可选name/description和必需expected_revision，至少提供一个可编辑字段；description空串可清除描述。禁止更改slug、Team、主体、状态、策略及预算。200 data复用既有详情契约；旧revision为409，错误data不添加current_revision，客户端通过授权GET刷新。
+
+归档body为expected_revision及reason。reason在修剪前最多512码点/2048字节，修剪后非空；不在审计中保存原文。当前只支持运行域尚未接入前的归档：active_run_count为正返回409；若已存在ag_runs/ag_schedules/ag_schedule_fires表，在对应领域适配完成前返回503，不能假装已经停止计划或排空真实任务。200 data为`id/status=archived/revision/archived_at/blocking_run_count=0`，不提供虚构的stopped_schedule_count。归档不物理删除资源或回收slug，一般列表/详情不再显示该对象；历史运行的读取例外需在后续运行领域单独实现。
+
+两个POST必须携带单值`Idempotency-Key`，长度16–128，字符为可见ASCII 0x21–0x7e，不修剪；原key不进入存储或审计。成功和同key成功重放返回`Idempotency-Key-Expires-At`响应头，值为原收据的UTC Unix毫秒规范十进制字符串，初始保留期至少24小时。本版本不清理/替换过期行：超过该时间仍返回已存同请求收据，异请求继续409，不将过期key复用为新的副作用。每次重放仍检查当前授权；创建目标已归档不可重放，归档同key重放仅对当前仍有该对象管理权的主体返回原收据。PATCH由revision CAS控制，不要求该header。
+
+工作区变更、完成收据和去内容化审计outbox同一主库事务落地；审计投影到独立日志存储的失败不能把已提交业务改报回滚。HTTP始终只返回固定安全envelope和no-store，不暴露内部审计payload、SQL、原key或私密请求内容。公开示例用于开发说明，不能作为本地或生产执行结果。
 
 ## P00-T05 全局只读能力探测
 

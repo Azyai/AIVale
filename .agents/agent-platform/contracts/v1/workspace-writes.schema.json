@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:workspace-writes:1.0.0",
+  "title": "AIVale workspace lifecycle write contract 1.0.0",
+  "description": "P01-T04 adds only API-002/004/005. Existing workspace read and probe/core schemas remain unchanged. Request decoding adds source-level checks beyond JSON Schema.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P01-T04",
+    "core_version": "1.1.0",
+    "read_version": "1.0.0",
+    "api_ids": [
+      "API-002",
+      "API-004",
+      "API-005"
+    ],
+    "authentication": "Existing explicit Bearer dashboard session only; no cookie fallback; PAT/model tokens rejected.",
+    "requests": {
+      "max_bytes": 1048576,
+      "media_type": "application/json; optional charset=utf-8 only",
+      "content_encoding": "absent, empty or identity",
+      "query": "none, including an empty query marker",
+      "strict_json": "One object only; exact field names; reject unknown, duplicate decoded keys at every depth, null, invalid UTF-8 and unpaired Unicode surrogates.",
+      "slug": "Optional on create; if supplied, canonical lowercase ASCII 1..64 with no trim/lower conversion.",
+      "expected_revision": "Canonical positive JSON source integer, 1..9007199254740991; no float/exponent/string/null."
+    },
+    "idempotency": {
+      "required_for": [
+        "POST collection",
+        "POST archive"
+      ],
+      "key_min_bytes": 16,
+      "key_max_bytes": 128,
+      "key_characters": "Visible ASCII 0x21..0x7e; exactly one header value; no trim.",
+      "response_header": "Idempotency-Key-Expires-At",
+      "expires_at_unit": "UTC Unix milliseconds as canonical positive decimal string",
+      "minimum_retention_hours": 24,
+      "expired_key_behavior": "No cleanup/reuse in this release: same request still returns stored receipt after live authorization; different request remains 409. Expiry does not allow a new side effect.",
+      "replay": "Creation and archive return the original immutable receipt; authorization is checked again. An archived create target is not replayable. Archive replay can use the archived target only while current management permission remains.",
+      "patch": "No key required; expected_revision CAS controls updates."
+    },
+    "archive": "Pre-runtime only: active_run_count must be zero. If ag_runs/ag_schedules/ag_schedule_fires tables exist, archive is unavailable until the corresponding domain adapters are implemented. No run/schedule draining or stopped-schedule count is claimed.",
+    "errors": "Fixed shared envelope only; no current_revision or blocking count inside error data."
+  },
+  "$defs": {
+    "createRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\x00]*$",
+          "x-max-utf8-bytes": 512,
+          "description": "Raw input must be valid UTF-8 without NUL and at most 128 code points / 512 bytes, then trim surrounding Unicode whitespace and require a nonempty result."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "x-max-utf8-bytes": 4096,
+          "description": "Valid UTF-8 without NUL, at most 4096 bytes; preserve surrounding whitespace. Empty string clears the description."
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "updateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\x00]*$",
+          "x-max-utf8-bytes": 512,
+          "description": "Raw input must be valid UTF-8 without NUL and at most 128 code points / 512 bytes, then trim surrounding Unicode whitespace and require a nonempty result."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "x-max-utf8-bytes": 4096,
+          "description": "Valid UTF-8 without NUL, at most 4096 bytes; preserve surrounding whitespace. Empty string clears the description."
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "x-json-lexical-integer": true,
+          "description": "The JSON source token must contain only canonical positive decimal digits; strings, fractions, exponent notation and null are rejected before conversion. JSON Schema alone cannot verify numeric source spelling."
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "description"
+          ]
+        }
+      ]
+    },
+    "archiveRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "x-json-lexical-integer": true,
+          "description": "The JSON source token must contain only canonical positive decimal digits; strings, fractions, exponent notation and null are rejected before conversion. JSON Schema alone cannot verify numeric source spelling."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\x00]*$",
+          "x-max-utf8-bytes": 2048,
+          "description": "Before trimming: valid UTF-8 without NUL, at most 512 code points / 2048 bytes; after trim: nonempty. Only its digest may enter the audit event."
+        }
+      },
+      "required": [
+        "expected_revision",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "createReceipt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+          "maxLength": 64
+        },
+        "status": {
+          "const": "active"
+        },
+        "revision": {
+          "type": "integer",
+          "const": 1
+        },
+        "created_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "status",
+        "revision",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "archiveReceipt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "status": {
+          "const": "archived"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "archived_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "blocking_run_count": {
+          "type": "integer",
+          "const": 0
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "revision",
+        "archived_at",
+        "blocking_run_count"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    },
+    "createResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/createReceipt"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "updateResponse": {
+      "$ref": "urn:aivale:agent-platform:workspaces:1.0.0#/$defs/detailResponse"
+    },
+    "archiveResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/archiveReceipt"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/createResponse"
+    },
+    {
+      "$ref": "#/$defs/updateResponse"
+    },
+    {
+      "$ref": "#/$defs/archiveResponse"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    }
+  ]
+}

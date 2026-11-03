@@ -1,0 +1,858 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale workspace lifecycle writes",
+    "version": "1.0.0",
+    "description": "Independent P01-T04 API-002/004/005 extension. Shared core 1.1.0 and prior read contract stay unchanged. Platform defaults off; runtime_ready remains false. No member management, execution or runtime draining APIs are published."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "Local development example only"
+    }
+  ],
+  "security": [
+    {
+      "DashboardSession": []
+    }
+  ],
+  "paths": {
+    "/api/agent-platform/workspaces": {
+      "post": {
+        "operationId": "createAgentWorkspace",
+        "summary": "Create a workspace as current Team owner",
+        "description": "Requires current live double-fact Team ownership. Server chooses Team/actor/default policy and creates an explicit initial admin in one transaction. Omitted slug is generated once; names may repeat, slugs remain reserved including after archive. Same-key replay returns original immutable receipt after current authorization. All query parameters and even an empty query marker are rejected. Body is one strict UTF-8 JSON object <=1 MiB, application/json with optional UTF-8 charset; Content-Encoding absent/empty/identity. Unknown/duplicate decoded fields, null, invalid Unicode and trailing documents are rejected.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[\\x21-\\x7e]{16,128}$"
+            },
+            "description": "Exactly one visible ASCII value. No whitespace trimming. Persisted only as a hash. Reuse the same key for a retry; different normalized input under the same current scope returns 409."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-writes.schema.json#/$defs/createRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid JSON, content type/encoding, key, query, ID, fields or revision spelling",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "An explicit live dashboard Bearer session is required; cookies/PAT/model tokens rejected",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current visible subject lacks Team owner or workspace management permission",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace unavailable, including cross-tenant/archived/ungranted target or revoked replay access",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, idempotency, slug or active-run conflict; no internal conflict details exposed",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fixed safe internal error",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled or archive is unavailable until runtime domain adapters exist",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Immutable creation receipt, including replay",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              },
+              "Idempotency-Key-Expires-At": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|900[0-6][0-9]{12}|90070[0-9]{11}|90071[0-8][0-9]{10}|900719[0-8][0-9]{9}|9007199[0-1][0-9]{8}|90071992[0-4][0-9]{7}|900719925[0-3][0-9]{6}|9007199254[0-6][0-9]{5}|90071992547[0-3][0-9]{4}|9007199254740[0-8][0-9]{2}|90071992547409[0-8][0-9]|9007199254740990|9007199254740991)$",
+                  "maxLength": 16
+                },
+                "description": "Always returned on successful POST and successful same-key replay. Original persisted expiry, UTC Unix milliseconds; minimum initial retention 24 hours. Rows are not reused after this time in this release."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/createResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}": {
+      "patch": {
+        "operationId": "updateAgentWorkspace",
+        "summary": "Edit workspace metadata with revision CAS",
+        "description": "Current owner or explicit active admin may edit active/suspended workspace. Only name and description can change, at least one required; expected_revision must be a canonical positive safe JSON integer token. No key is required. Old revision returns 409; refresh revision via an authorized GET. All query parameters and even an empty query marker are rejected. Body is one strict UTF-8 JSON object <=1 MiB, application/json with optional UTF-8 charset; Content-Encoding absent/empty/identity. Unknown/duplicate decoded fields, null, invalid Unicode and trailing documents are rejected.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-writes.schema.json#/$defs/updateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid JSON, content type/encoding, key, query, ID, fields or revision spelling",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "An explicit live dashboard Bearer session is required; cookies/PAT/model tokens rejected",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current visible subject lacks Team owner or workspace management permission",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace unavailable, including cross-tenant/archived/ungranted target or revoked replay access",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, idempotency, slug or active-run conflict; no internal conflict details exposed",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fixed safe internal error",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled or archive is unavailable until runtime domain adapters exist",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current updated workspace detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/updateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}/archive": {
+      "post": {
+        "operationId": "archiveAgentWorkspace",
+        "summary": "Archive an unused pre-runtime workspace",
+        "description": "Requires current owner or explicit active admin, expected_revision, reason and a key. Positive active_run_count rejects with 409. Presence of ag_runs/ag_schedules/ag_schedule_fires fails closed with 503 until domain adapters exist. No physical deletion or claim of stopped schedules. General workspace reads become 404; same-key archive replay rechecks current management of the archived target and returns the original receipt. All query parameters and even an empty query marker are rejected. Body is one strict UTF-8 JSON object <=1 MiB, application/json with optional UTF-8 charset; Content-Encoding absent/empty/identity. Unknown/duplicate decoded fields, null, invalid Unicode and trailing documents are rejected.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[\\x21-\\x7e]{16,128}$"
+            },
+            "description": "Exactly one visible ASCII value. No whitespace trimming. Persisted only as a hash. Reuse the same key for a retry; different normalized input under the same current scope returns 409."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-writes.schema.json#/$defs/archiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid JSON, content type/encoding, key, query, ID, fields or revision spelling",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "An explicit live dashboard Bearer session is required; cookies/PAT/model tokens rejected",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current visible subject lacks Team owner or workspace management permission",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace unavailable, including cross-tenant/archived/ungranted target or revoked replay access",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, idempotency, slug or active-run conflict; no internal conflict details exposed",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fixed safe internal error",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled or archive is unavailable until runtime domain adapters exist",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Immutable pre-runtime archive receipt, including replay",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned request ID equal to the response request_id."
+              },
+              "Idempotency-Key-Expires-At": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|900[0-6][0-9]{12}|90070[0-9]{11}|90071[0-8][0-9]{10}|900719[0-8][0-9]{9}|9007199[0-1][0-9]{8}|90071992[0-4][0-9]{7}|900719925[0-3][0-9]{6}|9007199254[0-6][0-9]{5}|90071992547[0-3][0-9]{4}|9007199254740[0-8][0-9]{2}|90071992547409[0-8][0-9]|9007199254740990|9007199254740991)$",
+                  "maxLength": 16
+                },
+                "description": "Always returned on successful POST and successful same-key replay. Original persisted expiry, UTC Unix milliseconds; minimum initial retention 24 hours. Rows are not reused after this time in this release."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-writes.schema.json#/$defs/archiveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DashboardSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Existing signed dashboard access JWT backed by a live login session. PAT and model bearer keys are not valid."
+      }
+    }
+  }
+}
