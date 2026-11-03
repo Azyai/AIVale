@@ -109,8 +109,20 @@ func ParseDashboardAccessToken(raw string) (identity AuthIdentity, internal bool
 	if raw == "" {
 		return AuthIdentity{}, false, nil
 	}
+	header, remaining, ok := strings.Cut(raw, ".")
+	if !ok {
+		return AuthIdentity{}, false, nil
+	}
+	payload, signature, ok := strings.Cut(remaining, ".")
+	if !ok || strings.Contains(signature, ".") {
+		return AuthIdentity{}, false, nil
+	}
 	claims := &authClaims{}
-	parsed, _, parseErr := jwt.NewParser().ParseUnverified(raw, claims)
+	// Classification never authenticates these claims. jwt v5.3.1 also decodes
+	// signatures in ParseUnverified, so inspect only the header and claims here
+	// to prevent a malformed internal signature from falling through to PAT.
+	// ParseAccessToken below still validates the original, unchanged token.
+	parsed, _, parseErr := jwt.NewParser().ParseUnverified(header+"."+payload+".", claims)
 	if parseErr != nil || parsed == nil {
 		return AuthIdentity{}, false, nil
 	}
