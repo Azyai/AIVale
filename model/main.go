@@ -369,6 +369,8 @@ func migrateDB() error {
 		&SubscriptionPreConsumeRecord{},
 		&Team{},
 		&TeamMember{},
+		&AgentWorkspace{},
+		&AgentWorkspaceMember{},
 		&CustomOAuthProvider{},
 		&UserOAuthBinding{},
 		&PerfMetric{},
