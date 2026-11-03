@@ -14,9 +14,10 @@
 | 平台资源权限 | `service/authz/` | Casbin 资源动作校验不代替 Workspace 对象归属过滤 |
 | Agent 基础值对象 | `model/agent_scope.go`、`service/agent/context.go` | 只承载内部 ID，不创建表，也不证明已鉴权 |
 | 工作区持久化 | `model/agent_workspace.go` | P01-T01仅有带Team范围的仓储和创建引用校验；不包含角色动作授权，后续服务不得把读取成功当许可 |
+| 管理工作区访问 | `service/agent/workspace_access.go`、`model/agent_workspace_access.go`、`middleware/agent_workspace.go` | P01-T02每次从主库校验会话/用户/当前关系，角色矩阵限定工作区层动作；guard复用UserAuth且拒PAT/模型Token，尚未注册业务路由 |
 | 功能准入 | `middleware/agent_platform.go`、`setting/agent_setting/config.go` | 开关控制入口可用性，不能替代认证与授权 |
 
-当前 Agent 路由只有全局只读 `/api/agent-platform/capabilities`，返回配置且 `runtime_ready:false`；Workspace 成员访问判定与管理API、Agent grant、Worker 身份和凭据管理仍按后续任务实施。不能将计划中的权限矩阵描述为当前全部生效。
+当前 Agent 路由只有全局只读 `/api/agent-platform/capabilities`，返回配置且 `runtime_ready:false`；管理工作区访问判定已具内部服务和guard，工作区管理API、Agent grant、Worker 身份和凭据管理仍按后续任务实施。不能将计划中的权限矩阵描述为当前全部生效。
 
 ## 2. 认证复用与入口区分
 
@@ -49,6 +50,12 @@
 - 跨租户资源默认返回 404，同租户角色不足可返回 403；拒绝响应不泄漏资源名称、拥有者、密钥状态或文件地址。
 
 `service/authz/resolver.go` 当前对 superuser 角色有直接允许逻辑，普通用户再经过显式覆盖与角色基线。新增 Agent 资源必须在业务服务执行 Workspace 归属校验，不能把 `Can` 返回 true 作为跨租户数据读取许可。平台运营访问使用独立授权、明确范围、原因及审计，不在普通客户页面默认跨租户浏览。
+
+P01-T02的`AuthorizeWorkspace`只接受已有认证链的管理会话身份，不接受有效Team或角色参数；guard还必须取得typed认证身份，拒绝仅`c.id/session_id`等通用上下文拼装身份。每次重新读取主库中的会话版本/状态/到期、User状态/AuthVersion、Team成员及工作区事实，旧Session、Scope、角色缓存或请求中的Team不能跳过校验。
+
+Team owner只有在`Team.OwnerUserId`及当前`TeamMember.role=owner`两事实一致时继承admin；普通成员必须有显式active且已知角色的Workspace行，default_member_role不授予访问。平台管理员无自动跨租户豁免。跨租户、不存在、未授权成员、归档或未知工作区状态统一404；当前身份/会话失效401，同域动作权限不足403，错误使用既有固定catalog且不泄漏SQL/资源名称。
+
+四角色的24动作候选范围见计划6.2，候选不等于最终许可：元数据读取不包含私密正文，run:create/内容/取消/审批、credential:use、Token grant、费用与Artifact父资源等还缺真实资源条件的动作，本入口一律拒绝；后续领域服务必须实现相应持久化授权和策略交集，不接受body中的sharing/binding/approval布尔值直接放行。暂停工作区仅允许已有读取及必要workspace/member管理；新写配置、发布和执行拒绝。归档本批全部拒绝，未来历史读取例外单独设计。
 
 ## 4. 撤销、缓存与运行身份
 

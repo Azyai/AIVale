@@ -23,6 +23,7 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | 工作台导航壳 | `web/src/features/agent-platform/`、认证父路由及现有导航 | P00-T07提供受动态开关控制的空页面，不读取真实工作区或赋予资源权限 |
 | 单步骤适配基座 | `service/agentexecution/`、根模块固定的Eino及官方MCP SDK依赖 | P00-T08提供内部窄接口与显式构造的Eino单步适配器；MCP只做本地内存协议验证，不提供客户连接或Run服务 |
 | 工作区持久化基础 | `model/agent_workspace.go`、主库迁移 | P01-T01提供工作区/成员两表及带Team范围的基础仓储；没有客户工作区API、角色动作判定或隐式授权 |
+| 管理工作区访问判定 | `service/agent/workspace_access.go`、`middleware/agent_workspace.go` | P01-T02提供实时管理会话/用户/成员/角色判定及可复用guard，尚未注册客户工作区CRUD路由；候选角色范围不等于私密资源或运行许可 |
 
 精确 `GET /api/agent-platform/capabilities` 是当前已注册的探测入口，位于现有 API 中间件链内。它不读取租户数据、不调用模型、不初始化执行引擎，也不接受客户端声明的 Team/Workspace 作用域。
 
