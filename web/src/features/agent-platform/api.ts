@@ -42,7 +42,13 @@ const responseSchema = z.object({
 })
 
 /** Read current global capabilities; the server remains the admission authority. */
-export async function getAgentPlatformCapabilities(): Promise<AgentPlatformCapabilities> {
-  const response = await api.get<unknown>('/api/agent-platform/capabilities')
+export async function getAgentPlatformCapabilities(
+  signal?: AbortSignal
+): Promise<AgentPlatformCapabilities> {
+  const response = await api.get<unknown>('/api/agent-platform/capabilities', {
+    signal,
+    // React Query owns request sharing; unrelated signals must stay independent.
+    disableDuplicate: true,
+  })
   return responseSchema.parse(requireServerSuccess(response.data)).data
 }
