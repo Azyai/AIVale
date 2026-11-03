@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.6 前端工作台导航壳与动态可用性边界
+版本：1.7 运行时依赖与单步骤适配边界
 
 日期：2026 年 11 月 3 日
 
@@ -2092,6 +2092,32 @@ P00-T06在上述基础上把现有能力探测和功能禁用拒绝接入共享H
 
 接口先定义最少方法和真实调用点，避免提前创建通用插件平台。错误统一转换为第6章稳定错误码；内部供应商或SDK错误保留脱敏原因，不能原样透出带密钥URL、堆栈或完整请求。
 
+#### 8.2.1 P00-T08依赖与单步骤基座
+
+根模块保持Go 1.26基线，固定以下发布版本；模块校验和保存在`go.sum`，不使用分支、伪版本或浮动latest。
+
+| 依赖 | 固定版本 | 上游Go最低版本 | 许可证与官方依据 |
+| --- | --- | --- | --- |
+| `github.com/cloudwego/eino` | `v0.9.22` | 1.18 | [发布版本](https://github.com/cloudwego/eino/releases/tag/v0.9.22)、[go.mod](https://raw.githubusercontent.com/cloudwego/eino/v0.9.22/go.mod)、[Apache-2.0声明](https://raw.githubusercontent.com/cloudwego/eino/v0.9.22/LICENSE-APACHE) |
+| `github.com/modelcontextprotocol/go-sdk` | `v1.8.0` | 1.25.0 | [发布版本](https://github.com/modelcontextprotocol/go-sdk/releases/tag/v1.8.0)、[go.mod](https://raw.githubusercontent.com/modelcontextprotocol/go-sdk/v1.8.0/go.mod)、[Apache-2.0/MIT过渡说明与原始声明](https://raw.githubusercontent.com/modelcontextprotocol/go-sdk/v1.8.0/LICENSE) |
+
+许可证不能简化为“MCP全部只有Apache-2.0”；分发时保留所选版本随附的原始许可证、归属与适用NOTICE，既有项目许可证和受保护标识保持。此表固定本批依赖依据，不承诺上游未来兼容或替代发行流程的许可证清单。
+
+`service/agentexecution/contracts.go`仅提供以下内部窄接口，不新增公共HTTP/JSON契约：
+
+- `Runtime.RunStep(context.Context, StepInput) (StepOutput, error)`只执行一个显式注入的步骤，输入输出为平台自有`Payload []byte`，不泄漏SDK消息或检查点对象。
+- `Step`是同样输入输出的处理函数；`NewEinoRuntime(ctx, step)`构造时编译`START → step → END`图，不执行步骤、不读取环境模型Key/目录、不建立外部连接，也不接入包init、API或Worker主启动链。
+- `ToolInvoker.Invoke(ctx, ToolCall)`接收Workspace、Connection、ToolSnapshot固定引用、工具名及不透明参数，返回不透明`ToolResult.Payload`；本批不实现真实工具发现、远程调用或授权。
+- `SkillSource.Read(ctx, SkillFileReference)`接收Workspace、SkillVersion、digest及包内路径，只表示固定资源引用。真实权限、路径、内容完整性和字节预算由P05实现，裸引用不构成授权，也不是可直接读取的宿主路径。
+
+取消是协作式的：已取消或已过期的Context不启动步骤，运行中的处理函数必须响应Context；适配器等待处理函数结束，不通过额外goroutine提前返回伪造终止。所有失败丢弃输出，保留`errors.Is`语义；处理错误与同时发生的取消可同时保留。缓冲区不由适配器隐式复制或解释；真实持久化、输入上限和并发所有权由后续调用方明确。
+
+官方MCP SDK本批作为明确固定的本地协议依赖保留在`go.mod`，只在忽略的测试夹具中显式构造客户端/服务端并使用内存传输，不为生产引用制造空连接器。PoC显式限制客户端能力，无文件roots、sampling或elicitation处理器，验证协议`2025-11-25`的协商、工具调用、取消和关闭；不声称已完成远程HTTP、stdio或所有协议版本矩阵。测试源码按当前规范只在本地保留，Fresh clone/CI构建通过不能代替PoC验收；今后整理依赖时须核对这项有意保留的固定项，真实连接适配留P04。
+
+Go模块MVS会选择部分较高传递依赖，包括JWT `v5.3.1`、sonic `v1.15.0`、loader `v0.5.0`、doublestar `v4.10.0`及`x/time v0.15.0`；不得顺带升级GORM/数据库驱动或改动独立模块。JWT补丁把签名解码提前到未验证解析阶段，宿主内部Token分类必须保持原有拒绝语义：严格三段，只在分类阶段解析header/claims，完整原Token仍走签名、算法、issuer、audience、有效期和用途校验。坏内部签名不能降级进入PAT认证；分类得到的未验证claims不建立身份。该兼容修复独立于真实Agent认证设计，不新增凭据或改变会话协议。
+
+本基座不是第8.2节完整AgentRuntime、客户Run队列或生产MCP/Skills适配；状态机、租约、检查点、模型调用、授权、计量与文件生命周期仍按对应任务实施。`service/agent/capabilities.go`的`runtime_ready`保持`false`，五项功能开关默认关闭；依赖存在和本地单步成功不改变准入结论。
+
 ### 8.3 路由与既有能力兼容
 
 管理API使用新前缀，公开运行API使用独立Run资源；不改变既有 `/v1/chat/completions`、`/v1/responses`、`/api/team` 的请求和响应。第一期旧Key继续照常调用模型，但没有Agent grant就不能调用Agent。个人Token不能通过指定Workspace ID扣团队钱包。
@@ -2560,16 +2586,23 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P00-T08 固定运行时依赖与适配接口
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
 - **前置依赖**：P00-T02、P00-T05。
 - **目标**：限定Eino和MCP依赖的使用边界。
 - **具体操作**：
-  1. 选择经PoC验证的Eino与官方MCP SDK发布版本，检查Go版本及许可证。
-  2. 定义Runtime、ToolInvoker、SkillSource等窄接口，首期仅加入无外部副作用的测试实现。
-  3. 将依赖初始化放入模块构造过程，不在包init启动网络连接。
-- **交付物与落点**：固定依赖版本、适配接口及本地确定性演示。
-- **验收**：测试实现能运行/取消一个步骤；无模型凭据时不启动真实调用，不读取客户目录。
-- **回退**：撤销依赖与接口接线，业务开关保持关闭。
+  1. 核对P00-T02/T05依赖、当前分支及工程规范，确认本批只建立单步骤适配基础，不提前实现P01资源权限或P03运行队列。
+  2. 从官方发布、模块文件和许可证核对Eino与官方MCP SDK版本；固定第8.2.1节两项依赖，保持宿主Go基线。
+  3. 在本地候选mod/sum中解析完整模块图，与原始模块图比较；识别直接、传递和上游测试依赖变化，确认数据库、GORM及其他认证依赖集合没有被顺带改变。
+  4. 对JWT补丁的解析变化先建立失败回归，再最小修复内部Token分类；验证坏内部签名不能落入PAT、外部opaque凭据保持兼容，完整签名与claims验证不放宽。
+  5. 将核对后的固定版本与校验和写入根模块，MCP明确标记为本地协议固定项；不修改relaykit/tokenkit依赖或执行全仓无关升级。
+  6. 定义平台自有Runtime/Step、ToolInvoker、SkillSource和固定资源引用，以本地PoC真实消费这些接口；不生成假Repository、生产内存Skill仓库或空远程连接器。
+  7. 实现显式构造的Eino单Lambda图，逐项处理nil/已取消Context、nil步骤、执行错误、同时取消和零失败输出，保留标准错误链并等待步骤退出。
+  8. 在唯一集中本地测试中构造官方MCP内存客户端/服务端及固定SkillSource，运行确定性步骤并验证协议协商、调用、取消、关闭及引用错误阻断下游。
+  9. 回归现有能力探测、默认关闭策略、错误契约、认证/会话、JSON、限流和精确权限；确认无新增HTTP入口、主链装配、模型凭据读取或客户目录访问。
+  10. 完成只读模块构建/vet、模块校验、Go格式和前端适用基线；更新计划及规范事实并同步外层源文件。测试、夹具、失败诊断和详细结果只存本地，生产改动按功能模块提交。
+- **交付物与落点**：根`go.mod/go.sum`固定版本；`service/agentexecution/contracts.go`与`eino.go`单步骤基础；`service/auth_token.go`的独立JWT解析兼容修复；第8.2.1节及适用规范。单个集中运行测试、既有认证测试扩展和确定性演示仅本地保留。
+- **验收**：真实Eino与官方MCP内存测试能执行并确认取消后处理函数退出，Context/处理错误保持可判定且失败无输出；无模型凭据可验证、不读取客户目录；坏内部Token不降级认证，原会话与公开探测保持；真实远程能力与租户授权不冒充已完成。
+- **回退**：保持总开关及相关子开关关闭，按模块逆序撤销适配与固定SDK依赖，不删除数据或改动旧模型入口；JWT兼容修复经旧版本回归后可独立保留。`runtime_ready`继续为`false`。
 - **估算与门禁**：1 人日；G-BASE、G-SEC。
 
 <a id="task-p00-t09"></a>

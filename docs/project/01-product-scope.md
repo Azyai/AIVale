@@ -20,6 +20,8 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | 新命名空间准入 gate | `middleware/agent_platform.go` | 控制新请求准入，不代替身份认证、租户授权或运行取消 |
 | 内部作用域与请求上下文 | `model/agent_scope.go`、`service/agent/context.go` | 仅元数据载体；`AgentScope` 不是数据库表，也不能证明访问已授权 |
 | 公开全局能力探测 | `router/agent-router.go`、`controller/agent_platform.go`、`service/agent/capabilities.go` | 只读有效开关，当前 `runtime_ready` 固定为 `false` |
+| 工作台导航壳 | `web/src/features/agent-platform/`、认证父路由及现有导航 | P00-T07提供受动态开关控制的空页面，不读取真实工作区或赋予资源权限 |
+| 单步骤适配基座 | `service/agentexecution/`、根模块固定的Eino及官方MCP SDK依赖 | P00-T08提供内部窄接口与显式构造的Eino单步适配器；MCP只做本地内存协议验证，不提供客户连接或Run服务 |
 
 精确 `GET /api/agent-platform/capabilities` 是当前已注册的探测入口，位于现有 API 中间件链内。它不读取租户数据、不调用模型、不初始化执行引擎，也不接受客户端声明的 Team/Workspace 作用域。
 
@@ -34,6 +36,8 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | `agent_setting.scripts_enabled` | 总开关、Skills 与脚本开关均开启 |
 
 `GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的 Workspace、Run、审批、MCP 或脚本处理器；公开探测不替代未来的工作区权限探测。
+
+单步骤适配器只执行服务端显式注入的处理函数，不接入主启动链、读取模型凭据或客户文件。内部资源引用不是授权；本地测试可以验证运行与协作取消，但不能据此将`runtime_ready`改为`true`或开放真实客户执行。完整状态机、租约、模型计量、远程MCP及技能存储分别按后续任务交付。
 
 ## 3. 租户、身份与资源
 

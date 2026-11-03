@@ -6,7 +6,7 @@
 
 - 当前 `service/agent/` 只有请求上下文和全局能力探测；`router/agent-router.go` 只注册只读能力探测，`runtime_ready` 固定为 `false`。
 - `setting/agent_setting/config.go` 提供五项默认关闭的有效开关；`CanClaimNewWork` 是未来领取入口的检查点，尚不构成运行队列。
-- `service/agentexecution/`、`service/mcp/`、`service/skill/`、`service/agentartifact/` 是计划中的落点，按对应任务建立，不为目录齐全提前生成空实现。
+- `service/agentexecution/` 已提供P00-T08单步Runtime、ToolInvoker、SkillSource窄接口及显式构造的Eino适配器；尚未接入业务启动或客户执行链。`service/mcp/`、`service/skill/`、`service/agentartifact/`仍按对应任务建立，不为目录齐全提前生成空实现。
 - 既有 `relay/` 供应商适配器、JavaScript 任务插件和系统任务继续按原契约运行；不能直接把它们标为 Agent 工具或客户脚本沙箱。
 - `service/task_artifact_store.go` 的现有存储边界仍返回禁用实现，不能据此宣称 Agent 对象存储已可用。
 
@@ -24,6 +24,8 @@
 | `RunRepository` | 创建、领取、状态转换、追加事件 | Workspace 条件、revision/lease、明确事务边界 |
 
 新增接口先证明真实调用点和实现差异，避免把一个函数拆成多层无语义包装。统一传递 `context.Context`，分别限制连接、响应头、读取和整体执行；响应体与流必须关闭。
+
+P00-T08的`Runtime.RunStep`仅接受平台自有字节载荷和调用方Context，构造时编译一个显式注入步骤，不在包`init`初始化SDK或执行任务。取消为协作式：处理函数必须响应Context，适配器等待其退出，不以另开goroutine提前返回伪装终止。`ToolCall`与`SkillFileReference`只是固定资源引用；真实调用前的权限、Schema、路径、完整性、大小及网络校验仍由后续实现执行。测试专用内存SkillSource/ToolInvoker不进入生产源码；官方MCP SDK只验证内存传输，不因此新增远程连接入口。
 
 适配器错误映射到计划中的稳定业务错误码，并说明可否安全重试。内部保留脱敏原因和关联 ID；不向用户透出含密钥 URL、原始请求头、堆栈或整段供应商响应。
 
