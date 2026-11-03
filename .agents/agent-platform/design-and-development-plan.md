@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.10 服务端工作区访问判定与实时撤销
+版本：1.11 工作区只读接口与可见范围查询
 
 日期：2026 年 11 月 3 日
 
@@ -1355,7 +1355,7 @@ P00-T06将公共core契约显式演进为1.1.0：在原错误目录外增加`500
 
 | 编号 / 阶段 | 方法和路径 | 权限 | 输入与输出 | 副作用、失败和验收 |
 | --- | --- | --- | --- | --- |
-| API-001 / P01 | GET `/api/agent-platform/workspaces` | 有效团队成员 | 输入 page/page_size/q；输出可见 workspace 列表、当前角色 | 不返回其他团队工作区；无团队返回可解释的空态 |
+| API-001 / P01 | GET `/api/agent-platform/workspaces` | 有效管理会话，实时团队/成员范围 | 输入 page/page_size/sort/q；输出可见 workspace 列表、当前角色 | 不返回其他团队工作区；无团队返回可解释的空态 |
 | API-002 / P01 | POST `/api/agent-platform/workspaces` | Team owner | name、description、可选slug；输出新 workspace | 服务端确定team_id；slug缺省生成稳定随机值，允许名称重名，slug冲突409 |
 | API-003 / P01 | GET `W` | workspace:read | 输出基础信息、状态、revision、effective_permissions | 权限来自实时后端计算；跨租户返回404 |
 | API-004 / P01 | PATCH `W` | workspace:manage | name、description、expected_revision | 禁止客户端修改 team_id；冲突409 |
@@ -1369,6 +1369,10 @@ P00-T06将公共core契约显式演进为1.1.0：在原错误目录外增加`500
 | API-012 / P01 | GET `W/token-grants` | token-grant:manage | token_id、page/page_size | 所有查询再检验Token控制权 |
 | API-013 / P01 | POST `W/token-grants` | token-grant:manage | token_id、scope、resource_type、resource_id、expires_at | 权限不能超出授予人；生成审计；重复授权返回既有记录 |
 | API-014 / P01 | DELETE `W/token-grants/:grant_id` | token-grant:manage | reason | 立即阻止后续新Run与后续受限动作；在途结果仍记录 |
+
+P01-T03只注册API-001与API-003，受默认关闭的总开关控制，且只接受既有管理会话。列表data固定为`items/total/page/page_size/empty_reason`；无空态时empty_reason为null，否则为`no_team/no_results/page_out_of_range`。summary仅有字符串id、slug、name、status、current_role、created_at、updated_at、revision及effective_permissions，详情另含description。内部team/actorID、policy和预算字段不返回；权限摘要按当前角色与状态批准，不含需要额外资源事实的动作。
+
+page默认1、page_size默认20且最大100；sort复用第6.1节，只允许created_at/id和asc/desc，ID稳定补序。q单值、合法UTF-8/无NUL，修剪前最多128字符/512字节，修剪后区分大小写地匹配名称字面子串，特殊字符无通配含义。未知、重复、空分页、非法编码及溢出拒绝；详情不接受query。名称过滤及授权范围先于COUNT和分页，三库语义一致，末页不执行巨大OFFSET。详情对跨租户、归档、不存在和不可见统一404，失效会话401；全部业务和认证响应使用新固定envelope及no-store。公开精确契约见`.agents/agent-platform/contracts/v1/workspaces.{schema,openapi,examples}.json`。
 
 归档不同于物理删除。第一期管理接口不提供工作区一键彻底清空；资料删除、账务留存和审计留存按第 5 章分类执行。
 
@@ -2368,6 +2372,14 @@ P00-T03的范围调整不改变上述最低兼容版本声明。本次环境只�
 
 两阶段各自退出码、实际Go执行事件、重组后的唯一场景摘要、角色矩阵实际执行数量和全部安全负例、同一引擎版本及正常收尾必须一致；P01-T01旧收据不能代替访问阶段。缺任一阶段、场景、必需用例、原始日志或关闭结果均阻断。成功仅证明本批管理工作区层判定，不代表未来Run正文、凭据、资金Token、审批或Artifact父资源已经授权。
 
+#### 10.2.4 P01-T03工作区只读接口门禁
+
+使用`python .agents/agent-platform/delivery/gate.py --profile workspace-read --base-ref <开发前提交> --task P01-T03`：基础21项、管理会话适配1项、三个引擎三阶段验证3项，共25项。`workspace_read_scope`仅接受本任务及已声明的model/service/controller/DTO/middleware/router影响路径，不放行其他数据库模型、驱动或写操作。
+
+各引擎先执行P01-T01迁移与P01-T02访问服务，再在相同四隔离目标上通过实际生产路由及UserAuth测试列表/详情。fresh/upgrade各要求19项行为全通过及正整数实际HTTP请求数：路由/开关/会话限定、可见范围和owner双事实、显式成员、范围内COUNT分页、字面筛选、稳定排序空页、详情隔离、输入拒绝、实时撤权、DTO/权限边界、no-store、安全错误、夹具隔离、Context/数据库错误及Schema验证。所有阶段须具有实际Go事件、完整且唯一摘要、相同运行编号和引擎版本；旧收据、缺场景、跳过、零请求或未正常关闭均不能通过。
+
+三阶段每个引擎1500秒上限覆盖启动240秒、三阶段各330秒和停止90秒。工具先校验本地必需输入，交付门禁再次核对原始日志与收据；成功仅为`scope=selected_p01_workspace_read`、`acceptance=selected_workspace_read`。真实版本、命令和详细结果只保留本地；P00历史全量及完整PAT路由目录开放项不因本任务关闭。
+
 ### 10.3 固定验收数据
 
 建立测试Team A/B；A有两个Workspace A1/A2。分别创建owner、developer、operator、viewer以及已移出成员。为A/B各建有效、过期、撤销、模型受限、额度不足的Token；Agent grant独立配置。
@@ -2723,17 +2735,25 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P01-T03 实现工作区列表和详情接口
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
 - **前置依赖**：P01-T02、P00-T06。
 - **目标**：提供可安全浏览的资源空间。
 - **具体操作**：
-  1. 增加管理API工作区列表和详情，只查询当前主体可见范围。
-  2. 实现分页、名称筛选和角色摘要，响应中隐藏内部凭据配置。
-  3. 为无工作区、归档空间及非法ID设置稳定响应。
-- **交付物与落点**：工作区读接口与请求响应样例。
-- **验收**：用户只看到可访问空间；猜测其他team ID和非法分页不会扩大数据范围。
+  1. 核对前批访问服务、历史开放项、API-001/003、共享ID/分页契约及当前稳定OWASP授权要求；限定本批为只读，不提前接入写操作或API-118工作区能力探测。
+  2. 新增显式字段投影与实时可见查询：User/Session/Team当前事实、owner双事实或同team显式active成员、已知角色及active/suspended空间。归档/未知状态/跨team不进入可见范围。
+  3. 在同一可见SQL范围内先COUNT再分页；使用静态排序枚举与ID稳定补序，不做全量加载后过滤或逐条鉴权查询。超出末页直接返回空items，限制page_size并检查offset溢出。
+  4. 复用共享page/page_size/sort解析，新增单值q校验：UTF-8、无NUL、至多128字符/512字节、修剪外部空白。名称按区分大小写的字面子串筛选，百分号、下划线及反斜杠不是通配符；三库绑定参数。
+  5. 将会话SID、会话及成员状态、角色等固定枚举统一为方言兼容的精确匹配，避免MySQL默认排序规则放宽大小写或尾空格；服务层继续实时读取，不使用授权缓存或旧事务快照。
+  6. 实现列表/详情service及固定错误：有效个人会话无当前team返回no_team空态；无匹配和末页区分，跨team/不存在/归档统一404，非法输入400，失效会话401，内部错误不泄露SQL。
+  7. 新增白名单DTO：字符串ID、JS安全范围毫秒/revision/total、当前角色和按角色/状态批准的完整权限摘要；详情另含description。排除team/actorID、policy、预算、凭据和运行限制，缺资源事实的条件权限不进入摘要。
+  8. 将两个GET接入平台开关和现有UserAuth typed管理会话链；拒绝PAT/模型Token和通用上下文fallback。认证失败转新固定错误、全路径no-store，成功后恢复原writer，不改变旧管理接口响应。
+  9. 冻结独立workspace JSON Schema、OpenAPI及脱敏公开样例，实际响应通过本地Schema解析器；严格拒绝未知/重复query、非规范ID、敏感额外字段及不安全数值，详情不接受query。
+  10. 扩充workspace-read配置及三阶段原始日志校验，完成工具行为回归、真实三库fresh/upgrade HTTP链路与前批迁移/权限回归，确认数据保留、正常收尾和最终输入一致。
+  11. 本地记录命令、实际版本、请求/行为结果、OWASP范围及历史未决；同步规范/计划镜像后按只读接口与契约、验证工具、规范模块提交，测试及详细验收不入Git。
+- **交付物与落点**：`GET /api/agent-platform/workspaces`及`GET /api/agent-platform/workspaces/:workspace_id`、model/service/controller/DTO与会话适配；独立公开workspace契约及25项三阶段交付配置。
+- **验收**：真实三库与生产UserAuth链中仅显示当前可访问空间，COUNT/分页/筛选不扩大范围，owner继承与显式成员正确，跨team和归档一致拒绝；撤权/停用/会话失效下一次调用生效。非法query/ID稳定拒绝，响应白名单与完整权限摘要符合Schema，所有结果no-store且安全错误不泄露；全部所选检查执行并确认环境关闭，不外推为全量认证或生产发布通过。
 - **回退**：关闭工作区读路由，不改现有team接口。
-- **估算与门禁**：0.5 人日；G-API、G-AUTH。
+- **估算与门禁**：0.5 人日；G-API、G-AUTH、G-DB、G-BASE。
 
 <a id="task-p01-t04"></a>
 

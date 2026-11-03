@@ -22,8 +22,9 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | 公开全局能力探测 | `router/agent-router.go`、`controller/agent_platform.go`、`service/agent/capabilities.go` | 只读有效开关，当前 `runtime_ready` 固定为 `false` |
 | 工作台导航壳 | `web/src/features/agent-platform/`、认证父路由及现有导航 | P00-T07提供受动态开关控制的空页面，不读取真实工作区或赋予资源权限 |
 | 单步骤适配基座 | `service/agentexecution/`、根模块固定的Eino及官方MCP SDK依赖 | P00-T08提供内部窄接口与显式构造的Eino单步适配器；MCP只做本地内存协议验证，不提供客户连接或Run服务 |
-| 工作区持久化基础 | `model/agent_workspace.go`、主库迁移 | P01-T01提供工作区/成员两表及带Team范围的基础仓储；没有客户工作区API、角色动作判定或隐式授权 |
-| 管理工作区访问判定 | `service/agent/workspace_access.go`、`middleware/agent_workspace.go` | P01-T02提供实时管理会话/用户/成员/角色判定及可复用guard，尚未注册客户工作区CRUD路由；候选角色范围不等于私密资源或运行许可 |
+| 工作区持久化基础 | `model/agent_workspace.go`、主库迁移 | P01-T01提供工作区/成员两表及带Team范围的基础仓储；持久化本身不构成访问授权 |
+| 管理工作区访问判定 | `service/agent/workspace_access.go`、`middleware/agent_workspace.go` | P01-T02提供实时管理会话/用户/成员/角色判定及可复用guard；候选角色范围不等于私密资源或运行许可 |
+| 工作区元数据读取 | `router/agent-router.go`、`controller/agent_workspace.go`、`service/agent/workspace_read.go` | P01-T03注册工作区列表/详情两个只读GET，受默认关闭的总开关和管理会话认证控制；不包含写入、成员管理或运行接口 |
 
 精确 `GET /api/agent-platform/capabilities` 是当前已注册的探测入口，位于现有 API 中间件链内。它不读取租户数据、不调用模型、不初始化执行引擎，也不接受客户端声明的 Team/Workspace 作用域。
 
@@ -37,7 +38,9 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | `agent_setting.skills_enabled` | 总开关与 Skills 开关均开启 |
 | `agent_setting.scripts_enabled` | 总开关、Skills 与脚本开关均开启 |
 
-`GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的 Workspace、Run、审批、MCP 或脚本处理器；公开探测不替代未来的工作区权限探测。
+`GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的工作区写入、Run、审批、MCP 或脚本处理器；公开探测不替代未来的工作区权限探测。
+
+已注册的`GET /api/agent-platform/workspaces`与`GET /api/agent-platform/workspaces/:workspace_id`只返回当前主体获准读取的工作区元数据，拒绝PAT和模型Token。列表在服务端授权范围内筛选、COUNT和分页，名称`q`按区分大小写的字面子串匹配。响应采用显式白名单和`no-store`，角色/状态对应的`effective_permissions`仅是当次工作区层权限摘要，不授予资源执行权；前端仍为导航壳，不能据此宣称客户工作区管理流程或运行引擎已经交付。
 
 单步骤适配器只执行服务端显式注入的处理函数，不接入主启动链、读取模型凭据或客户文件。内部资源引用不是授权；本地测试可以验证运行与协作取消，但不能据此将`runtime_ready`改为`true`或开放真实客户执行。完整状态机、租约、模型计量、远程MCP及技能存储分别按后续任务交付。
 
