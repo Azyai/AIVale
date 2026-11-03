@@ -1,6 +1,6 @@
 # 智能体平台基础交付门禁
 
-`gate.py` 执行版本管理中的 `checks.json`。它保存本次实际命令、工具版本、基准与输入摘要、退出码和用例结果；不提交 Git、不部署、不启动数据库、不修改开关。
+`gate.py` 执行版本管理中的 `checks.json`。它保存本次实际命令、工具版本、基准与输入摘要、退出码和用例结果；不提交Git、不部署、不控制系统数据库服务、不修改开关。数据库配置会创建并关闭本次隔离测试实例。
 
 ## 使用
 
@@ -25,6 +25,7 @@ python .agents/agent-platform/delivery/gate.py --profile build --base-ref HEAD -
 | `build` | 锁定前端依赖、类型/前端构建、根和独立 Go 模块构建/vet、模块校验、工作区及暂存差异检查 | `scope=build_only`、`acceptance=not_run`；不是验收通过 |
 | `foundation` | 上述检查，加固定的 Agent、认证、JSON、限流、权限、离线旧模型协议和前端工作台回归 | 仅 `selected_p00_foundation` 所选用例通过；不是全仓、完整P00阶段或生产发布证明 |
 | `workspace` | 上述21项，加工作区 SQLite/MySQL/PostgreSQL 三个真实隔离环境验证 | 仅配置声明的 P01-T01 模型/迁移及所选基础，`acceptance=selected_workspace`；不代表后续角色鉴权或其他数据库变更已验证 |
+| `workspace-access` | 基础21项、管理会话适配验证，以及三个引擎各自的迁移和访问判定两阶段验证，共25项 | 仅P01-T02的工作区层访问判定，`acceptance=selected_workspace_access`；不授予后续资源正文、凭据或运行许可 |
 
 现有公共 CI 继续只做构建和静态检查。它没有本地测试源码，不因 `build` 返回 0 而完成验收。
 
@@ -49,6 +50,8 @@ python .agents/agent-platform/delivery/gate.py --profile workspace --base-ref <�
 ```
 
 `workspace` 配置强制三个引擎各一项，限定任务和数据库影响路径；改驱动、其他模型或未知范围会继续标记未完成。每项只读取本工具本次创建的子目录，重新核对 Go 原始事件、场景摘要与收据一致，不提供外部旧报告导入参数。
+
+P01-T02使用`--profile workspace-access --task P01-T02`，仍需保存并指定开发前基准。该配置另外固定管理会话适配用例；三个数据库检查必须显式启用`--access`，迁移阶段通过后，在同一隔离环境的新建/升级目标上实际执行权限服务。每场景核对四角色×24动作、权限范围、会话/用户/成员撤销、跨租户及错误脱敏；没有访问阶段的P01-T01旧结果不能代替。两阶段的原始Go事件、唯一场景摘要、实际版本和收据都须一致，最后确认正常收尾。
 
 P00-T03 的 MySQL-only 约定只覆盖它原有的隔离启动环境。把 `--task` 改成 `P00-T03` 不能豁免新的 schema 或其他数据库变更。`build` 可编译数据库相关代码，但仍明确未执行验收。
 

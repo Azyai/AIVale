@@ -1,4 +1,4 @@
-"""Run the versioned build or selected P00 foundation delivery checks.
+"""Run versioned build or scoped platform delivery checks.
 
 Results belong to ignored local storage. This tool never commits, deploys,
 changes feature switches, starts database services, or certifies a release.
@@ -72,7 +72,7 @@ def snapshot(repo: Path, base: str, checks: list[dict], config: dict) -> dict:
 
 
 def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
-    if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in ('build', 'foundation', 'workspace'):
+    if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in ('build', 'foundation', 'workspace', 'workspace-access'):
         raise ValueError('Unsupported configuration or profile.')
     checks = config['checks']
     ids = [check['id'] for check in checks]
@@ -111,10 +111,12 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
         raise ValueError('Build-only profiles cannot claim local test execution.')
     if profile == 'foundation' and not any(check['kind'] in ('go_tests', 'vitest') for check in selected):
         raise ValueError('Foundation acceptance requires actual test checks.')
-    if profile == 'workspace':
+    if profile in ('workspace', 'workspace-access'):
         engines = [check.get('engine') for check in selected if check['kind'] == 'database']
         if sorted(engines) != ['mysql', 'postgresql', 'sqlite']:
             raise ValueError('Workspace acceptance requires exactly one live check per database engine.')
+        if profile == 'workspace-access' and any(check.get('access') is not True for check in selected if check['kind'] == 'database'):
+            raise ValueError('Workspace access requires the live access stage on every database engine.')
     return selected
 
 
@@ -209,7 +211,28 @@ def validate_database_evidence(evidence: dict, engine: str, run_id: str) -> None
             raise ValueError('Unique-constraint rejection lacks the actual engine error code.')
 
 
-def database_result(path: Path, engine: str) -> dict:
+def validate_workspace_access_evidence(evidence: dict, engine: str, run_id: str) -> None:
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Workspace access evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Workspace access must execute on fresh and upgraded databases.')
+    fields = (
+        'roles_verified', 'role_scopes_verified', 'conditional_actions_denied', 'owner_inheritance',
+        'cross_tenant_denied', 'workspace_isolation', 'default_role_denied', 'root_no_bypass',
+        'member_blocked_denied', 'member_removed_denied', 'team_exit_denied', 'user_disabled_denied',
+        'user_deleted_denied', 'role_downgrade_effective', 'session_revoked_denied',
+        'session_expired_denied', 'session_version_denied', 'user_auth_version_denied',
+        'archived_denied', 'suspended_restricted', 'unknown_inputs_denied', 'context_failure_denied',
+        'database_failure_denied', 'safe_errors', 'fixtures_only',
+        'transaction_snapshot_denied', 'prepared_base_allowed',
+    )
+    for scenario in scenarios:
+        if scenario.get('role_action_cases') != 96 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('Workspace access lacks the full role/action matrix or required revocation and isolation evidence.')
+
+
+def database_result(path: Path, engine: str, access: bool = False) -> dict:
     report = json.loads(path.read_text(encoding='utf-8-sig'))
     if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
         raise ValueError('The live database runner did not complete successfully.')
@@ -221,19 +244,26 @@ def database_result(path: Path, engine: str) -> dict:
     actual = database_log_result(path.parent / 'go-test.stdout.log', engine, report['run_id'])
     if report['tests'] != actual['tests'] or report['evidence'] != actual['evidence']:
         raise ValueError('Database receipt differs from the actual Go events and scenario summary.')
+    if access:
+        if report.get('access_requested') is not True or report.get('access_go_exit_code') != 0:
+            raise ValueError('The live workspace access stage was not executed successfully.')
+        actual_access = workspace_access_log_result(path.parent / 'access-go-test.stdout.log', engine, report['run_id'])
+        if report.get('access_tests') != actual_access['tests'] or report.get('access_evidence') != actual_access['evidence']:
+            raise ValueError('Workspace access receipt differs from the actual Go events and summary.')
+        if actual_access['tests']['top_level_passed'] != 1 or actual_access['evidence']['version'] != actual['evidence']['version']:
+            raise ValueError('Workspace access must use the same real database version and exact top-level test.')
     return report
 
 
-def database_log_result(path: Path, engine: str, run_id: str) -> dict:
-    tests = go_test_result(path, ['TestAgentWorkspaceDatabaseMatrix'])
+def go_test_summary(path: Path, test_name: str, marker: str) -> dict:
+    tests = go_test_result(path, [test_name])
     records = []
-    marker = 'AGENT_WORKSPACE_DATABASE_RESULT '
     chunks = []
     for line in path.read_text(encoding='utf-8-sig').splitlines():
         if not line.strip():
             continue
         event = json.loads(line)
-        if event.get('Action') == 'output' and event.get('Test') == 'TestAgentWorkspaceDatabaseMatrix':
+        if event.get('Action') == 'output' and event.get('Test') == test_name:
             chunks.append(event.get('Output', ''))
     # test2json splits long t.Log lines into multiple events. Reassemble the
     # selected test's output before parsing the single completed JSON summary.
@@ -243,8 +273,19 @@ def database_log_result(path: Path, engine: str, run_id: str) -> dict:
             records.append(json.loads(output.split(marker, 1)[1]))
     if len(records) != 1:
         raise ValueError('Exactly one completed database scenario summary is required.')
-    validate_database_evidence(records[0], engine, run_id)
     return {'tests': tests, 'evidence': records[0]}
+
+
+def database_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentWorkspaceDatabaseMatrix', 'AGENT_WORKSPACE_DATABASE_RESULT ')
+    validate_database_evidence(result['evidence'], engine, run_id)
+    return result
+
+
+def workspace_access_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentWorkspaceAccessDatabaseMatrix', 'AGENT_WORKSPACE_ACCESS_DATABASE_RESULT ')
+    validate_workspace_access_evidence(result['evidence'], engine, run_id)
+    return result
 
 
 def run_check(repo: Path, output: Path, check: dict) -> dict:
@@ -290,12 +331,17 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
         elif check['kind'] == 'vitest':
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
-            database = database_result(database_output / 'result.json', check['engine'])
-            result['tests'] = database['tests']
+            access = check.get('access', False)
+            database = database_result(database_output / 'result.json', check['engine'], access)
+            result['tests'] = dict(database['tests'])
+            if access:
+                result['tests'] = {key: value + database['access_tests'][key] for key, value in result['tests'].items()}
             result['database'] = {
                 'engine': check['engine'], 'version': database['evidence']['version'],
                 'run_id': database['run_id'], 'result': str(database_output / 'result.json'),
             }
+            if access:
+                result['database']['access_verified'] = True
         result['status'] = 'passed'
         return result
     except KeyboardInterrupt:
@@ -341,7 +387,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
     report = {
         'schema_version': 1, 'task': task, 'profile': profile,
         'status': 'incomplete', 'acceptance': 'not_run',
-        'scope': {'foundation': 'selected_p00_foundation', 'workspace': 'selected_p01_workspace', 'build': 'build_only'}[profile],
+        'scope': {'foundation': 'selected_p00_foundation', 'workspace': 'selected_p01_workspace', 'workspace-access': 'selected_p01_workspace_access', 'build': 'build_only'}[profile],
         'full_repository_acceptance': False,
         'historical_full_baseline': 'unresolved; selected checks do not close P00-T01 history',
         'database': {'status': 'not_applicable'}, 'checks': [],
@@ -377,7 +423,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
         database_paths = database_impact_paths(initial['changed_paths'])
-        if schema_change or database_paths or profile == 'workspace':
+        if schema_change or database_paths or profile in ('workspace', 'workspace-access'):
             report['database'] = {
                 'status': 'incomplete', 'trigger_paths': database_paths,
                 'explicit_schema_change': schema_change,
@@ -386,11 +432,11 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
             }
             if profile == 'foundation':
                 raise ValueError('Schema/database-impacting scope requires the missing live three-engine gate.')
-        if profile == 'workspace':
-            scope = config['workspace_scope']
+        if profile in ('workspace', 'workspace-access'):
+            scope = config['workspace_scope' if profile == 'workspace' else 'workspace_access_scope']
             unsupported = sorted(set(database_paths) - set(scope['allowed_impact_paths']))
             if task not in scope['tasks'] or unsupported:
-                raise ValueError('Workspace database checks cover only the declared P01-T01 scope; unsupported paths: ' + ', '.join(unsupported))
+                raise ValueError('Workspace checks cover only their declared task and database-impact paths; unsupported paths: ' + ', '.join(unsupported))
         for executable in ('go', 'bun', 'git'):
             if shutil.which(executable):
                 args = [executable, 'version'] if executable == 'go' else [executable, '--version']
@@ -411,8 +457,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         report['status'] = 'passed'
         if profile == 'foundation':
             report['acceptance'] = 'selected_foundation'
-        elif profile == 'workspace':
-            report['acceptance'] = 'selected_workspace'
+        elif profile in ('workspace', 'workspace-access'):
+            report['acceptance'] = 'selected_workspace' if profile == 'workspace' else 'selected_workspace_access'
             report['database'] = {
                 'status': 'passed', 'trigger_paths': database_paths,
                 'explicit_schema_change': schema_change,
@@ -434,7 +480,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', choices=('build', 'foundation', 'workspace'), default='foundation')
+    parser.add_argument('--profile', choices=('build', 'foundation', 'workspace', 'workspace-access'), default='foundation')
     parser.add_argument('--base-ref', required=True, help='Reviewed Git baseline; tracked, staged and untracked changes are included.')
     parser.add_argument('--task', required=True, help='Plan task, for example P00-T09.')
     parser.add_argument('--schema-change', action='store_true', help='Add a database-impacting scope; this never waives detected changes.')

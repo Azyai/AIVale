@@ -63,6 +63,33 @@
       "database-sqlite",
       "database-mysql",
       "database-postgresql"
+    ],
+    "workspace-access": [
+      "frontend-install",
+      "frontend-typecheck",
+      "frontend-build",
+      "root-build",
+      "root-vet",
+      "relaykit-build",
+      "relaykit-vet",
+      "tokenkit-build",
+      "tokenkit-vet",
+      "module-verify",
+      "git-diff-check",
+      "git-cached-diff-check",
+      "agent-boundary-tests",
+      "agent-runtime-tests",
+      "auth-regression-tests",
+      "host-json-limit-tests",
+      "authz-tests",
+      "legacy-model-stream-tests",
+      "legacy-model-adaptor-tests",
+      "legacy-model-router-tests",
+      "agent-web-tests",
+      "workspace-auth-adapter-tests",
+      "workspace-access-sqlite",
+      "workspace-access-mysql",
+      "workspace-access-postgresql"
     ]
   },
   "checks": [
@@ -669,6 +696,123 @@
         ".agents/agent-platform/delivery/gate.py",
         ".agents/agent-platform/postgres/environment.ps1"
       ]
+    },
+    {
+      "id": "workspace-auth-adapter-tests",
+      "gate": "G-AUTH",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./middleware",
+        "-run",
+        "^TestAgentWorkspaceAccessMiddleware$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "middleware/agent_workspace_test.go",
+        "middleware/agent_workspace.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/auth_test.go"
+      ],
+      "expected_tests": [
+        "TestAgentWorkspaceAccessMiddleware"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "workspace-access-sqlite",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "sqlite",
+        "--access"
+      ],
+      "timeout_seconds": 1200,
+      "kind": "database",
+      "engine": "sqlite",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        "service/agent/workspace_access_database_test.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/agent_workspace.go"
+      ],
+      "access": true
+    },
+    {
+      "id": "workspace-access-mysql",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "mysql",
+        "--access"
+      ],
+      "timeout_seconds": 1200,
+      "kind": "database",
+      "engine": "mysql",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        ".agents/agent-platform/mysql/environment.ps1",
+        "service/agent/workspace_access_database_test.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/agent_workspace.go"
+      ],
+      "access": true
+    },
+    {
+      "id": "workspace-access-postgresql",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "postgresql",
+        "--access"
+      ],
+      "timeout_seconds": 1200,
+      "kind": "database",
+      "engine": "postgresql",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        ".agents/agent-platform/postgres/environment.ps1",
+        "service/agent/workspace_access_database_test.go",
+        "service/agent/workspace_access.go",
+        "model/agent_workspace_access.go",
+        "middleware/agent_workspace.go"
+      ],
+      "access": true
     }
   ],
   "workspace_scope": {
@@ -678,6 +822,16 @@
     "allowed_impact_paths": [
       "model/agent_workspace.go",
       "model/main.go"
+    ]
+  },
+  "workspace_access_scope": {
+    "tasks": [
+      "P01-T02"
+    ],
+    "allowed_impact_paths": [
+      "model/agent_workspace_access.go",
+      "service/agent/workspace_access.go",
+      "middleware/agent_workspace.go"
     ]
   }
 }
