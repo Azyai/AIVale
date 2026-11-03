@@ -37,6 +37,32 @@
       "legacy-model-adaptor-tests",
       "legacy-model-router-tests",
       "agent-web-tests"
+    ],
+    "workspace": [
+      "frontend-install",
+      "frontend-typecheck",
+      "frontend-build",
+      "root-build",
+      "root-vet",
+      "relaykit-build",
+      "relaykit-vet",
+      "tokenkit-build",
+      "tokenkit-vet",
+      "module-verify",
+      "git-diff-check",
+      "git-cached-diff-check",
+      "agent-boundary-tests",
+      "agent-runtime-tests",
+      "auth-regression-tests",
+      "host-json-limit-tests",
+      "authz-tests",
+      "legacy-model-stream-tests",
+      "legacy-model-adaptor-tests",
+      "legacy-model-router-tests",
+      "agent-web-tests",
+      "database-sqlite",
+      "database-mysql",
+      "database-postgresql"
     ]
   },
   "checks": [
@@ -575,6 +601,83 @@
         "src/components/layout/__tests__/agent-platform-navigation.test.tsx",
         "src/context/__tests__/search-provider.test.tsx"
       ]
+    },
+    {
+      "id": "database-sqlite",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "sqlite"
+      ],
+      "timeout_seconds": 900,
+      "kind": "database",
+      "engine": "sqlite",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py"
+      ]
+    },
+    {
+      "id": "database-mysql",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "mysql"
+      ],
+      "timeout_seconds": 900,
+      "kind": "database",
+      "engine": "mysql",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        ".agents/agent-platform/mysql/environment.ps1"
+      ]
+    },
+    {
+      "id": "database-postgresql",
+      "gate": "G-DB",
+      "cwd": ".",
+      "argv": [
+        "python",
+        ".agents/agent-platform/database/matrix.py",
+        "--engine",
+        "postgresql"
+      ],
+      "timeout_seconds": 900,
+      "kind": "database",
+      "engine": "postgresql",
+      "required_files": [
+        "model/agent_workspace_database_test.go",
+        "model/agent_platform_mysql_test.go",
+        "model/agent_workspace.go",
+        "model/main.go",
+        ".agents/agent-platform/database/matrix.py",
+        ".agents/agent-platform/delivery/gate.py",
+        ".agents/agent-platform/postgres/environment.ps1"
+      ]
     }
-  ]
+  ],
+  "workspace_scope": {
+    "tasks": [
+      "P01-T01"
+    ],
+    "allowed_impact_paths": [
+      "model/agent_workspace.go",
+      "model/main.go"
+    ]
+  }
 }

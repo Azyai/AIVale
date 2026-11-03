@@ -72,7 +72,7 @@ def snapshot(repo: Path, base: str, checks: list[dict], config: dict) -> dict:
 
 
 def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
-    if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in ('build', 'foundation'):
+    if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in ('build', 'foundation', 'workspace'):
         raise ValueError('Unsupported configuration or profile.')
     checks = config['checks']
     ids = [check['id'] for check in checks]
@@ -86,7 +86,7 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
     for check in selected:
         if not re.fullmatch(r'[a-z][a-z0-9-]{0,79}', check['id']):
             raise ValueError('Invalid check ID.')
-        if check['kind'] not in ('command', 'go_tests', 'vitest'):
+        if check['kind'] not in ('command', 'go_tests', 'vitest', 'database'):
             raise ValueError('Unsupported check kind.')
         if not isinstance(check['argv'], list) or not check['argv'] or not all(isinstance(arg, str) and arg for arg in check['argv']):
             raise ValueError('Commands must be nonempty argument arrays.')
@@ -111,6 +111,10 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
         raise ValueError('Build-only profiles cannot claim local test execution.')
     if profile == 'foundation' and not any(check['kind'] in ('go_tests', 'vitest') for check in selected):
         raise ValueError('Foundation acceptance requires actual test checks.')
+    if profile == 'workspace':
+        engines = [check.get('engine') for check in selected if check['kind'] == 'database']
+        if sorted(engines) != ['mysql', 'postgresql', 'sqlite']:
+            raise ValueError('Workspace acceptance requires exactly one live check per database engine.')
     return selected
 
 
@@ -179,11 +183,78 @@ def vitest_result(path: Path, cwd: Path, expected: list[str]) -> dict:
     return {'files_passed': len(executed), 'tests_passed': assertions, 'failed': 0, 'skipped': 0}
 
 
+def validate_database_evidence(evidence: dict, engine: str, run_id: str) -> None:
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Database evidence does not match this engine and isolated run.')
+    if evidence.get('legacy_source') != 'v1.0.0-rc.42@6370b29424168039e94d40d610191e7d2e65dbf4:minimal_projection':
+        raise ValueError('Database evidence lacks the frozen released-schema projection source.')
+    if evidence.get('team_fixture_source') != 'a65d1f7de:pre_batch_team_projection':
+        raise ValueError('Database evidence lacks the pre-batch Team projection source.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Fresh and upgrade database scenarios are both required.')
+    fields = (
+        'main_schema_stable', 'log_schema_stable', 'main_data_stable', 'log_data_stable',
+        'agent_tables_main_only', 'index_definitions_verified', 'slug_duplicate_rejected',
+        'member_duplicate_rejected', 'same_name_allowed', 'cross_team_slug_allowed',
+        'unknown_team_rejected', 'cross_team_read_denied', 'cross_team_member_rejected',
+        'removed_team_member_rejected', 'transaction_rollback', 'pagination_scoped',
+    )
+    for scenario in scenarios:
+        if scenario.get('startup_passes') != 3 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('A database scenario lacks required executed behavior or three startup passes.')
+        if scenario.get('name') == 'upgrade' and any(scenario.get(field) is not True for field in ('legacy_data_preserved', 'old_team_data_preserved')):
+            raise ValueError('Upgrade did not preserve released projection and existing Team data.')
+        if str(scenario.get('duplicate_error_code')) != {'mysql': '1062', 'postgresql': '23505', 'sqlite': '2067'}[engine]:
+            raise ValueError('Unique-constraint rejection lacks the actual engine error code.')
+
+
+def database_result(path: Path, engine: str) -> dict:
+    report = json.loads(path.read_text(encoding='utf-8-sig'))
+    if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
+        raise ValueError('The live database runner did not complete successfully.')
+    if report.get('cleanup', {}).get('stopped') is not True or report.get('go_exit_code') != 0:
+        raise ValueError('Database validation or isolated environment shutdown is incomplete.')
+    tests = report['tests']
+    if tests.get('top_level_passed') != 1 or tests.get('failed') != 0 or tests.get('skipped') != 0:
+        raise ValueError('Database test did not actually execute and pass without skips.')
+    actual = database_log_result(path.parent / 'go-test.stdout.log', engine, report['run_id'])
+    if report['tests'] != actual['tests'] or report['evidence'] != actual['evidence']:
+        raise ValueError('Database receipt differs from the actual Go events and scenario summary.')
+    return report
+
+
+def database_log_result(path: Path, engine: str, run_id: str) -> dict:
+    tests = go_test_result(path, ['TestAgentWorkspaceDatabaseMatrix'])
+    records = []
+    marker = 'AGENT_WORKSPACE_DATABASE_RESULT '
+    chunks = []
+    for line in path.read_text(encoding='utf-8-sig').splitlines():
+        if not line.strip():
+            continue
+        event = json.loads(line)
+        if event.get('Action') == 'output' and event.get('Test') == 'TestAgentWorkspaceDatabaseMatrix':
+            chunks.append(event.get('Output', ''))
+    # test2json splits long t.Log lines into multiple events. Reassemble the
+    # selected test's output before parsing the single completed JSON summary.
+    for line in ''.join(chunks).splitlines():
+        output = line.strip()
+        if marker in output:
+            records.append(json.loads(output.split(marker, 1)[1]))
+    if len(records) != 1:
+        raise ValueError('Exactly one completed database scenario summary is required.')
+    validate_database_evidence(records[0], engine, run_id)
+    return {'tests': tests, 'evidence': records[0]}
+
+
 def run_check(repo: Path, output: Path, check: dict) -> dict:
     argv = list(check['argv'])
     report_path = output / (check['id'] + '.results.json')
     if check['kind'] == 'vitest':
         argv.append('--outputFile=' + str(report_path))
+    database_output = output / (check['id'] + '.database')
+    if check['kind'] == 'database':
+        argv.extend(['--output', str(database_output)])
     argv[0] = shutil.which(argv[0]) or argv[0]
     cwd = source_path(repo, check['cwd'])
     result = {'id': check['id'], 'gate': check['gate'], 'status': 'failed', 'argv': argv, 'cwd': str(cwd), 'exit_code': None}
@@ -210,12 +281,21 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
                     result['reason'] += ' Complete process-tree termination could not be confirmed.'
                 return result
         if result['exit_code'] != 0:
+            if check['kind'] == 'database' and result['exit_code'] == 2:
+                result['status'] = 'incomplete'
             result['reason'] = 'Command returned a nonzero exit code; inspect its local logs.'
             return result
         if check['kind'] == 'go_tests':
             result['tests'] = go_test_result(stdout_path, check['expected_tests'])
         elif check['kind'] == 'vitest':
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
+        elif check['kind'] == 'database':
+            database = database_result(database_output / 'result.json', check['engine'])
+            result['tests'] = database['tests']
+            result['database'] = {
+                'engine': check['engine'], 'version': database['evidence']['version'],
+                'run_id': database['run_id'], 'result': str(database_output / 'result.json'),
+            }
         result['status'] = 'passed'
         return result
     except KeyboardInterrupt:
@@ -261,7 +341,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
     report = {
         'schema_version': 1, 'task': task, 'profile': profile,
         'status': 'incomplete', 'acceptance': 'not_run',
-        'scope': 'selected_p00_foundation' if profile == 'foundation' else 'build_only',
+        'scope': {'foundation': 'selected_p00_foundation', 'workspace': 'selected_p01_workspace', 'build': 'build_only'}[profile],
         'full_repository_acceptance': False,
         'historical_full_baseline': 'unresolved; selected checks do not close P00-T01 history',
         'database': {'status': 'not_applicable'}, 'checks': [],
@@ -297,15 +377,20 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
         database_paths = database_impact_paths(initial['changed_paths'])
-        if schema_change or database_paths:
+        if schema_change or database_paths or profile == 'workspace':
             report['database'] = {
                 'status': 'incomplete', 'trigger_paths': database_paths,
                 'explicit_schema_change': schema_change,
                 'required_engines': ['sqlite', 'mysql', 'postgresql'],
-                'reason': 'This foundation profile has no live database matrix runner. Add and execute the required database checks before accepting this scope. P00-T03 is not a schema-change exception.',
+                'reason': 'This scope requires the live database profile and its full selected matrix. P00-T03 is not a schema-change exception.',
             }
             if profile == 'foundation':
                 raise ValueError('Schema/database-impacting scope requires the missing live three-engine gate.')
+        if profile == 'workspace':
+            scope = config['workspace_scope']
+            unsupported = sorted(set(database_paths) - set(scope['allowed_impact_paths']))
+            if task not in scope['tasks'] or unsupported:
+                raise ValueError('Workspace database checks cover only the declared P01-T01 scope; unsupported paths: ' + ', '.join(unsupported))
         for executable in ('go', 'bun', 'git'):
             if shutil.which(executable):
                 args = [executable, 'version'] if executable == 'go' else [executable, '--version']
@@ -316,7 +401,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
             report['checks'][index] = run_check(repo, target, check)
             (target / 'result.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
             if report['checks'][index]['status'] != 'passed':
-                report['status'] = 'failed'
+                report['status'] = 'incomplete' if report['checks'][index]['status'] == 'incomplete' else 'failed'
                 report['reason'] = 'A required check failed; remaining checks were not run.'
                 return report
         final = snapshot(repo, base, selected, config)
@@ -326,6 +411,13 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         report['status'] = 'passed'
         if profile == 'foundation':
             report['acceptance'] = 'selected_foundation'
+        elif profile == 'workspace':
+            report['acceptance'] = 'selected_workspace'
+            report['database'] = {
+                'status': 'passed', 'trigger_paths': database_paths,
+                'explicit_schema_change': schema_change,
+                'engines': [check['database'] for check in report['checks'] if 'database' in check],
+            }
         return report
     except KeyboardInterrupt:
         report['status'] = 'failed'
@@ -342,7 +434,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', choices=('build', 'foundation'), default='foundation')
+    parser.add_argument('--profile', choices=('build', 'foundation', 'workspace'), default='foundation')
     parser.add_argument('--base-ref', required=True, help='Reviewed Git baseline; tracked, staged and untracked changes are included.')
     parser.add_argument('--task', required=True, help='Plan task, for example P00-T09.')
     parser.add_argument('--schema-change', action='store_true', help='Add a database-impacting scope; this never waives detected changes.')

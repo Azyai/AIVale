@@ -24,6 +24,7 @@ python .agents/agent-platform/delivery/gate.py --profile build --base-ref HEAD -
 | --- | --- | --- |
 | `build` | 锁定前端依赖、类型/前端构建、根和独立 Go 模块构建/vet、模块校验、工作区及暂存差异检查 | `scope=build_only`、`acceptance=not_run`；不是验收通过 |
 | `foundation` | 上述检查，加固定的 Agent、认证、JSON、限流、权限、离线旧模型协议和前端工作台回归 | 仅 `selected_p00_foundation` 所选用例通过；不是全仓、完整P00阶段或生产发布证明 |
+| `workspace` | 上述21项，加工作区 SQLite/MySQL/PostgreSQL 三个真实隔离环境验证 | 仅配置声明的 P01-T01 模型/迁移及所选基础，`acceptance=selected_workspace`；不代表后续角色鉴权或其他数据库变更已验证 |
 
 现有公共 CI 继续只做构建和静态检查。它没有本地测试源码，不因 `build` 返回 0 而完成验收。
 
@@ -41,7 +42,13 @@ python .agents/agent-platform/delivery/gate.py --profile build --base-ref HEAD -
 
 此版 `foundation` 是 P00 工程基础的所选回归配置，不是任意业务改动的放行器。对 Go 源码、Go 模块元数据、模型/迁移、SQL、数据库或部署配置采用保守范围判断；即使实际只是 Go 注释，也要求先明确适用范围并扩充相应门禁。`--schema-change` 只能收紧判定，不能覆盖自动检测。
 
-这些变更缺少真实 SQLite/MySQL/PostgreSQL 门禁时，数据库状态为 `incomplete`，本地验收返回非零。本版本没有数据库矩阵执行器，也不接受手填的旧报告作为绿灯。后续数据库任务必须实现并执行对应真实环境检查；无数据库影响时只记不适用，不伪造三库通过。
+这些变更缺少真实 SQLite/MySQL/PostgreSQL 门禁时，数据库状态为 `incomplete`，本地验收返回非零。`foundation` 不包含数据库执行器，也不接受手填的旧报告作为绿灯。P01-T01 使用新增 `workspace` 配置和 [真实数据库入口](../database/README.md)，三库各需空库/升级、三次启动、数据/索引/范围与回滚验证，并确认服务关闭。其他数据库任务必须先补对应检查；无数据库影响时只记不适用，不伪造三库通过。
+
+```powershell
+python .agents/agent-platform/delivery/gate.py --profile workspace --base-ref <开发前提交> --task P01-T01
+```
+
+`workspace` 配置强制三个引擎各一项，限定任务和数据库影响路径；改驱动、其他模型或未知范围会继续标记未完成。每项只读取本工具本次创建的子目录，重新核对 Go 原始事件、场景摘要与收据一致，不提供外部旧报告导入参数。
 
 P00-T03 的 MySQL-only 约定只覆盖它原有的隔离启动环境。把 `--task` 改成 `P00-T03` 不能豁免新的 schema 或其他数据库变更。`build` 可编译数据库相关代码，但仍明确未执行验收。
 
