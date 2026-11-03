@@ -1,0 +1,580 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "build": [
+      "frontend-install",
+      "frontend-typecheck",
+      "frontend-build",
+      "root-build",
+      "root-vet",
+      "relaykit-build",
+      "relaykit-vet",
+      "tokenkit-build",
+      "tokenkit-vet",
+      "module-verify",
+      "git-diff-check",
+      "git-cached-diff-check"
+    ],
+    "foundation": [
+      "frontend-install",
+      "frontend-typecheck",
+      "frontend-build",
+      "root-build",
+      "root-vet",
+      "relaykit-build",
+      "relaykit-vet",
+      "tokenkit-build",
+      "tokenkit-vet",
+      "module-verify",
+      "git-diff-check",
+      "git-cached-diff-check",
+      "agent-boundary-tests",
+      "agent-runtime-tests",
+      "auth-regression-tests",
+      "host-json-limit-tests",
+      "authz-tests",
+      "legacy-model-stream-tests",
+      "legacy-model-adaptor-tests",
+      "legacy-model-router-tests",
+      "agent-web-tests"
+    ]
+  },
+  "checks": [
+    {
+      "id": "frontend-install",
+      "gate": "G-BASE",
+      "cwd": "web",
+      "argv": [
+        "bun",
+        "install",
+        "--frozen-lockfile"
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "web/package.json",
+        "web/bun.lock"
+      ]
+    },
+    {
+      "id": "frontend-typecheck",
+      "gate": "G-BASE",
+      "cwd": "web",
+      "argv": [
+        "bun",
+        "run",
+        "typecheck"
+      ],
+      "timeout_seconds": 180,
+      "kind": "command",
+      "required_files": [
+        "web/package.json",
+        "web/tsconfig.json"
+      ]
+    },
+    {
+      "id": "frontend-build",
+      "gate": "G-BASE",
+      "cwd": "web",
+      "argv": [
+        "bun",
+        "run",
+        "build"
+      ],
+      "timeout_seconds": 300,
+      "kind": "command",
+      "required_files": [
+        "web/package.json",
+        "web/rsbuild.config.ts",
+        "web/src/main.tsx",
+        "web/index.html"
+      ]
+    },
+    {
+      "id": "root-build",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "build",
+        "-mod=readonly",
+        "./..."
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "go.mod",
+        "go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "root-vet",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "go.mod",
+        "go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "relaykit-build",
+      "gate": "G-BASE",
+      "cwd": "relaykit",
+      "argv": [
+        "go",
+        "build",
+        "-mod=readonly",
+        "./..."
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "relaykit/go.mod",
+        "relaykit/go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "relaykit-vet",
+      "gate": "G-BASE",
+      "cwd": "relaykit",
+      "argv": [
+        "go",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "relaykit/go.mod",
+        "relaykit/go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "tokenkit-build",
+      "gate": "G-BASE",
+      "cwd": "tokenkit",
+      "argv": [
+        "go",
+        "build",
+        "-mod=readonly",
+        "./..."
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "tokenkit/go.mod",
+        "tokenkit/go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "tokenkit-vet",
+      "gate": "G-BASE",
+      "cwd": "tokenkit",
+      "argv": [
+        "go",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "timeout_seconds": 600,
+      "kind": "command",
+      "required_files": [
+        "tokenkit/go.mod",
+        "tokenkit/go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "module-verify",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "mod",
+        "verify"
+      ],
+      "timeout_seconds": 180,
+      "kind": "command",
+      "required_files": [
+        "go.mod",
+        "go.sum"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "git-diff-check",
+      "gate": "G-OPS",
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeout_seconds": 30,
+      "kind": "command",
+      "required_files": [
+        "go.mod"
+      ]
+    },
+    {
+      "id": "git-cached-diff-check",
+      "gate": "G-OPS",
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "timeout_seconds": 30,
+      "kind": "command",
+      "required_files": [
+        "go.mod"
+      ]
+    },
+    {
+      "id": "agent-boundary-tests",
+      "gate": "G-API",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./router",
+        "-run",
+        "^(TestAgentPlatformCapabilities|TestAgentPlatformStatusPreservesLegacyFields|TestAgentPlatformGateScopesAndDrainControls|TestAgentPlatformFeatureAdmissionAndInFlightDrain|TestAgentPlatformGateIsWiredIntoProductionRouter|TestAgentPlatformModuleProbe|TestAgentPlatformModuleProbeExceptionIsNarrow|TestAgentPlatformModuleContextIsInternal|TestAgentAPICanonicalID|TestAgentAPIPageQueries|TestAgentAPIErrorCatalogueAndSafety|TestAgentAPIHTTPResponses|TestAgentAPINamespaceRecovery)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "router/agent_platform_test.go"
+      ],
+      "expected_tests": [
+        "TestAgentPlatformCapabilities",
+        "TestAgentPlatformStatusPreservesLegacyFields",
+        "TestAgentPlatformGateScopesAndDrainControls",
+        "TestAgentPlatformFeatureAdmissionAndInFlightDrain",
+        "TestAgentPlatformGateIsWiredIntoProductionRouter",
+        "TestAgentPlatformModuleProbe",
+        "TestAgentPlatformModuleProbeExceptionIsNarrow",
+        "TestAgentPlatformModuleContextIsInternal",
+        "TestAgentAPICanonicalID",
+        "TestAgentAPIPageQueries",
+        "TestAgentAPIErrorCatalogueAndSafety",
+        "TestAgentAPIHTTPResponses",
+        "TestAgentAPINamespaceRecovery"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "agent-runtime-tests",
+      "gate": "G-SEC",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./service/agentexecution",
+        "-run",
+        "^(TestEinoRuntimeRunsFixedSkillAndMemoryMCPWithoutModelCredentials|TestEinoRuntimeRejectsInvalidConstruction|TestEinoRuntimeRejectsCancelledOrInvalidInvocationBeforeStep|TestEinoRuntimeWaitsForCooperativeCancellationAndRejectsLateSuccess|TestEinoRuntimePreservesHandlerFailureAndDiscardsOutput|TestEinoRuntimeStopsBeforeToolWhenFixedSkillCannotBeRead|TestEinoMCPToolCancellationReachesServerAndSessionStillCloses)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "service/agentexecution/runtime_test.go"
+      ],
+      "expected_tests": [
+        "TestEinoRuntimeRunsFixedSkillAndMemoryMCPWithoutModelCredentials",
+        "TestEinoRuntimeRejectsInvalidConstruction",
+        "TestEinoRuntimeRejectsCancelledOrInvalidInvocationBeforeStep",
+        "TestEinoRuntimeWaitsForCooperativeCancellationAndRejectsLateSuccess",
+        "TestEinoRuntimePreservesHandlerFailureAndDiscardsOutput",
+        "TestEinoRuntimeStopsBeforeToolWhenFixedSkillCannotBeRead",
+        "TestEinoMCPToolCancellationReachesServerAndSessionStillCloses"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "auth-regression-tests",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./service",
+        "./middleware",
+        "-run",
+        "^(TestAccessTokenRoundTripAndPurposeIsolation|TestAccessTokenRejectsTampering|TestDashboardAccessTokenRejectsMalformedInternalSignature|TestDashboardAccessTokenClassificationRejectsMalformedSegments|TestAccessTokenEnforcesSignatureAndClaimConstraints|TestDashboardAccessTokenClassification|TestSecurityProofBindsIdentityAndOperation|TestSecurityProofBindsAccessTokenSession|TestLoginSessionCreateRefreshAndRevoke|TestUserAuthVersionInvalidatesExistingSession|TestUserAuthAllowsOpaqueDottedPAT|TestUserAuthNeverFallsBackForRecognizedInvalidInternalJWT|TestTryUserAuthCredentialClassification|TestUserAuthAppliesAccessTokenRouteRules|TestAccessTokenIdentityAndSingleLookup)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "service/auth_token_test.go",
+        "service/auth_session_test.go",
+        "middleware/auth_test.go"
+      ],
+      "expected_tests": [
+        "TestAccessTokenRoundTripAndPurposeIsolation",
+        "TestAccessTokenRejectsTampering",
+        "TestDashboardAccessTokenRejectsMalformedInternalSignature",
+        "TestDashboardAccessTokenClassificationRejectsMalformedSegments",
+        "TestAccessTokenEnforcesSignatureAndClaimConstraints",
+        "TestDashboardAccessTokenClassification",
+        "TestSecurityProofBindsIdentityAndOperation",
+        "TestSecurityProofBindsAccessTokenSession",
+        "TestLoginSessionCreateRefreshAndRevoke",
+        "TestUserAuthVersionInvalidatesExistingSession",
+        "TestUserAuthAllowsOpaqueDottedPAT",
+        "TestUserAuthNeverFallsBackForRecognizedInvalidInternalJWT",
+        "TestTryUserAuthCredentialClassification",
+        "TestUserAuthAppliesAccessTokenRouteRules",
+        "TestAccessTokenIdentityAndSingleLookup"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "host-json-limit-tests",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./common",
+        "-run",
+        "^(TestJsonRawMessageToString|TestDecodeJsonWithValidation|TestHostJSONCodecConformance|TestInMemoryRateLimiterAllocatesTimestampsOnDemand|TestInMemoryRateLimiterEnforcesWindowBoundary|TestInMemoryRateLimiterRemovesAllExpiredRequestsPerCall|TestInMemoryRateLimiterKeepsNonExpiredRequests|TestInMemoryRateLimiterEvictsOnlyExpiredLRUTail|TestInMemoryRateLimiterCleanupTicksEvictExpiredKeys|TestInMemoryRateLimiterInitKeepsFirstConfiguration|TestInMemoryRateLimiterConcurrentInitializationAndRequests)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "common/json_test.go",
+        "common/rate-limit_test.go"
+      ],
+      "expected_tests": [
+        "TestJsonRawMessageToString",
+        "TestDecodeJsonWithValidation",
+        "TestHostJSONCodecConformance",
+        "TestInMemoryRateLimiterAllocatesTimestampsOnDemand",
+        "TestInMemoryRateLimiterEnforcesWindowBoundary",
+        "TestInMemoryRateLimiterRemovesAllExpiredRequestsPerCall",
+        "TestInMemoryRateLimiterKeepsNonExpiredRequests",
+        "TestInMemoryRateLimiterEvictsOnlyExpiredLRUTail",
+        "TestInMemoryRateLimiterCleanupTicksEvictExpiredKeys",
+        "TestInMemoryRateLimiterInitKeepsFirstConfiguration",
+        "TestInMemoryRateLimiterConcurrentInitializationAndRequests"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "authz-tests",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./service/authz",
+        "-run",
+        "^(TestInitSeedsBuiltInRolesAndPoliciesOnce|TestInitOnSlaveOnlyLoadsPolicies|TestLegacyScopedPoliciesDoNotExpandPermissions|TestSetUserPermissionsStoresOnlyOverrides|TestClearUserAuthorizationRemovesOverrides|TestSetUserPermissionsInTxDoesNotMutateEnforcerBeforeReload|TestSetUserPermissionsInTxRollbackLeavesNoPolicy|TestAdapterAddPolicyIsIdempotent|TestCapabilitiesUseCatalogShape|TestTaskPluginBindIsRootOnlyUntilGranted)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "service/authz/authz_test.go"
+      ],
+      "expected_tests": [
+        "TestInitSeedsBuiltInRolesAndPoliciesOnce",
+        "TestInitOnSlaveOnlyLoadsPolicies",
+        "TestLegacyScopedPoliciesDoNotExpandPermissions",
+        "TestSetUserPermissionsStoresOnlyOverrides",
+        "TestClearUserAuthorizationRemovesOverrides",
+        "TestSetUserPermissionsInTxDoesNotMutateEnforcerBeforeReload",
+        "TestSetUserPermissionsInTxRollbackLeavesNoPolicy",
+        "TestAdapterAddPolicyIsIdempotent",
+        "TestCapabilitiesUseCatalogShape",
+        "TestTaskPluginBindIsRootOnlyUntilGranted"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "legacy-model-stream-tests",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./relay/channel/openai",
+        "-run",
+        "^(TestOaiResponsesToChatBufferedStreamHandlerReturnsJSONFromSSE|TestOaiResponsesToChatStreamHandlerConvertsSSEOrderAndUsage)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "relay/channel/openai/chat_via_responses_test.go"
+      ],
+      "expected_tests": [
+        "TestOaiResponsesToChatBufferedStreamHandlerReturnsJSONFromSSE",
+        "TestOaiResponsesToChatStreamHandlerConvertsSSEOrderAndUsage"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "legacy-model-adaptor-tests",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./relay/channel/advancedcustom",
+        "-run",
+        "^(TestAdaptorConvertsOpenAIChatRequestToResponsesUpstream)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "relay/channel/advancedcustom/adaptor_test.go"
+      ],
+      "expected_tests": [
+        "TestAdaptorConvertsOpenAIChatRequestToResponsesUpstream"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "legacy-model-router-tests",
+      "gate": "G-BASE",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./router",
+        "-run",
+        "^(TestListModelsSupportsOpenAIAndGeminiAuthentication)$"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "router/relay_router_test.go"
+      ],
+      "expected_tests": [
+        "TestListModelsSupportsOpenAIAndGeminiAuthentication"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
+      "id": "agent-web-tests",
+      "gate": "G-UI",
+      "cwd": "web",
+      "argv": [
+        "bun",
+        "run",
+        "test",
+        "src/features/agent-platform/__tests__/capabilities.test.ts",
+        "src/features/agent-platform/__tests__/queries.test.tsx",
+        "src/features/agent-platform/__tests__/query-lifecycle.test.tsx",
+        "src/features/agent-platform/__tests__/workbench.test.tsx",
+        "src/features/agent-platform/__tests__/routes.test.tsx",
+        "src/lib/__tests__/query-client.test.ts",
+        "src/components/layout/__tests__/agent-platform-navigation.test.tsx",
+        "src/context/__tests__/search-provider.test.tsx",
+        "--reporter=json"
+      ],
+      "timeout_seconds": 180,
+      "kind": "vitest",
+      "required_files": [
+        "web/src/features/agent-platform/__tests__/capabilities.test.ts",
+        "web/src/features/agent-platform/__tests__/queries.test.tsx",
+        "web/src/features/agent-platform/__tests__/query-lifecycle.test.tsx",
+        "web/src/features/agent-platform/__tests__/workbench.test.tsx",
+        "web/src/features/agent-platform/__tests__/routes.test.tsx",
+        "web/src/lib/__tests__/query-client.test.ts",
+        "web/src/components/layout/__tests__/agent-platform-navigation.test.tsx",
+        "web/src/context/__tests__/search-provider.test.tsx",
+        "web/src/features/agent-platform/__tests__/query-fixtures.tsx",
+        "web/src/test-setup.ts",
+        "web/vitest.config.ts"
+      ],
+      "expected_files": [
+        "src/features/agent-platform/__tests__/capabilities.test.ts",
+        "src/features/agent-platform/__tests__/queries.test.tsx",
+        "src/features/agent-platform/__tests__/query-lifecycle.test.tsx",
+        "src/features/agent-platform/__tests__/workbench.test.tsx",
+        "src/features/agent-platform/__tests__/routes.test.tsx",
+        "src/lib/__tests__/query-client.test.ts",
+        "src/components/layout/__tests__/agent-platform-navigation.test.tsx",
+        "src/context/__tests__/search-provider.test.tsx"
+      ]
+    }
+  ]
+}
