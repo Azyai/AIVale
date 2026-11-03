@@ -7331,6 +7331,19 @@
     "Select a city": "Chọn thành phố",
     "Token 服务 · 模型部署": "Dịch vụ Token · Triển khai mô hình",
     "Scroll to zoom, drag to pan": "Lăn để phóng to, kéo để di chuyển",
-    "Hover over the map to see local landmarks and flavors": "Di chuột lên bản đồ để xem địa danh và món ăn đặc sản từng vùng"
+    "Hover over the map to see local landmarks and flavors": "Di chuột lên bản đồ để xem địa danh và món ăn đặc sản từng vùng",
+    "Agent workbench": "Bàn làm việc tác tử",
+    "Checking agent workbench availability...": "Đang kiểm tra tính khả dụng của bàn làm việc tác tử…",
+    "Unable to check agent workbench availability": "Không thể kiểm tra tính khả dụng của bàn làm việc tác tử",
+    "Check your connection and try again.": "Kiểm tra kết nối rồi thử lại.",
+    "Agent workbench is unavailable": "Bàn làm việc tác tử chưa khả dụng",
+    "The agent workbench has not been enabled. Contact your administrator for access.": "Bàn làm việc tác tử chưa được bật. Vui lòng liên hệ quản trị viên.",
+    "Check availability": "Kiểm tra lại",
+    "The agent workbench is being prepared.": "Bàn làm việc tác tử đang được chuẩn bị.",
+    "Workspace management will be available here once it is ready.": "Tính năng quản lý không gian làm việc sẽ có ở đây khi sẵn sàng.",
+    "Workspace": "Không gian làm việc",
+    "Workspace details are not available yet": "Chi tiết không gian làm việc chưa khả dụng",
+    "Return to the workspace list to continue.": "Quay lại danh sách không gian làm việc để tiếp tục.",
+    "Back to workspaces": "Về danh sách không gian làm việc"
   }
 }

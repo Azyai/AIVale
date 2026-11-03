@@ -31,8 +31,12 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command'
-import { useSearch } from '@/context/search-provider'
+import { useSearch } from '@/context/search-context'
 import { useTheme } from '@/context/theme-provider'
+import {
+  isAgentPlatformAvailable,
+  useAgentPlatformCapabilities,
+} from '@/features/agent-platform/queries'
 import { useSidebarData } from '@/hooks/use-sidebar-data'
 
 import { getNavGroupsForPath } from './layout/lib/sidebar-view-registry'
@@ -45,10 +49,13 @@ export function CommandMenu() {
   const { open, setOpen } = useSearch()
   const { pathname } = useLocation()
   const sidebarData = useSidebarData()
+  const capabilities = useAgentPlatformCapabilities()
 
   // Use the active nested sidebar view's nav groups when one matches
   // the current URL; otherwise fall back to the root navigation.
-  const navGroups = getNavGroupsForPath(pathname, t) ?? sidebarData.navGroups
+  const navGroups =
+    getNavGroupsForPath(pathname, t, isAgentPlatformAvailable(capabilities)) ??
+    sidebarData.navGroups
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {
@@ -67,11 +74,11 @@ export function CommandMenu() {
             <CommandEmpty>{t('No results found.')}</CommandEmpty>
             {navGroups.map((group) => (
               <CommandGroup key={group.id || group.title} heading={group.title}>
-                {group.items.map((navItem, i) => {
-                  if (navItem.url)
+                {group.items.map((navItem) => {
+                  if (navItem.url) {
                     return (
                       <CommandItem
-                        key={`${navItem.url}-${i}`}
+                        key={navItem.url}
                         value={navItem.title}
                         onSelect={() => {
                           runCommand(() => navigate({ to: navItem.url }))
@@ -83,10 +90,11 @@ export function CommandMenu() {
                         {navItem.title}
                       </CommandItem>
                     )
+                  }
 
-                  return navItem.items?.map((subItem, i) => (
+                  return navItem.items?.map((subItem) => (
                     <CommandItem
-                      key={`${navItem.title}-${subItem.url}-${i}`}
+                      key={`${navItem.title}-${subItem.url}`}
                       value={`${navItem.title}-${subItem.url}`}
                       onSelect={() => {
                         runCommand(() => navigate({ to: subItem.url }))

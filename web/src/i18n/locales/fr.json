@@ -7331,6 +7331,19 @@
     "Select a city": "Sélectionner une ville",
     "Token 服务 · 模型部署": "Service Token · Déploiement de modèles",
     "Scroll to zoom, drag to pan": "Molette pour zoomer, glisser pour déplacer",
-    "Hover over the map to see local landmarks and flavors": "Survolez la carte pour découvrir monuments et spécialités locales"
+    "Hover over the map to see local landmarks and flavors": "Survolez la carte pour découvrir monuments et spécialités locales",
+    "Agent workbench": "Atelier des agents",
+    "Checking agent workbench availability...": "Vérification de la disponibilité de l’atelier des agents…",
+    "Unable to check agent workbench availability": "Impossible de vérifier la disponibilité de l’atelier des agents",
+    "Check your connection and try again.": "Vérifiez votre connexion et réessayez.",
+    "Agent workbench is unavailable": "L’atelier des agents est indisponible",
+    "The agent workbench has not been enabled. Contact your administrator for access.": "L’atelier des agents n’est pas activé. Contactez votre administrateur.",
+    "Check availability": "Vérifier la disponibilité",
+    "The agent workbench is being prepared.": "L’atelier des agents est en cours de préparation.",
+    "Workspace management will be available here once it is ready.": "La gestion des espaces de travail sera disponible ici lorsqu’elle sera prête.",
+    "Workspace": "Espace de travail",
+    "Workspace details are not available yet": "Les détails de l’espace de travail ne sont pas encore disponibles",
+    "Return to the workspace list to continue.": "Revenez à la liste des espaces de travail pour continuer.",
+    "Back to workspaces": "Retour aux espaces de travail"
   }
 }

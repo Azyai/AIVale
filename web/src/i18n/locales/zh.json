@@ -7331,6 +7331,19 @@
     "Select a city": "请选择城市",
     "Token 服务 · 模型部署": "Token 服务 · 模型部署",
     "Scroll to zoom, drag to pan": "滚轮缩放，拖拽平移",
-    "Hover over the map to see local landmarks and flavors": "鼠标移到地图上，查看各地特色建筑与美食"
+    "Hover over the map to see local landmarks and flavors": "鼠标移到地图上，查看各地特色建筑与美食",
+    "Agent workbench": "智能体工作台",
+    "Checking agent workbench availability...": "正在检查智能体工作台是否可用…",
+    "Unable to check agent workbench availability": "无法检查智能体工作台是否可用",
+    "Check your connection and try again.": "请检查网络连接后重试。",
+    "Agent workbench is unavailable": "智能体工作台暂不可用",
+    "The agent workbench has not been enabled. Contact your administrator for access.": "智能体工作台尚未启用，请联系管理员。",
+    "Check availability": "重新检查",
+    "The agent workbench is being prepared.": "智能体工作台正在准备中。",
+    "Workspace management will be available here once it is ready.": "工作区管理功能就绪后，将在这里提供。",
+    "Workspace": "工作区",
+    "Workspace details are not available yet": "工作区详情暂不可用",
+    "Return to the workspace list to continue.": "请返回工作区列表继续。",
+    "Back to workspaces": "返回工作区列表"
   }
 }

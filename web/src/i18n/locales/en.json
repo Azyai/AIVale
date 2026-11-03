@@ -7331,6 +7331,19 @@
     "Select a city": "Select a city",
     "Token 服务 · 模型部署": "Token Service · Model Deployment",
     "Scroll to zoom, drag to pan": "Scroll to zoom, drag to pan",
-    "Hover over the map to see local landmarks and flavors": "Hover over the map to see local landmarks and flavors"
+    "Hover over the map to see local landmarks and flavors": "Hover over the map to see local landmarks and flavors",
+    "Agent workbench": "Agent workbench",
+    "Checking agent workbench availability...": "Checking agent workbench availability...",
+    "Unable to check agent workbench availability": "Unable to check agent workbench availability",
+    "Check your connection and try again.": "Check your connection and try again.",
+    "Agent workbench is unavailable": "Agent workbench is unavailable",
+    "The agent workbench has not been enabled. Contact your administrator for access.": "The agent workbench has not been enabled. Contact your administrator for access.",
+    "Check availability": "Check availability",
+    "The agent workbench is being prepared.": "The agent workbench is being prepared.",
+    "Workspace management will be available here once it is ready.": "Workspace management will be available here once it is ready.",
+    "Workspace": "Workspace",
+    "Workspace details are not available yet": "Workspace details are not available yet",
+    "Return to the workspace list to continue.": "Return to the workspace list to continue.",
+    "Back to workspaces": "Back to workspaces"
   }
 }
