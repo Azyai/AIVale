@@ -1,0 +1,432 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale workspace read API",
+    "version": "1.0.0",
+    "description": "P01-T03 adds only API-001 and API-003. Uses shared Agent transport/core 1.1.0 and workspace DTO 1.0.0. Unknown and repeated query parameters are rejected. Default platform flag remains disabled."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "Local development example, not a deployed service"
+    }
+  ],
+  "security": [
+    {
+      "DashboardSession": []
+    }
+  ],
+  "paths": {
+    "/api/agent-platform/workspaces": {
+      "get": {
+        "operationId": "listAgentWorkspaces",
+        "summary": "List current session subject visible workspaces",
+        "description": "Live user/session and membership checks precede visible-scope COUNT and pagination. No Team parameter is accepted. Archived/ungranted spaces excluded; suspended visible spaces readable. Empty results explain no_team/no_results/page_out_of_range.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|900[0-6][0-9]{12}|90070[0-9]{11}|90071[0-8][0-9]{10}|900719[0-8][0-9]{9}|9007199[0-1][0-9]{8}|90071992[0-4][0-9]{7}|900719925[0-3][0-9]{6}|9007199254[0-6][0-9]{5}|90071992547[0-3][0-9]{4}|9007199254740[0-8][0-9]{2}|90071992547409[0-8][0-9]|9007199254740990|9007199254740991)$",
+              "default": "1",
+              "minLength": 1,
+              "maxLength": 16
+            },
+            "description": "Canonical positive JS-safe integer; repeated or empty values rejected."
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]?|100)$",
+              "default": "20",
+              "minLength": 1,
+              "maxLength": 3
+            },
+            "description": "Canonical integer 1..100; repeated or empty values rejected."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 32,
+              "default": "created_at:desc,id:desc",
+              "enum": [
+                "id:asc",
+                "id:desc",
+                "created_at:asc",
+                "created_at:desc",
+                "created_at:asc,id:asc",
+                "created_at:asc,id:desc",
+                "created_at:desc,id:asc",
+                "created_at:desc,id:desc"
+              ]
+            },
+            "description": "created_at/id and asc/desc only, ID tie-breaker last; omit ID to append id:desc."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[^\\x00]*$",
+              "x-max-utf8-bytes": 512
+            },
+            "description": "At most 512 UTF-8 bytes and 128 Unicode code points before trim, no NUL; case-sensitive literal name substring; empty means no filter. One value only."
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID, query or pagination",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid dashboard session is required; PAT/model tokens rejected",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace is unavailable, including cross-tenant or archived",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe internal error",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Visible workspace metadata page",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/listResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}": {
+      "get": {
+        "operationId": "getAgentWorkspace",
+        "summary": "Read visible workspace metadata",
+        "description": "No query parameters accepted. Permission metadata contains only currently allowed workspace-level unconditional actions; no private policies, budgets, actor IDs or future resource grants are returned.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            },
+            "description": "Canonical positive signed-int64 decimal string; max 9223372036854775807."
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID, query or pagination",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid dashboard session is required; PAT/model tokens rejected",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace is unavailable, including cross-tenant or archived",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe internal error",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Workspace metadata and public description",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspaces.schema.json#/$defs/detailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DashboardSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Existing signed dashboard access JWT backed by a live login session. PAT and model bearer keys are not valid."
+      }
+    }
+  }
+}

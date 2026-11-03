@@ -169,15 +169,8 @@ type WorkspaceAccess struct {
 // 它仅授权工作区层动作；发布依赖校验等业务前提仍由相应服务检查。
 // db必须是本次主库基础连接，不接受已有事务快照作为实时授权事实。
 func AuthorizeWorkspace(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, workspaceID int64, action WorkspaceAction) (*WorkspaceAccess, error) {
-	if ctx == nil || db == nil || db.Config == nil || db.Statement == nil || db.Statement.ConnPool == nil {
-		return nil, agenttypes.NewError(agenttypes.InternalError, nil)
-	}
-	if _, transactional := db.Statement.ConnPool.(gorm.TxCommitter); transactional {
-		// sql.Tx及GORM PreparedStmtTX均实现TxCommitter，不能跨请求复用旧快照。
-		return nil, agenttypes.NewError(agenttypes.InternalError, nil)
-	}
-	if identity.UserID <= 0 || identity.SessionID == "" || len(identity.SessionID) > 64 || strings.HasPrefix(identity.SessionID, "pat:") || identity.UserAuthVersion <= 0 || identity.SessionVersion <= 0 {
-		return nil, agenttypes.NewError(agenttypes.AuthRequired, nil)
+	if err := validateWorkspaceSessionInput(ctx, db, identity); err != nil {
+		return nil, err
 	}
 	if workspaceID <= 0 {
 		return nil, agenttypes.NewInvalidArgument("workspace_id", "Workspace ID must be positive")
@@ -220,18 +213,45 @@ func AuthorizeWorkspace(ctx context.Context, db *gorm.DB, identity model.AuthSes
 		return nil, agenttypes.NewError(agenttypes.ResourceNotFound, nil)
 	}
 	permission := WorkspacePermissionForRole(role, action)
-	if permission.Scope == WorkspaceScopeNone || permission.RequiresResourceCheck {
+	if !workspaceActionPermitted(role, record.WorkspaceStatus, action) {
 		return nil, agenttypes.NewError(agenttypes.PermissionDenied, nil)
-	}
-	if record.WorkspaceStatus == model.AgentWorkspaceStatusSuspended {
-		switch action {
-		case WorkspaceRead, WorkspaceManage, MemberManage, AgentRead, SkillRead, MCPRead, RunRead, ScheduleRead:
-		default:
-			return nil, agenttypes.NewError(agenttypes.PermissionDenied, nil)
-		}
 	}
 	return &WorkspaceAccess{
 		UserID: record.UserID, Scope: model.AgentScope{TeamID: record.TeamID, WorkspaceID: record.WorkspaceID},
 		Role: role, WorkspaceStatus: record.WorkspaceStatus, Action: action, PermissionScope: permission.Scope,
 	}, nil
+}
+
+// validateWorkspaceSessionInput 固定各管理读/授权入口的基础连接和受信会话前置条件。
+func validateWorkspaceSessionInput(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity) error {
+	if ctx == nil || db == nil || db.Config == nil || db.Statement == nil || db.Statement.ConnPool == nil {
+		return agenttypes.NewError(agenttypes.InternalError, nil)
+	}
+	if _, transactional := db.Statement.ConnPool.(gorm.TxCommitter); transactional {
+		// sql.Tx及GORM PreparedStmtTX均实现TxCommitter，不能跨请求复用旧快照。
+		return agenttypes.NewError(agenttypes.InternalError, nil)
+	}
+	if identity.UserID <= 0 || identity.SessionID == "" || len(identity.SessionID) > 64 || strings.HasPrefix(identity.SessionID, "pat:") || identity.UserAuthVersion <= 0 || identity.SessionVersion <= 0 {
+		return agenttypes.NewError(agenttypes.AuthRequired, nil)
+	}
+	return nil
+}
+
+// workspaceActionPermitted 与授权和读接口共享状态/动作规则，候选权限不自动变成许可。
+func workspaceActionPermitted(role, status string, action WorkspaceAction) bool {
+	permission := WorkspacePermissionForRole(role, action)
+	if permission.Scope == WorkspaceScopeNone || permission.RequiresResourceCheck {
+		return false
+	}
+	if status != model.AgentWorkspaceStatusActive {
+		if status != model.AgentWorkspaceStatusSuspended {
+			return false
+		}
+		switch action {
+		case WorkspaceRead, WorkspaceManage, MemberManage, AgentRead, SkillRead, MCPRead, RunRead, ScheduleRead:
+		default:
+			return false
+		}
+	}
+	return true
 }

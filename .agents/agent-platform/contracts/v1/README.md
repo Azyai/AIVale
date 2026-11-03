@@ -2,7 +2,7 @@
 
 当前公共契约版本为 **1.1.0**。首个纯文本Agent契约由 **P00-T02** 建立，**P00-T06** 在同一v1目录显式补充通用内部错误与分页排序约定。它是后续数据库、Go DTO、前端类型与接口实现的共同输入。
 
-本任务交付契约材料，相关业务 API 尚未上线。Schema 和样例校验不能代替服务端鉴权、真实计费、数据库兼容性或安全合规验证。
+P01-T03在共享1.1.0契约上新增独立版本1.0.0的工作区只读接口描述，正式注册API-001/003；其他远期业务仍不因契约存在而开放。Schema和样例校验不能代替服务端鉴权、真实计费、数据库兼容性或安全合规验证。
 
 ## 文件与验证入口
 
@@ -15,10 +15,17 @@
 | `capabilities.examples.json` | 探测禁用、配置开启但未就绪、禁用gate拒绝未支持写方法的开发样例 |
 | `transport.schema.json` | P00-T06共享成功、分页响应及公开传输样例Schema，不发布新的业务路由 |
 | `transport.examples.json` | 长期公开的ID、分页、成功与安全错误示例，不是某次验收记录或测试专用反例集 |
+| `workspaces.schema.json` | P01-T03工作区列表/详情显式DTO、字符串ID与安全数值、空态及字段白名单；独立版本1.0.0，不改旧core/probe协议 |
+| `workspaces.openapi.json` | API-001/003的管理会话身份、page/page_size/sort/q、错误与no-store规则；不声明写接口或API-118 |
+| `workspaces.examples.json` | 合成的列表/详情、无团队/无结果/空页及固定错误开发示例，不是执行报告 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
-测试入口与专用案例仅保留本地；新克隆须先具备上述文件，缺少时标记为未验证，不能宣称契约测试通过。正式 Schema、OpenAPI、公开开发示例和工具依赖继续版本管理。规则见 [测试与验收规范](../../../../docs/project/07-acceptance.md)。在具备用例的仓库根目录运行：
+测试入口与专用案例仅保留本地；新克隆须先具备上述文件，缺少时标记为未验证，不能宣称契约测试通过。正式 Schema、OpenAPI、公开开发示例和工具依赖继续版本管理。规则见 [测试与验收规范](../../../../docs/project/07-acceptance.md)。
+
+工作区名称查询`q`最多128个Unicode码点且UTF-8原始值最多512字节，随后修剪首尾空白；按区分大小写的字面子串匹配，`%`、`_`、`!`、反斜线无通配含义。列表只接受单值`page/page_size/sort/q`，详情不接受query；排序复用共享白名单。`effective_permissions`只含当前角色/状态下可直接通过工作区层判定的动作，元数据范围不含私密正文，缺实际资源条件的动作不列出。列表`empty_reason`为null、no_team、no_results或page_out_of_range；归档/跨租户详情统一不可见。
+
+在具备本地共享契约用例的仓库根目录运行：
 
 ```powershell
 python .agents/agent-platform/contracts/validate.py --output .local-tests/agent-platform/P00-T02/results.json
@@ -140,4 +147,4 @@ created_at:desc,id:desc
 
 默认`created_at:desc,id:desc`；省略ID时补`id:desc`稳定次序，ID必须是最后一项。解析器返回受控字段和方向枚举，模型层只能映射这些枚举，不能将原始sort字符串拼到SQL。
 
-`PageQuery`以私有字段保存验证结果，排序切片防御复制；零值不是有效查询。offset使用checked int64运算，它是内部数据库偏移，不作为JSON数字公开，可能大于JavaScript安全整数。`NewPage`将nil items规范成空数组，检查total安全整数、页大小及结果数量；无效服务端查询或仓储数据作为内部500处理，不伪装成客户400，也不静默截断结果。当前仍没有分页业务处理器；共享工具通过本地HTTP harness验证，不以虚构路由或固定空列表冒充业务实现。
+`PageQuery`以私有字段保存验证结果，排序切片防御复制；零值不是有效查询。offset使用checked int64运算，它是内部数据库偏移，不作为JSON数字公开，可能大于JavaScript安全整数。`NewPage`将nil items规范成空数组，检查total安全整数、页大小及结果数量；无效服务端查询或仓储数据作为内部500处理，不伪装成客户400，也不静默截断结果。P00-T06时共享工具通过本地HTTP harness验证；P01-T03工作区列表进一步接入真实数据库与生产路由，验证范围及执行结果仍单独保存在本地。

@@ -1,0 +1,216 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P01-T03",
+  "examples": [
+    {
+      "name": "owner_page",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-list-example",
+        "data": {
+          "items": [
+            {
+              "id": "101",
+              "slug": "research",
+              "name": "研究空间",
+              "status": "active",
+              "current_role": "admin",
+              "created_at": 1793650000000,
+              "updated_at": 1793650000000,
+              "revision": 1,
+              "effective_permissions": [
+                "agent:publish",
+                "agent:read",
+                "agent:write",
+                "credential:manage",
+                "mcp:manage",
+                "mcp:read",
+                "member:manage",
+                "run:read",
+                "schedule:manage",
+                "schedule:read",
+                "skill:publish",
+                "skill:read",
+                "skill:write",
+                "workspace:manage",
+                "workspace:read"
+              ]
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "page_size": 20,
+          "empty_reason": null
+        }
+      }
+    },
+    {
+      "name": "viewer_metadata_detail",
+      "schema": "detailResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-detail-example",
+        "data": {
+          "id": "102",
+          "slug": "review",
+          "name": "审阅空间",
+          "status": "active",
+          "current_role": "viewer",
+          "created_at": 1793650000000,
+          "updated_at": 1793650000000,
+          "revision": 1,
+          "effective_permissions": [
+            "agent:read",
+            "mcp:read",
+            "run:read",
+            "schedule:read",
+            "skill:read",
+            "workspace:read"
+          ],
+          "description": "只读协作空间"
+        }
+      }
+    },
+    {
+      "name": "no_team",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-no-team-example",
+        "data": {
+          "items": [],
+          "total": 0,
+          "page": 1,
+          "page_size": 20,
+          "empty_reason": "no_team"
+        }
+      }
+    },
+    {
+      "name": "no_results",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-no-results-example",
+        "data": {
+          "items": [],
+          "total": 0,
+          "page": 1,
+          "page_size": 20,
+          "empty_reason": "no_results"
+        }
+      }
+    },
+    {
+      "name": "page_out_of_range",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-empty-page-example",
+        "data": {
+          "items": [],
+          "total": 1,
+          "page": 2,
+          "page_size": 20,
+          "empty_reason": "page_out_of_range"
+        }
+      }
+    },
+    {
+      "name": "invalid_query",
+      "schema": "errorResponse",
+      "http_status": 400,
+      "response": {
+        "success": false,
+        "code": "AG_INVALID_ARGUMENT",
+        "message": "Request parameters are invalid",
+        "request_id": "workspace-invalid-example",
+        "data": {
+          "field_errors": [
+            {
+              "path": "query",
+              "message": "Query contains an unsupported parameter"
+            }
+          ],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "auth_required",
+      "schema": "errorResponse",
+      "http_status": 401,
+      "response": {
+        "success": false,
+        "code": "AG_AUTH_REQUIRED",
+        "message": "Authentication is required",
+        "request_id": "workspace-auth-example",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "invisible_or_archived",
+      "schema": "errorResponse",
+      "http_status": 404,
+      "response": {
+        "success": false,
+        "code": "AG_RESOURCE_NOT_FOUND",
+        "message": "The resource is not available",
+        "request_id": "workspace-not-found-example",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "platform_disabled",
+      "schema": "errorResponse",
+      "http_status": 503,
+      "response": {
+        "success": false,
+        "code": "AG_RUNTIME_UNAVAILABLE",
+        "message": "Agent platform capability is unavailable",
+        "request_id": "workspace-disabled-example",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "internal_error",
+      "schema": "errorResponse",
+      "http_status": 500,
+      "response": {
+        "success": false,
+        "code": "AG_INTERNAL_ERROR",
+        "message": "The request could not be completed",
+        "request_id": "workspace-internal-example",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    }
+  ]
+}

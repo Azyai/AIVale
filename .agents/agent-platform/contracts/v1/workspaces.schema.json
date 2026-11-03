@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:workspaces:1.0.0",
+  "title": "AIVale workspace read contract 1.0.0",
+  "description": "P01-T03 management-session-only list/detail metadata. Additive to shared core 1.1.0; no write or workspace-capability endpoint is published.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P01-T03",
+    "core_version": "1.1.0",
+    "api_ids": [
+      "API-001",
+      "API-003"
+    ],
+    "authentication": "existing dashboard session; PAT and model tokens rejected",
+    "query": {
+      "allowed": [
+        "page",
+        "page_size",
+        "sort",
+        "q"
+      ],
+      "single_value": true,
+      "q_max_runes": 128,
+      "q_max_utf8_bytes": 512,
+      "q_trim": true,
+      "q_match": "case-sensitive literal substring; percent, underscore, exclamation and backslash have no wildcard meaning",
+      "detail_query": "none"
+    },
+    "database_fields_excluded": [
+      "team_id",
+      "created_by",
+      "updated_by",
+      "policy_json",
+      "default_member_role",
+      "max_active_runs",
+      "active_run_count",
+      "default_run_budget_quota",
+      "max_run_budget_quota",
+      "max_run_seconds"
+    ],
+    "archived": "not listed; detail is indistinguishable from unavailable",
+    "empty_reasons": {
+      "no_team": "Current enabled session user has no Team membership",
+      "no_results": "No visible workspace matches the requested filter",
+      "page_out_of_range": "Visible matches exist but this page has no rows"
+    }
+  },
+  "$defs": {
+    "workspaceSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\x00]*$"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "suspended"
+          ]
+        },
+        "current_role": {
+          "enum": [
+            "admin",
+            "developer",
+            "operator",
+            "viewer"
+          ]
+        },
+        "created_at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "updated_at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "effective_permissions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "workspace:read",
+              "workspace:manage",
+              "member:manage",
+              "agent:read",
+              "agent:write",
+              "agent:publish",
+              "skill:read",
+              "skill:write",
+              "skill:publish",
+              "mcp:read",
+              "mcp:manage",
+              "credential:manage",
+              "run:read",
+              "schedule:read",
+              "schedule:manage"
+            ]
+          },
+          "contains": {
+            "const": "workspace:read"
+          },
+          "description": "Only current workspace-level unconditional actions, filtered by role and state. Metadata actions never include private content. Resource-conditional actions remain denied."
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "status",
+        "current_role",
+        "created_at",
+        "updated_at",
+        "revision",
+        "effective_permissions"
+      ],
+      "additionalProperties": false
+    },
+    "workspaceDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\x00]*$"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "suspended"
+          ]
+        },
+        "current_role": {
+          "enum": [
+            "admin",
+            "developer",
+            "operator",
+            "viewer"
+          ]
+        },
+        "created_at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "updated_at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "effective_permissions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "workspace:read",
+              "workspace:manage",
+              "member:manage",
+              "agent:read",
+              "agent:write",
+              "agent:publish",
+              "skill:read",
+              "skill:write",
+              "skill:publish",
+              "mcp:read",
+              "mcp:manage",
+              "credential:manage",
+              "run:read",
+              "schedule:read",
+              "schedule:manage"
+            ]
+          },
+          "contains": {
+            "const": "workspace:read"
+          },
+          "description": "Only current workspace-level unconditional actions, filtered by role and state. Metadata actions never include private content. Resource-conditional actions remain denied."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "description": "UTF-8 public description; server limit is 4096 encoded bytes."
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "status",
+        "current_role",
+        "created_at",
+        "updated_at",
+        "revision",
+        "effective_permissions",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "workspacePage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/workspaceSummary"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "empty_reason": {
+          "enum": [
+            null,
+            "no_team",
+            "no_results",
+            "page_out_of_range"
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size",
+        "empty_reason"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "items": {
+                "minItems": 1
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "empty_reason": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "items": {
+                "maxItems": 0
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "empty_reason": {
+                "enum": [
+                  "no_team",
+                  "no_results",
+                  "page_out_of_range"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "empty_reason": {
+                "const": "no_team"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "total": {
+                "const": 0
+              },
+              "items": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "listResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/workspacePage"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "detailResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/workspaceDetail"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/listResponse"
+    },
+    {
+      "$ref": "#/$defs/detailResponse"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    }
+  ]
+}

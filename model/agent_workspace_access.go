@@ -29,8 +29,23 @@ func agentWorkspaceSessionQuery(db *gorm.DB, identity AuthSessionIdentity) *gorm
 		Joins("JOIN user_sessions ON user_sessions.user_id = users.id").
 		Where("users.id = ? AND users.status = ? AND users.deleted_at IS NULL AND users.auth_version = ?",
 			identity.UserID, common.UserStatusEnabled, identity.UserAuthVersion).
-		Where("user_sessions.sid = ? AND user_sessions.status = ? AND user_sessions.revoked_at = ? AND user_sessions.expires_at > ? AND user_sessions.version = ? AND user_sessions.user_auth_version = ?",
+		Where(agentWorkspaceExactColumn(db, "user_sessions.sid")+" = ? AND "+agentWorkspaceExactColumn(db, "user_sessions.status")+" = ? AND user_sessions.revoked_at = ? AND user_sessions.expires_at > ? AND user_sessions.version = ? AND user_sessions.user_auth_version = ?",
 			identity.SessionID, UserSessionStatusActive, 0, time.Now().Unix(), identity.SessionVersion, identity.UserAuthVersion)
+}
+
+// agentWorkspaceExactColumn只接收内部固定列名，不接收任何请求字段。
+// 精确身份和枚举比较不能被默认排序规则的大小写/尾空格等价放宽。
+func agentWorkspaceExactColumn(db *gorm.DB, column string) string {
+	switch db.Dialector.Name() {
+	case "mysql":
+		return "BINARY " + column
+	case "sqlite":
+		return column + " COLLATE BINARY"
+	case "postgres":
+		return column + ` COLLATE "C"`
+	default:
+		return column
+	}
 }
 
 // LoadAgentWorkspaceAccess 从当前Team成员事实推导租户，接口没有可覆盖的team参数。
