@@ -57,7 +57,7 @@ HTTP 布尔值或精确字符串 `"true"` / `"false"` 可用；数字、null、�
 
 ## 验证与复现
 
-在仓库根目录的 Windows PowerShell 7 中运行：
+`verify.ps1` 和 Go 测试源码仅保留本地，不随 Git 分发。新克隆缺少它们时只能执行已有构建检查，不得宣称真实数据库验收通过。规则见 [测试与验收规范](../../../docs/project/07-acceptance.md)。在具备本地入口和用例的仓库根目录，使用 Windows PowerShell 7 运行：
 
 ```powershell
 & ./.agents/agent-platform/feature-flags/verify.ps1 `
@@ -68,7 +68,7 @@ HTTP 布尔值或精确字符串 `"true"` / `"false"` 可用；数字、null、�
 
 入口顺序执行环境启动、临时测试 DSN 设置、集中测试与两项既有回归、摘要检查及正常关闭；临时环境变量最后恢复。失败、SKIP、缺失必需测试/摘要或正常关闭失败均返回非零。直接运行普通 Go 测试而缺少专用 DSN 时，MySQL 用例会跳过，不能算真实数据库验收。
 
-原始输出及不含凭据的 `p00-t04-verification.json` 留在 `.local-tests/agent-platform/mysql/<RunId>/`。该目录已被 Git 忽略并设为私有访问；其中凭据、状态、客户端配置与原始日志保持本机存放。可复核的交付见 [验收记录](../records/P00-T04.md) 和 [机器结果](../records/P00-T04.results.json)。每次复现使用新编号，不复用已建库的目录。
+原始输出及不含凭据的 `p00-t04-verification.json` 留在 `.local-tests/agent-platform/mysql/<RunId>/`。该目录已被 Git 忽略并设为私有访问；其中凭据、状态、客户端配置与原始日志保持本机存放。验收报告和机器结果不再入库，提交正文或交付说明仅记录实际验证摘要。每次复现使用新编号，不复用已建库的目录。
 
 构建和静态检查可另行执行：
 

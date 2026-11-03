@@ -47,3 +47,31 @@ go.work
 go.work.sum
 
 /deploy-sync/
+
+# Tests stay local; keep build configuration, public contracts and examples tracked.
+*_test.go
+*.test.*
+*.spec.*
+__tests__/
+testdata/
+/e2e/
+/bin/time_test.sh
+/.agents/agent-platform/mysql/verify.ps1
+/.agents/agent-platform/feature-flags/verify.ps1
+/.agents/agent-platform/contracts/validate.py
+/.agents/agent-platform/contracts/v1/cases.json
+
+# Local verification evidence, logs and caches never belong in commits.
+/.agents/agent-platform/baselines/
+/.agents/agent-platform/records/
+/.local-reports/
+/test-results/
+/playwright-report/
+/coverage/
+*.log
+*.log.*
+*.results.json
+*.test
+*.out
+__pycache__/
+*.py[cod]

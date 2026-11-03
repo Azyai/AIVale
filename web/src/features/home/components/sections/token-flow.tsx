@@ -23,7 +23,7 @@ import '../../token-flow.css'
 
 /* ============================================================
    一枚 Token 的旅程 —— Token 流转剧场
-   Ported from the standalone deck presentation/index3.html (S4).
+   Token routing visualization for the home page.
    Static SVG (nodes / wires / icons) is declared as JSX; particles
    are still created imperatively and animated along the wire paths
    with requestAnimationFrame, exactly like the original engine.

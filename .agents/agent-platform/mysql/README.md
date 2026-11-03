@@ -25,6 +25,8 @@ $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
 
 ## 一条命令完成验证
 
+`verify.ps1` 与 Go 测试源码仅保留本地，不随 Git 分发；`environment.ps1` 作为环境管理工具继续维护。新克隆需要先准备本地入口和用例，缺失时标为未验证，不将构建成功等同数据库验收。规则见 [测试与验收规范](../../../docs/project/07-acceptance.md)。
+
 在仓库根目录的 PowerShell 7 中执行：
 
 ```powershell
@@ -48,7 +50,7 @@ GOWORK=off go test -json -count=1 -p 2 -timeout 5m ./model -run '^TestAgentPlatf
 
 ## 查看结果与保留环境
 
-每次的 `.local-tests/agent-platform/mysql/<RunId>/verification.json` 不含凭据，记录提交、分支、输入文件 SHA256、版本、场景、退出码及关闭结果。`go-test.jsonl` 和 `go-test.stderr.log` 留作本机原始诊断；它们可能包含 SQL 和测试数据，不直接提交。仓库可审核的脱敏结果见 [P00-T03 记录](../records/P00-T03.md) 与 [机器可读结果](../records/P00-T03.results.json)。
+每次的 `.local-tests/agent-platform/mysql/<RunId>/verification.json` 不含凭据，记录提交、分支、输入文件 SHA256、版本、场景、退出码及关闭结果。`go-test.jsonl` 和 `go-test.stderr.log` 留作本机原始诊断；它们可能包含 SQL 和测试数据，不直接提交。脱敏报告与机器结果同样只留本地，提交正文或交付说明仅记录实际验证摘要。
 
 仅需要检查数据时可加 `-KeepRunning`；此时脚本保留实例，必须用记录里的编号显式关闭：
 

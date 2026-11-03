@@ -17,9 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /*
- * Token Flow Theater — ported from the standalone presentation deck
- * (presentation/index3.html, "S4 Token 流转剧场"). Class names are kept
- * verbatim from the deck (flow-ctl / seg / stage / stats / term ...) so the
+ * Token Flow Theater. Existing class names are kept
+ * (flow-ctl / seg / stage / stats / term ...) so the
  * visuals stay faithful to the original; they are only used inside this
  * feature, so collisions with Tailwind / app styles are not a concern.
  * Palette is the deck's own (#7c5cff / #a78bfa / #22d3ee / #fbbf24 /

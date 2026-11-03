@@ -40,7 +40,17 @@ dev-web:
 dev: dev-api dev-web
 
 # The main package embeds the ignored web/dist output and is covered after build-web.
+# Tests remain local; a fresh checkout without them cannot satisfy acceptance.
 test:
+	@for module in . relaykit tokenkit; do \
+		test_file=$$(find "$$module" -mindepth 1 \
+			-type d \( -name '.*' -o -name node_modules -o -name vendor -o -name relaykit -o -name tokenkit \) -prune \
+			-o -type f -name '*_test.go' -print -quit); \
+		if [ -z "$$test_file" ]; then \
+			echo "Missing local Go tests in $$module. Prepare the local test sources and fixtures before running make test." >&2; \
+			exit 1; \
+		fi; \
+	done
 	@echo "Testing root Go module..."
 	@root_module=$$(GOWORK=off go list -m); \
 		root_packages=$$(GOWORK=off go list -e ./... | grep -vxF "$$root_module"); \

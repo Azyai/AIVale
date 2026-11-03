@@ -10,13 +10,13 @@
 | --- | --- |
 | `core.schema.json` | 公共类型、状态、错误码和最小样例结构 |
 | `text-agent.example.json` | 同一个 Agent 从公开请求、受理到文本完成的固定样例 |
-| `cases.json` | 合法边界、非法输入及归属冲突的预期结果 |
+| `cases.json`（仅本地） | 合法边界、非法输入及归属冲突的测试预期，不随 Git 分发 |
 | `capabilities.openapi.json` | P00-T05全局只读能力探测的OpenAPI 3.1描述及局部响应Schema |
 | `capabilities.examples.json` | 探测禁用、配置开启但未就绪、禁用gate拒绝未支持写方法的开发样例 |
-| `../validate.py` | 离线校验 Schema、样例及正反案例 |
+| `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
-在仓库根目录运行：
+测试入口与专用案例仅保留本地；新克隆须先具备上述文件，缺少时标记为未验证，不能宣称契约测试通过。正式 Schema、OpenAPI、公开开发示例和工具依赖继续版本管理。规则见 [测试与验收规范](../../../../docs/project/07-acceptance.md)。在具备用例的仓库根目录运行：
 
 ```powershell
 python .agents/agent-platform/contracts/validate.py --output .local-tests/agent-platform/P00-T02/results.json
