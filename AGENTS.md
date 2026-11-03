@@ -41,7 +41,7 @@ This is an AI API gateway/proxy built with Go. It aggregates 40+ upstream AI pro
 
 ### AIVale repository hygiene
 
-- Follow [the project documentation index](docs/project/README.md), especially the testing, Git commit and repository hygiene conventions. These define the AIVale-specific submission policy.
+- Follow [the project documentation index](docs/project/README.md): 01–06 define AIVale product boundaries, Agent execution, adapters/jobs, architecture, data and security conventions; 07–09 define testing, Git commits and repository hygiene. Read the applicable topics before implementation; planned capabilities are not implemented merely because they appear in these documents.
 - Keep test sources and test-only fixtures locally and ignored by Git. Keep production code, public contracts/examples, test runner configuration and dependency metadata tracked. Do not remove meaningful local regression coverage when cancelling Git tracking.
 - Do not commit acceptance reports, execution logs, test results, temporary screenshots or generated validation data. Put future evidence in ignored `.local-tests/` or `.local-reports/` and summarize actual validation in the commit body or handoff.
 - A fresh clone and CI do not include local tests. Build/static-check success is not test or acceptance success; missing cases must be reported as unverified.
