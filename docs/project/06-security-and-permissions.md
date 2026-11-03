@@ -13,9 +13,10 @@
 | Team | `model/team.go` | 现有角色为 owner/member，属于账务与成员边界，不等同 Workspace 角色 |
 | 平台资源权限 | `service/authz/` | Casbin 资源动作校验不代替 Workspace 对象归属过滤 |
 | Agent 基础值对象 | `model/agent_scope.go`、`service/agent/context.go` | 只承载内部 ID，不创建表，也不证明已鉴权 |
+| 工作区持久化 | `model/agent_workspace.go` | P01-T01仅有带Team范围的仓储和创建引用校验；不包含角色动作授权，后续服务不得把读取成功当许可 |
 | 功能准入 | `middleware/agent_platform.go`、`setting/agent_setting/config.go` | 开关控制入口可用性，不能替代认证与授权 |
 
-当前 Agent 路由只有全局只读 `/api/agent-platform/capabilities`，返回配置且 `runtime_ready:false`；Workspace 成员、Agent grant、Worker 身份和凭据管理仍按后续任务实施。不能将计划中的权限矩阵描述为当前全部生效。
+当前 Agent 路由只有全局只读 `/api/agent-platform/capabilities`，返回配置且 `runtime_ready:false`；Workspace 成员访问判定与管理API、Agent grant、Worker 身份和凭据管理仍按后续任务实施。不能将计划中的权限矩阵描述为当前全部生效。
 
 ## 2. 认证复用与入口区分
 

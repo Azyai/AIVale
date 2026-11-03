@@ -15,7 +15,7 @@
 | Agent 最小基础 | `setting/agent_setting/`、`service/agent/`、`types/agent/`、能力探测接口 | 当前是开关、内部上下文及只读探测，不是运行引擎 |
 | 运行适配基础 | 根`go.mod`固定Eino `v0.9.22`与官方MCP Go SDK `v1.8.0` | 仅内部单步骤适配及本地协议PoC；完整Run引擎与真实连接仍按后续阶段实现 |
 
-当前`service/agent/capabilities.go`仍固定返回`runtime_ready:false`。前端`features/agent-platform/`已有受动态开关控制的工作台导航壳；`service/agentexecution/`仅提供显式构造的Eino单步骤适配器与内部窄接口，不接入API或Worker启动。真实工作区、Run队列、租约/检查点、远程MCP、技能存储及沙箱仍需按计划实现，不能由依赖存在或本地PoC推断已可供客户使用。
+当前`service/agent/capabilities.go`仍固定返回`runtime_ready:false`。前端`features/agent-platform/`已有受动态开关控制的工作台导航壳；`service/agentexecution/`仅提供显式构造的Eino单步骤适配器与内部窄接口，不接入API或Worker启动。P01-T01已有工作区持久化基础，工作区业务API/访问服务、Run队列、租约/检查点、远程MCP、技能存储及沙箱仍需按计划实现，不能由依赖存在或本地PoC推断已可供客户使用。
 
 ## 2. 模块化单体与进程边界
 
@@ -47,7 +47,7 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 | `router/`、`middleware/` | 注册路径、接入鉴权与功能 gate；不实现领域事务 | 已有，Agent gate 已接入 |
 | `controller/agent*.go` | 请求解析、调用 service、HTTP 状态和响应封装 | 当前有能力探测，其他按任务扩展 |
 | `dto/`、`types/agent/` | 边界 DTO、Agent 错误 wire 类型 | 已有；Agent 类型保持根模块叶子依赖 |
-| `model/agent*.go` | 持久化实体及带归属条件的数据库操作 | 当前 `AgentScope` 仅值对象，不是 ORM 模型 |
+| `model/agent*.go` | 持久化实体及带归属条件的数据库操作 | `AgentScope`仍仅值对象；P01-T01新增Workspace/成员ORM和带Team范围的基础仓储，不代表动作授权 |
 | `service/agent/` | 草稿、验证、发布与授权编排 | 当前只有 RequestContext / Probe 基础 |
 | `service/agentexecution/` | 单步骤适配及未来Run、状态机、租约与恢复 | 当前仅P00-T08的单步接口/Eino适配；持久化执行及恢复仍规划 |
 | `service/skill/`、`service/mcp/` | 技能包与工具连接适配 | 规划，不把供应商任务插件当客户 Skills |

@@ -9,7 +9,7 @@
 | 主数据库 | `model/main.go` 通过 `SQL_DSN` 选择 SQLite、MySQL 或 PostgreSQL；`model.DB` 保存业务事实 |
 | 日志数据库 | 未配置 `LOG_SQL_DSN` 时复用主库，否则使用独立 `model.LOG_DB`；日志库另支持 ClickHouse |
 | 持久化与迁移 | 使用 GORM，现有启动链包含 `migrateDB`、`AutoMigrate` 和显式迁移函数；常规迁移由主节点执行，但应逐项检查实际启动前置操作 |
-| Agent 数据边界 | `model/agent_scope.go` 中的 `AgentScope` 是服务端归属值对象，不是 ORM 模型，也不证明权限；29 张 `ag_*` 表仍按阶段实现 |
+| Agent 数据边界 | `AgentScope`仍是内部值对象；P01-T01在`model/agent_workspace.go`实现`ag_workspaces`、`ag_workspace_members`及基础仓储，其余规划表继续按阶段实现；持久化不证明动作授权 |
 | 缓存 | Redis 和进程缓存用于加速、唤醒和可重建投影，不作为 Run、权限撤销或费用的唯一事实源 |
 
 不得把其他项目的 Flyway、MyBatis、自动代码生成或“生产禁止所有启动迁移”直接写成本项目现状。调整迁移执行方式须作为独立设计与实现任务，不能只修改规范即视为落地。
@@ -117,6 +117,16 @@
 5. 迁移先行、业务能力后启用；API/worker 的就绪检查和默认关闭开关必须与数据库状态一致，不因表存在就开放未完成业务。
 6. 回退优先关闭新入口、停止新任务领取并保留数据。禁止通过清库、删除客户表或回写历史事实完成应用回滚；正式恢复依赖已验证的备份方案。
 7. 若触及独立日志库或共享驱动配置，覆盖对应日志库组合。不得将主库验证外推为 ClickHouse 日志路径通过，也不得仅凭 SQLite 单测声称其他方言兼容。
+
+### 8.1 工作区首批持久化边界
+
+P01-T01在现有主节点`migrateDB`的AutoMigrate列表追加工作区和成员两表，不新增跨旧表外键或级联删除。`CreateAgentWorkspace`/`CreateAgentWorkspaceMember`在传入的数据库上下文/事务上核对现有Team、启用用户及Team成员，成员创建同时核对工作区归属和active状态。现有Team没有活跃状态字段，不虚构该字段或改变旧Team模型。
+
+六个基础仓储入口显式要求正数Team ID；列表有界且先带Team条件，成员查询还带Workspace条件。读取包括归档/blocked等元数据，供后续访问服务判断，不能直接当作可访问证明；用户离队后的残留行不通过清理延迟换取有效授权。P01-T02才接入每次访问的角色和身份判定。
+
+slug先拒绝非ASCII再规范为小写，显示名允许重名；文本拒绝非法UTF-8和NUL，统一三库行为。描述最多4KiB；预算字段只存非负quota配置、默认值不高于最大值；策略先只接受`{"schema_version":1}`空配置，未来策略另行定义，不静默接受未实现安全字段。模型隐藏所有JSON字段，对外必须另建DTO。
+
+数据库门禁使用`.agents/agent-platform/delivery/gate.py --profile workspace`及`database/matrix.py`；固定本地用例缺失不得放行。真实三库、fresh/upgrade、三次连接启动及原有团队保留按第07规范和工程入口README验证；发布最小投影与开发前Team投影分别记录来源，不将投影写成完整历史库。
 
 ## 9. 留存、归档与删除
 
