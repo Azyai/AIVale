@@ -1,0 +1,67 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale workspace creation eligibility",
+    "version": "1.0.0",
+    "description": "P01-T08c adds a minimal read projection for the workbench create entry. API-002 still checks live ownership independently on every submission and replay."
+  },
+  "security": [{ "DashboardSession": [] }],
+  "paths": {
+    "/api/agent-platform/workspaces/create-eligibility": {
+      "get": {
+        "operationId": "getAgentWorkspaceCreateEligibility",
+        "summary": "Read live workspace creation eligibility",
+        "description": "No query parameters or bare question mark accepted. Uses only the authenticated subject's current Team membership and owner user ID. Both ownership facts must agree. Workspace/global admin roles are insufficient. Ineligible subjects receive false and null without Team metadata. Platform defaults off.",
+        "responses": {
+          "200": {
+            "description": "Current eligibility; the Team ID is present only for an eligible owner.",
+            "headers": {
+              "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+              "X-Oneapi-Request-Id": { "$ref": "#/components/headers/RequestID" }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "./workspace-create-eligibility.schema.json#/$defs/eligibilityResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/AgentError", "description": "A query string was supplied." },
+          "401": { "$ref": "#/components/responses/AgentError", "description": "No current valid dashboard session; PAT, model Token and Cookie alone do not qualify." },
+          "500": { "$ref": "#/components/responses/AgentError", "description": "Current eligibility could not be verified." },
+          "503": { "$ref": "#/components/responses/AgentError", "description": "The Agent platform gate is closed." }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DashboardSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Existing dashboard access JWT backed by a live login session."
+      }
+    },
+    "headers": {
+      "NoStore": { "schema": { "type": "string", "const": "no-store" } },
+      "RequestID": {
+        "description": "Server-owned ID equal to the JSON request_id.",
+        "schema": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "responses": {
+      "AgentError": {
+        "description": "Fixed Agent error envelope.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "X-Oneapi-Request-Id": { "$ref": "#/components/headers/RequestID" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "./workspace-create-eligibility.schema.json#/$defs/errorResponse" }
+          }
+        }
+      }
+    }
+  }
+}

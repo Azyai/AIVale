@@ -17,6 +17,7 @@ func SetAgentRouter(apiRouter *gin.RouterGroup) {
 	workspaces.Use(middleware.AgentWorkspaceRejectedAudit())
 	workspaces.Use(middleware.AgentWorkspaceManagementAuth()...)
 	workspaces.GET("", controller.ListAgentWorkspaces)
+	workspaces.GET("/create-eligibility", controller.GetAgentWorkspaceCreateEligibility)
 	workspaces.GET("/:workspace_id", controller.GetAgentWorkspace)
 	workspaces.POST("", controller.CreateAgentWorkspace)
 	workspaces.PATCH("/:workspace_id", controller.UpdateAgentWorkspace)

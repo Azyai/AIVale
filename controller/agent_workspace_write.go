@@ -49,8 +49,21 @@ func CreateAgentWorkspace(c *gin.Context) {
 		agentapi.WriteError(c, err)
 		return
 	}
+	const expectedTeamHeader = "X-Agent-Expected-Team-Id"
+	var expectedTeamID int64
+	if values := c.Request.Header.Values(expectedTeamHeader); len(values) > 0 {
+		if len(values) != 1 {
+			agentapi.WriteError(c, agenttypes.NewInvalidArgument(expectedTeamHeader, "Expected Team ID must have one value"))
+			return
+		}
+		expectedTeamID, err = agentapi.ParseID(values[0])
+		if err != nil {
+			agentapi.WriteError(c, agenttypes.NewInvalidArgument(expectedTeamHeader, "Expected Team ID must be a canonical positive int64"))
+			return
+		}
+	}
 	result, err := agent.CreateWorkspace(c.Request.Context(), model.DB, identity,
-		agent.CreateWorkspaceInput{Name: name, Description: description, Slug: slug, IdempotencyKey: key}, agentapi.RequestID(c))
+		agent.CreateWorkspaceInput{Name: name, Description: description, Slug: slug, IdempotencyKey: key, ExpectedTeamID: expectedTeamID}, agentapi.RequestID(c))
 	if err != nil {
 		agentapi.WriteError(c, err)
 		return

@@ -10,6 +10,8 @@ P01-T05以独立1.0.0版本的`workspace-members.*`发布API-006/007/008：显�
 
 P01-T06发布工作区运行 Key 授权 API-012/013/014。P01-T07 以独立 1.0.0 的 `workspace-token-grant-governance.*` 增补当前权限摘要、显式续授和带版本的撤销，运行 Key 授权 OpenAPI 更新到 1.1.0。
 
+P01-T08c 以独立 1.0.0 的 `workspace-create-eligibility.*` 发布创建资格读取；仅当前管理会话通过 Team 双重所有者事实时返回 Team ID，其余返回 `false/null`。API-002 OpenAPI 1.1.0 增加可选 `X-Agent-Expected-Team-Id`：仅比较当前已授权 Team，不选择 Team；不匹配在事务内、读取幂等收据或写入前返回 `409 AG_INVALID_STATE`。旧客户端可省略，现有请求体、响应体及幂等哈希保持不变。
+
 ## 文件与验证入口
 
 | 文件 | 用途 |
@@ -27,6 +29,9 @@ P01-T06发布工作区运行 Key 授权 API-012/013/014。P01-T07 以独立 1.0.
 | `workspace-writes.schema.json` | P01-T04创建/编辑/归档请求、最小不可变收据和固定响应；编辑复用既有详情Schema |
 | `workspace-writes.openapi.json` | API-002/004/005的管理会话、严格JSON、revision、幂等键及归档限制 |
 | `workspace-writes.examples.json` | 合成的创建/重放、编辑、归档及安全错误开发示例，不是执行报告 |
+| `workspace-create-eligibility.schema.json` | 创建资格和条件 Team ID 的固定响应白名单 |
+| `workspace-create-eligibility.openapi.json` | 管理会话、无查询参数、默认关闭及 no-store 约定 |
+| `workspace-create-eligibility.examples.json` | 合成的创建资格及安全错误开发示例，不是执行报告 |
 | `workspace-members.schema.json` | P01-T05严格PUT输入、成员分页、授权与撤销白名单响应；复用公共固定错误 |
 | `workspace-members.openapi.json` | API-006/007/008的会话、参数、最后管理员保护及no-store约定 |
 | `workspace-members.examples.json` | 合成的成员列表、授权、重新授权、撤销和固定错误开发示例，不是执行报告 |

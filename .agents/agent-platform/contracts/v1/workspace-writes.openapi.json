@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AIVale workspace lifecycle writes",
-    "version": "1.0.0",
-    "description": "Independent P01-T04 API-002/004/005 extension. Shared core 1.1.0 and prior read contract stay unchanged. Platform defaults off; runtime_ready remains false. No member management, execution or runtime draining APIs are published."
+    "version": "1.1.0",
+    "description": "P01-T04 API-002/004/005 with the P01-T08c additive expected-Team header on API-002. The shared core, write request and receipt bodies stay unchanged. Platform defaults off; runtime_ready remains false. No execution or runtime draining APIs are published."
   },
   "servers": [
     {
@@ -21,7 +21,7 @@
       "post": {
         "operationId": "createAgentWorkspace",
         "summary": "Create a workspace as current Team owner",
-        "description": "Requires current live double-fact Team ownership. Server chooses Team/actor/default policy and creates an explicit initial admin in one transaction. Omitted slug is generated once; names may repeat, slugs remain reserved including after archive. Same-key replay returns original immutable receipt after current authorization. All query parameters and even an empty query marker are rejected. Body is one strict UTF-8 JSON object <=1 MiB, application/json with optional UTF-8 charset; Content-Encoding absent/empty/identity. Unknown/duplicate decoded fields, null, invalid Unicode and trailing documents are rejected.",
+        "description": "Requires current live double-fact Team ownership. Server chooses Team/actor/default policy and creates an explicit initial admin in one transaction. The optional expected-Team header binds the current Team but never selects the target. Omitted slug is generated once; names may repeat, slugs remain reserved including after archive. Same-key replay returns the original immutable receipt after current authorization and any supplied precondition. All query parameters and even an empty query marker are rejected. Body is one strict UTF-8 JSON object <=1 MiB, application/json with optional UTF-8 charset; Content-Encoding absent/empty/identity. Unknown/duplicate decoded fields, null, invalid Unicode and trailing documents are rejected.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -34,6 +34,13 @@
               "pattern": "^[\\x21-\\x7e]{16,128}$"
             },
             "description": "Exactly one visible ASCII value. No whitespace trimming. Persisted only as a hash. Reuse the same key for a retry; different normalized input under the same current scope returns 409."
+          },
+          {
+            "name": "X-Agent-Expected-Team-Id",
+            "in": "header",
+            "required": false,
+            "schema": { "$ref": "./workspace-create-eligibility.schema.json#/$defs/teamId" },
+            "description": "If present, exactly one canonical Team ID from the eligibility response. A mismatch for the current Team owner returns 409 AG_INVALID_STATE before idempotency lookup or mutation. It never selects a Team and does not change the idempotency hash. Omission preserves the original behavior."
           }
         ],
         "requestBody": {
@@ -48,7 +55,7 @@
         },
         "responses": {
           "400": {
-            "description": "Invalid JSON, content type/encoding, key, query, ID, fields or revision spelling",
+            "description": "Invalid JSON, content type/encoding, key, query, fields, or expected-Team header",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -152,7 +159,7 @@
             }
           },
           "409": {
-            "description": "Revision, idempotency, slug or active-run conflict; no internal conflict details exposed",
+            "description": "Expected Team mismatch (AG_INVALID_STATE), idempotency conflict or slug conflict. No internal conflict details or Team identifiers are exposed.",
             "headers": {
               "Cache-Control": {
                 "schema": {

@@ -23,6 +23,13 @@ type CreateWorkspaceInput struct {
 	Description    string `json:"-"`
 	Slug           string `json:"-"`
 	IdempotencyKey string `json:"-"`
+	ExpectedTeamID int64  `json:"-"` // Zero omits the optional precondition.
+}
+
+// Workspace creation requires both current Team ownership facts; workspace
+// admin and global roles do not grant it.
+func workspaceCreateOwner(userID, teamID, teamOwnerID int64, teamRole string) bool {
+	return userID > 0 && teamID > 0 && teamOwnerID == userID && teamRole == model.TeamRoleOwner
 }
 
 type UpdateWorkspaceInput struct {
@@ -82,6 +89,9 @@ func CreateWorkspace(ctx context.Context, db *gorm.DB, identity model.AuthSessio
 	if !workspaceWriteKeyValid(input.IdempotencyKey) {
 		return nil, agenttypes.NewInvalidArgument("Idempotency-Key", "Idempotency key must contain 16 to 128 visible ASCII characters")
 	}
+	if input.ExpectedTeamID < 0 {
+		return nil, agenttypes.NewInvalidArgument("X-Agent-Expected-Team-Id", "Expected Team ID must be positive")
+	}
 	input.Name = strings.TrimSpace(input.Name)
 	requestID = workspaceWriteRequestID(requestID)
 	generatedSlug := input.Slug
@@ -95,8 +105,11 @@ func CreateWorkspace(ctx context.Context, db *gorm.DB, identity model.AuthSessio
 	var result *WriteWorkspaceResult
 	err := model.WithAgentWorkspaceWriteFacts(db.WithContext(ctx), identity, 0, func(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts) error {
 		result = nil // every confirmed-rollback attempt constructs fresh model objects.
-		if facts.TeamID <= 0 || facts.TeamOwnerUserID != facts.UserID || facts.TeamMemberRole != model.TeamRoleOwner {
+		if !workspaceCreateOwner(facts.UserID, facts.TeamID, facts.TeamOwnerUserID, facts.TeamMemberRole) {
 			return agenttypes.NewError(agenttypes.PermissionDenied, nil)
+		}
+		if input.ExpectedTeamID != 0 && input.ExpectedTeamID != facts.TeamID {
+			return agenttypes.NewError(agenttypes.InvalidState, nil)
 		}
 		scopeHash, requestHash, err := workspaceWriteHashes(facts, "workspace.create", "POST", "/api/agent-platform/workspaces", "", map[string]any{"name": input.Name, "description": input.Description, "slug": input.Slug})
 		if err != nil {

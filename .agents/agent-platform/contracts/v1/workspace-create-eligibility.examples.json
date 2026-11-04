@@ -1,0 +1,69 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P01-T08c",
+  "examples": [
+    {
+      "name": "eligible_owner",
+      "schema": "eligibilityResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-create-eligible-example",
+        "data": { "can_create": true, "team_id": "6001" }
+      }
+    },
+    {
+      "name": "ineligible_current_subject",
+      "schema": "eligibilityResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "workspace-create-ineligible-example",
+        "data": { "can_create": false, "team_id": null }
+      }
+    },
+    {
+      "name": "query_not_allowed",
+      "schema": "errorResponse",
+      "http_status": 400,
+      "response": {
+        "success": false,
+        "code": "AG_INVALID_ARGUMENT",
+        "message": "Request parameters are invalid",
+        "request_id": "workspace-create-query-example",
+        "data": {
+          "field_errors": [{ "path": "query", "message": "Workspace creation eligibility does not accept query parameters" }],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "session_required",
+      "schema": "errorResponse",
+      "http_status": 401,
+      "response": {
+        "success": false,
+        "code": "AG_AUTH_REQUIRED",
+        "message": "Authentication is required",
+        "request_id": "workspace-create-session-example",
+        "data": { "field_errors": [], "retryable": false }
+      }
+    },
+    {
+      "name": "platform_gate_closed",
+      "schema": "errorResponse",
+      "http_status": 503,
+      "response": {
+        "success": false,
+        "code": "AG_RUNTIME_UNAVAILABLE",
+        "message": "Agent platform capability is unavailable",
+        "request_id": "workspace-create-gate-example",
+        "data": { "field_errors": [], "retryable": false }
+      }
+    }
+  ]
+}

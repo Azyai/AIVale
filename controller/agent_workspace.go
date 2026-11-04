@@ -83,6 +83,29 @@ func GetAgentWorkspace(c *gin.Context) {
 	agentapi.WriteSuccess(c, http.StatusOK, "OK", payload)
 }
 
+func GetAgentWorkspaceCreateEligibility(c *gin.Context) {
+	identity, authenticated := middleware.GetAgentWorkspaceReadIdentity(c)
+	if !authenticated {
+		agentapi.WriteError(c, agenttypes.NewError(agenttypes.AuthRequired, nil))
+		return
+	}
+	if c.Request.URL.RawQuery != "" || c.Request.URL.ForceQuery {
+		agentapi.WriteError(c, agenttypes.NewInvalidArgument("query", "Workspace creation eligibility does not accept query parameters"))
+		return
+	}
+	teamID, err := agent.GetWorkspaceCreateEligibility(c.Request.Context(), model.DB, identity)
+	if err != nil {
+		agentapi.WriteError(c, err)
+		return
+	}
+	payload := dto.AgentWorkspaceCreateEligibility{}
+	if teamID > 0 {
+		id := strconv.FormatInt(teamID, 10)
+		payload.CanCreate, payload.TeamID = true, &id
+	}
+	agentapi.WriteSuccess(c, http.StatusOK, "OK", payload)
+}
+
 func agentWorkspaceSummary(value agent.WorkspaceView) (dto.AgentWorkspaceSummary, error) {
 	if value.ID <= 0 || value.CreatedAt < 0 || value.CreatedAt > agenttypes.MaxSafeInteger ||
 		value.UpdatedAt < 0 || value.UpdatedAt > agenttypes.MaxSafeInteger || value.Revision < 1 || value.Revision > agenttypes.MaxSafeInteger ||

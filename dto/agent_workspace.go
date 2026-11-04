@@ -26,3 +26,10 @@ type AgentWorkspaceList struct {
 	PageSize    int                     `json:"page_size"`
 	EmptyReason *string                 `json:"empty_reason"`
 }
+
+// AgentWorkspaceCreateEligibility is a UI hint, not authority to create.
+// The Team identifier is present only for an eligible owner and binds retries.
+type AgentWorkspaceCreateEligibility struct {
+	CanCreate bool    `json:"can_create"`
+	TeamID    *string `json:"team_id"`
+}

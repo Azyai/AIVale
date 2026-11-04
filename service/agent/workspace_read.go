@@ -35,6 +35,32 @@ type WorkspaceList struct {
 	NoTeam   bool            `json:"-"`
 }
 
+// GetWorkspaceCreateEligibility returns the live eligible Team, or zero when
+// the current session has no matching owner facts. Creation authorizes again.
+func GetWorkspaceCreateEligibility(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity) (int64, error) {
+	if err := validateWorkspaceSessionInput(ctx, db, identity); err != nil {
+		return 0, err
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, agenttypes.NewError(agenttypes.InternalError, err)
+	}
+	principal, err := model.LoadAgentWorkspaceReadPrincipal(db.WithContext(ctx), identity)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, agenttypes.NewError(agenttypes.AuthRequired, nil)
+	}
+	if err != nil {
+		return 0, agenttypes.NewError(agenttypes.InternalError, err)
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, agenttypes.NewError(agenttypes.InternalError, err)
+	}
+	if principal.TeamID == nil || principal.TeamOwnerUserID == nil ||
+		!workspaceCreateOwner(principal.UserID, *principal.TeamID, *principal.TeamOwnerUserID, principal.TeamMemberRole) {
+		return 0, nil
+	}
+	return *principal.TeamID, nil
+}
+
 // ListWorkspaces 读取当前管理主体的可见空间，Team来源仅为数据库当前成员关系。
 func ListWorkspaces(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, page agenttypes.PageQuery, query string) (*WorkspaceList, error) {
 	if err := validateWorkspaceSessionInput(ctx, db, identity); err != nil {
