@@ -28,6 +28,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { getAgentPlatformCapabilities } from './api'
 import type { WorkspaceListSearch } from './lib/workspace-list-search'
 import type { AgentPlatformCapabilities } from './types'
+import { getWorkspaceCreateEligibility } from './workspace-create-api'
 import {
   AgentWorkspaceDetailError,
   getAgentWorkspace,
@@ -95,14 +96,42 @@ const privateWorkspaceQueryOptions = {
   meta: { errorToast: false, errorRedirect: false },
 } as const
 
+export const agentWorkspaceListQueryKey = [
+  'agent-platform',
+  'workspaces',
+] as const
+
+export function useWorkspaceCreateEligibility() {
+  const scope = useWorkspaceSession()
+  const queryKey = [
+    'agent-platform',
+    'workspace-create-eligibility',
+    scope.userId,
+    scope.sessionId,
+  ] as const
+  const query = useQuery({
+    ...privateWorkspaceQueryOptions,
+    queryKey,
+    enabled: scope.signedIn,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    queryFn: async ({ signal }) => {
+      assertCurrentWorkspaceSession(scope, signal)
+      const eligibility = await getWorkspaceCreateEligibility(signal)
+      assertCurrentWorkspaceSession(scope, signal)
+      return eligibility
+    },
+  })
+  return { scope, query, queryKey }
+}
+
 export function useAgentWorkspaces(search: WorkspaceListSearch) {
   const scope = useWorkspaceSession()
 
   const query = useQuery({
     ...privateWorkspaceQueryOptions,
     queryKey: [
-      'agent-platform',
-      'workspaces',
+      ...agentWorkspaceListQueryKey,
       scope.userId,
       scope.sessionId,
       search,

@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { Link, useLocation } from '@tanstack/react-router'
 import { FolderSearch, Layers } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/empty-state'
@@ -34,16 +35,21 @@ import {
 } from './workspace-list-filters'
 import { WorkspaceListTable } from './workspace-list-table'
 
-export function WorkspaceList(props: WorkspaceListControls) {
+export function WorkspaceList(
+  props: WorkspaceListControls & { action?: ReactNode }
+) {
   const { t } = useTranslation()
   return (
     <section
       aria-labelledby='agent-workspaces-heading'
       className='mt-8 min-w-0 border-t pt-6'
     >
-      <h2 id='agent-workspaces-heading' className='mb-4 text-xl font-semibold'>
-        {t('Workspaces')}
-      </h2>
+      <div className='mb-4 flex flex-wrap items-center justify-between gap-3'>
+        <h2 id='agent-workspaces-heading' className='text-xl font-semibold'>
+          {t('Workspaces')}
+        </h2>
+        {props.action}
+      </div>
       <WorkspaceListContent {...props} />
     </section>
   )

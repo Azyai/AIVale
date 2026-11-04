@@ -38,6 +38,13 @@ function AgentPlatformWorkspacesRoute() {
     <AgentPlatformWorkspaces
       search={search}
       onSearchChange={(next) => void navigate({ search: next })}
+      onWorkspaceCreated={(id) =>
+        void navigate({
+          to: '/agent-platform/w/$workspace_id',
+          params: { workspace_id: id },
+          search,
+        })
+      }
     />
   )
 }

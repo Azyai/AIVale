@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
 
+import { WorkspaceCreateAction } from './components/workspace-create-action'
 import { WorkspaceList } from './components/workspace-list'
 import type { WorkspaceListControls } from './components/workspace-list-filters'
 
@@ -44,7 +45,11 @@ function WorkbenchTool(props: {
   )
 }
 
-export function AgentPlatformWorkspaces(props: WorkspaceListControls) {
+export function AgentPlatformWorkspaces(
+  props: WorkspaceListControls & {
+    onWorkspaceCreated: (id: string) => void
+  }
+) {
   const { t } = useTranslation()
 
   return (
@@ -53,7 +58,10 @@ export function AgentPlatformWorkspaces(props: WorkspaceListControls) {
         {t('Build and manage agents with your team in a shared workspace.')}
       </p>
 
-      <WorkspaceList {...props} />
+      <WorkspaceList
+        {...props}
+        action={<WorkspaceCreateAction onCreated={props.onWorkspaceCreated} />}
+      />
       <section
         aria-labelledby='agent-tools-heading'
         className='mt-10 min-w-0 border-t pt-6'
