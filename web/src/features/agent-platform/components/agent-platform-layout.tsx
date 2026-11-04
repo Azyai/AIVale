@@ -16,15 +16,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link, Outlet } from '@tanstack/react-router'
+import { Outlet } from '@tanstack/react-router'
 import { LockKeyhole } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/empty-state'
 import { ErrorState } from '@/components/error-state'
-import { SectionPageLayout } from '@/components/layout'
+import { PublicLayout } from '@/components/layout'
 import { LoadingState } from '@/components/loading-state'
+import { SkipToMain } from '@/components/skip-to-main'
 import { Button } from '@/components/ui/button'
 
 import {
@@ -76,19 +77,20 @@ export function AgentPlatformLayout() {
   }
 
   return (
-    <SectionPageLayout>
-      <SectionPageLayout.Title>{t('Agent workbench')}</SectionPageLayout.Title>
-      <SectionPageLayout.Actions>
-        <Button
-          variant='ghost'
-          render={
-            <Link to='/dashboard/$section' params={{ section: 'overview' }} />
-          }
+    <>
+      <SkipToMain />
+      <PublicLayout showMainContainer={false}>
+        <main
+          id='content'
+          tabIndex={-1}
+          className='mx-auto w-full max-w-6xl scroll-mt-24 px-5 pt-28 pb-16 sm:px-8 md:pt-40 md:pb-24'
         >
-          {t('Back to Dashboard')}
-        </Button>
-      </SectionPageLayout.Actions>
-      <SectionPageLayout.Content>{content}</SectionPageLayout.Content>
-    </SectionPageLayout>
+          <h1 className='text-4xl font-semibold tracking-tight sm:text-5xl'>
+            {t('Agent workbench')}
+          </h1>
+          {content}
+        </main>
+      </PublicLayout>
+    </>
   )
 }

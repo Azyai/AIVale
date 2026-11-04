@@ -19,17 +19,14 @@ For commercial licensing, please contact support@quantumnous.com
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { TopNavLink } from '@/components/layout/types'
+import {
+  isAgentPlatformAvailable,
+  useAgentPlatformCapabilities,
+} from '@/features/agent-platform/queries'
 import { useStatus } from '@/hooks/use-status'
 import { parseHeaderNavModulesFromStatus } from '@/lib/nav-modules'
 import { useAuthStore } from '@/stores/auth-store'
-
-export type TopNavLink = {
-  title: string
-  href: string
-  disabled?: boolean
-  requiresAuth?: boolean
-  external?: boolean
-}
 
 /**
  * Generate top navigation links based on HeaderNavModules configuration from backend /api/status
@@ -47,6 +44,7 @@ export function useTopNavLinks(): TopNavLink[] {
   const { t } = useTranslation()
   const { status } = useStatus()
   const { auth } = useAuthStore()
+  const agentPlatform = useAgentPlatformCapabilities()
 
   // Parse HeaderNavModules
   const modules = useMemo(() => {
@@ -77,6 +75,15 @@ export function useTopNavLinks(): TopNavLink[] {
   if (pricing && typeof pricing === 'object' && pricing.enabled) {
     const requiresAuth = pricing.requireAuth && !isAuthed
     links.push({ title: t('Model Square'), href: '/pricing', requiresAuth })
+  }
+
+  // The workbench guard restores the destination after sign-in.
+  if (isAgentPlatformAvailable(agentPlatform)) {
+    links.push({
+      title: t('Agent workbench'),
+      href: '/agent-platform',
+      matchDescendants: true,
+    })
   }
 
   // Rankings

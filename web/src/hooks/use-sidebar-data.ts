@@ -40,10 +40,6 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import type { SidebarData } from '@/components/layout/types'
-import {
-  isAgentPlatformAvailable,
-  useAgentPlatformCapabilities,
-} from '@/features/agent-platform/queries'
 import { ROLE } from '@/lib/roles'
 
 /**
@@ -54,7 +50,6 @@ import { ROLE } from '@/lib/roles'
  */
 export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
-  const capabilities = useAgentPlatformCapabilities()
 
   return {
     navGroups: [
@@ -110,15 +105,6 @@ export function useSidebarData(): SidebarData {
             configUrls: ['/usage-logs/drawing', '/usage-logs/task'],
             icon: ListTodo,
           },
-          ...(isAgentPlatformAvailable(capabilities)
-            ? [
-                {
-                  title: t('Agent workbench'),
-                  url: '/agent-platform/workspaces',
-                  icon: LayoutDashboard,
-                },
-              ]
-            : []),
         ],
       },
       {

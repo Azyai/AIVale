@@ -22,10 +22,6 @@ import { useTranslation } from 'react-i18next'
 
 import { resolveSidebarView } from '@/components/layout/lib/sidebar-view-registry'
 import type { NavGroup, ResolvedSidebarView } from '@/components/layout/types'
-import {
-  isAgentPlatformAvailable,
-  useAgentPlatformCapabilities,
-} from '@/features/agent-platform/queries'
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -39,15 +35,14 @@ const ROOT_VIEW_KEY = '__root'
  * Resolve the active sidebar view for the current location.
  *
  * - Returns the matching nested {@link SidebarView} (with its nav
- *   groups) when the URL belongs to a registered drill-in workspace.
+ *   groups) when the URL belongs to a registered dashboard area.
  * - Otherwise returns the root navigation, narrowed by:
  *     · admin-only group visibility (role-based);
  *     · `useSidebarConfig` (admin × user `sidebar_modules` overlay).
  *
  * Nested views are intentionally NOT passed through `useSidebarConfig`
  * — those filters target known dashboard URLs only. Routes remain responsible
- * for access control; the Agent workbench also requires current capabilities
- * before its contextual navigation can appear.
+ * for access control.
  */
 export function useSidebarView(): ResolvedSidebarView {
   const { t } = useTranslation()
@@ -55,7 +50,6 @@ export function useSidebarView(): ResolvedSidebarView {
   const userRole = useAuthStore((s) => s.auth.user?.role)
   const rootSidebarData = useSidebarData()
   const configFilteredRoot = useSidebarConfig(rootSidebarData.navGroups)
-  const capabilities = useAgentPlatformCapabilities()
 
   const rootNavGroups = useMemo<NavGroup[]>(() => {
     const role = userRole ?? ROLE.GUEST
@@ -70,10 +64,7 @@ export function useSidebarView(): ResolvedSidebarView {
       })
   }, [configFilteredRoot, userRole])
 
-  const view = resolveSidebarView(
-    pathname,
-    isAgentPlatformAvailable(capabilities)
-  )
+  const view = resolveSidebarView(pathname)
 
   if (view) {
     return {

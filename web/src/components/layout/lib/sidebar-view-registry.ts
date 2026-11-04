@@ -18,15 +18,14 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { TFunction } from 'i18next'
 
-import { AGENT_PLATFORM_VIEW } from '../config/agent-platform.config'
 import { SYSTEM_SETTINGS_VIEW } from '../config/system-settings.config'
 import type { NavGroup, SidebarView } from '../types'
 
 /**
- * Nested sidebar views that do not depend on Agent platform capabilities.
+ * Nested dashboard sidebar views.
  *
  * Each entry describes a contextual sidebar that replaces the root
- * navigation when the user enters that workspace (Vercel-style
+ * navigation when the user enters that dashboard area (Vercel-style
  * "drill-in" pattern). Add new entries here to register a new view.
  *
  * Match priority is array order; the first matching `pathPattern` wins.
@@ -35,21 +34,11 @@ const SIDEBAR_VIEWS: readonly SidebarView[] = [SYSTEM_SETTINGS_VIEW]
 
 /**
  * Resolve the active nested view for the given path.
- * Agent navigation stays hidden unless a consumer explicitly verifies admission.
  *
  * @returns Matching {@link SidebarView}, or `null` when the root
  *          navigation should be displayed.
  */
-export function resolveSidebarView(
-  pathname: string,
-  agentPlatformAvailable = false
-): SidebarView | null {
-  if (
-    agentPlatformAvailable &&
-    AGENT_PLATFORM_VIEW.pathPattern.test(pathname)
-  ) {
-    return AGENT_PLATFORM_VIEW
-  }
+export function resolveSidebarView(pathname: string): SidebarView | null {
   return SIDEBAR_VIEWS.find((view) => view.pathPattern.test(pathname)) ?? null
 }
 
@@ -63,9 +52,8 @@ export function resolveSidebarView(
  */
 export function getNavGroupsForPath(
   pathname: string,
-  t: TFunction,
-  agentPlatformAvailable = false
+  t: TFunction
 ): NavGroup[] | null {
-  const view = resolveSidebarView(pathname, agentPlatformAvailable)
+  const view = resolveSidebarView(pathname)
   return view ? view.getNavGroups(t) : null
 }

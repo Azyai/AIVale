@@ -16,10 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ThemeSwitch } from '@/components/theme-switch'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { NotificationPopover } from '@/components/notification-popover'
 import { ProfileDropdown } from '@/components/profile-dropdown'
+import { ThemeSwitch } from '@/components/theme-switch'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useTopNavLinks } from '@/hooks/use-top-nav-links'
 
@@ -109,11 +109,7 @@ export function AppHeader({
 
       {rightContent ?? (
         <div className='ms-auto flex shrink-0 items-center gap-1'>
-          {showTopNav && (
-            <div className='hidden lg:block'>
-              <TopNav links={links} />
-            </div>
-          )}
+          {showTopNav && links.length > 0 && <TopNav links={links} />}
 
           <div className='bg-border/40 mx-2.5 h-6 w-px' />
 

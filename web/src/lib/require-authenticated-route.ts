@@ -16,10 +16,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { redirect } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/_authenticated/agent-platform/')({
-  beforeLoad: () => {
-    throw redirect({ to: '/agent-platform/workspaces', replace: true })
-  },
-})
+import { resolveAuthentication } from '@/lib/auth-session'
+import { useAuthStore } from '@/stores/auth-store'
+
+export async function requireAuthenticatedRoute(href: string): Promise<void> {
+  // Skipping refresh without a session hint optimizes public pages only.
+  // Protected routes still resolve against the server on a cold session.
+  await resolveAuthentication()
+  const { auth } = useAuthStore.getState()
+
+  if (!auth.user || !auth.accessToken) {
+    throw redirect({
+      to: '/sign-in',
+      search: { redirect: href },
+    })
+  }
+}

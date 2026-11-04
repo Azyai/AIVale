@@ -16,8 +16,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog } from '@/components/dialog'
@@ -78,6 +85,9 @@ export function PublicHeader(props: PublicHeaderProps) {
   const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const mobileNavId = useId()
+  const mobileNavTrigger = useRef<HTMLButtonElement>(null)
+  const mobileNavPanel = useRef<HTMLDivElement>(null)
   const [authPromptTarget, setAuthPromptTarget] =
     useState<AuthPromptTarget | null>(null)
   const [authPromptSecondsLeft, setAuthPromptSecondsLeft] =
@@ -91,8 +101,6 @@ export function PublicHeader(props: PublicHeaderProps) {
   } = useSystemConfig()
   const dynamicLinks = useTopNavLinks()
   const notifications = useNotifications()
-  const routerState = useRouterState()
-  const pathname = routerState.location.pathname
 
   const user = auth.user
   const isAuthenticated = !!user
@@ -143,9 +151,26 @@ export function PublicHeader(props: PublicHeaderProps) {
   }, [])
 
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    if (!mobileOpen) return
+    const desktop = window.matchMedia('(min-width: 64rem)')
+    if (desktop.matches) {
+      setMobileOpen(false)
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    mobileNavPanel.current
+      ?.querySelector<HTMLAnchorElement>('nav a[href]')
+      ?.focus({ preventScroll: true })
+
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileOpen(false)
+    }
+    desktop.addEventListener('change', closeOnDesktop)
     return () => {
-      document.body.style.overflow = ''
+      document.body.style.overflow = previousOverflow
+      desktop.removeEventListener('change', closeOnDesktop)
     }
   }, [mobileOpen])
 
@@ -190,25 +215,28 @@ export function PublicHeader(props: PublicHeaderProps) {
         return
       }
 
+      if (closeMobile) {
+        setMobileOpen(false)
+        mobileNavTrigger.current?.focus({ preventScroll: true })
+      }
+
       if (link.requiresAuth) {
         event.preventDefault()
-        if (closeMobile) {
-          setMobileOpen(false)
-        }
         setAuthPromptSecondsLeft(AUTH_PROMPT_SECONDS)
         setAuthPromptTarget({
           title: t(link.title),
           href: link.href,
         })
-        return
-      }
-
-      if (closeMobile) {
-        setMobileOpen(false)
       }
     },
     [t]
   )
+
+  function handleMobileNavEscape(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key !== 'Escape' || !mobileOpen) return
+    setMobileOpen(false)
+    mobileNavTrigger.current?.focus()
+  }
 
   return (
     <>
@@ -216,7 +244,10 @@ export function PublicHeader(props: PublicHeaderProps) {
           blurred backdrop; a hairline border fades in after scrolling. The
           brand anchors to the far left, links center in the remaining space,
           controls hug the right edge. */}
-      <header className='pointer-events-none fixed inset-x-0 top-0 z-50'>
+      <header
+        className='pointer-events-none fixed inset-x-0 top-0 z-50'
+        onKeyDown={handleMobileNavEscape}
+      >
         <div
           className={cn(
             'pointer-events-auto bg-background/70 border-border/60 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300 dark:border-white/15 dark:bg-white/5',
@@ -270,7 +301,6 @@ export function PublicHeader(props: PublicHeaderProps) {
             {/* Desktop nav + controls — hugging the right edge */}
             <div className='hidden shrink-0 items-center gap-1 lg:flex'>
               {links.map((link) => {
-                const isActive = pathname === link.href
                 if (link.external) {
                   return (
                     <a
@@ -283,7 +313,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                       tabIndex={link.disabled ? -1 : undefined}
                       onClick={(event) => handleNavLinkClick(event, link)}
                       className={cn(
-                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3.5 py-3 text-lg transition-colors duration-200',
+                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 xl:px-3.5 xl:text-lg',
                         link.disabled && 'pointer-events-none opacity-50'
                       )}
                     >
@@ -295,14 +325,15 @@ export function PublicHeader(props: PublicHeaderProps) {
                   <Link
                     key={`${link.title}:${link.href}`}
                     to={link.href}
+                    activeOptions={{
+                      exact: !link.matchDescendants,
+                      includeSearch: false,
+                    }}
                     title={t(link.title)}
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
                     className={cn(
-                      'min-w-0 truncate rounded-lg px-3.5 py-3 text-lg transition-colors duration-200',
-                      isActive
-                        ? 'text-primary font-medium'
-                        : 'text-muted-foreground hover:text-foreground',
+                      'text-muted-foreground hover:text-foreground data-[status=active]:text-primary min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 data-[status=active]:font-medium xl:px-3.5 xl:text-lg',
                       link.disabled && 'pointer-events-none opacity-50'
                     )}
                   >
@@ -343,12 +374,15 @@ export function PublicHeader(props: PublicHeaderProps) {
                 <ProfileDropdown />
               )}
               <Button
+                ref={mobileNavTrigger}
                 type='button'
                 variant='ghost'
                 size='icon'
                 className='size-11'
                 onClick={() => setMobileOpen((v) => !v)}
                 aria-label={t('Toggle navigation menu')}
+                aria-expanded={mobileOpen}
+                aria-controls={mobileNavId}
               >
                 <div className='relative size-5'>
                   <span
@@ -378,23 +412,26 @@ export function PublicHeader(props: PublicHeaderProps) {
 
       {/* Mobile full-screen overlay */}
       <div
+        ref={mobileNavPanel}
+        id={mobileNavId}
+        inert={!mobileOpen}
+        aria-hidden={!mobileOpen}
+        onKeyDown={handleMobileNavEscape}
         className={cn(
-          'bg-background/98 fixed inset-0 z-40 backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:pointer-events-none lg:hidden',
+          'bg-background/98 fixed inset-0 z-40 overflow-y-auto backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:pointer-events-none lg:hidden',
           mobileOpen
             ? 'pointer-events-auto opacity-100'
             : 'pointer-events-none opacity-0'
         )}
       >
-        <div className='flex h-full flex-col justify-between px-8 pt-24 pb-10'>
+        <div className='flex min-h-full flex-col justify-between gap-4 px-8 pt-24 pb-10'>
           <nav className='flex flex-col gap-1'>
             {links.map((link, i) => {
-              const isActive = pathname === link.href
               const linkClassName = cn(
-                'flex items-center gap-3 py-3 text-base font-medium tracking-tight transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                'text-muted-foreground data-[status=active]:text-foreground flex items-center gap-3 py-3 text-base font-medium tracking-tight transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
                 mobileOpen
                   ? 'translate-y-0 opacity-100'
                   : 'translate-y-4 opacity-0',
-                isActive ? 'text-foreground' : 'text-muted-foreground',
                 link.disabled && 'pointer-events-none opacity-50'
               )
               const transitionStyle = {
@@ -421,6 +458,10 @@ export function PublicHeader(props: PublicHeaderProps) {
                 <Link
                   key={`${link.title}:${link.href}`}
                   to={link.href}
+                  activeOptions={{
+                    exact: !link.matchDescendants,
+                    includeSearch: false,
+                  }}
                   disabled={link.disabled}
                   onClick={(event) => handleNavLinkClick(event, link, true)}
                   className={linkClassName}

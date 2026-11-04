@@ -16,21 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { SidebarView } from '../types'
+import { createFileRoute } from '@tanstack/react-router'
 
-/** Context navigation for the workbench shell; resources arrive in later phases. */
-export const AGENT_PLATFORM_VIEW: SidebarView = {
-  id: 'agent-platform',
-  pathPattern: /^\/agent-platform(\/|$)/,
-  parent: {
-    to: '/dashboard/overview',
-    label: 'Back to Dashboard',
-  },
-  getNavGroups: (t) => [
-    {
-      id: 'agent-platform',
-      title: t('Agent workbench'),
-      items: [{ title: t('Workspaces'), url: '/agent-platform/workspaces' }],
-    },
-  ],
-}
+import { AgentPlatformWorkspace } from '@/features/agent-platform'
+
+export const Route = createFileRoute('/agent-platform/w/$workspace_id')({
+  component: AgentPlatformWorkspace,
+})

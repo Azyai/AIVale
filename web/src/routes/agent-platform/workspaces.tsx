@@ -18,10 +18,8 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute } from '@tanstack/react-router'
 
-import { AgentPlatformWorkspace } from '@/features/agent-platform'
+import { AgentPlatformWorkspaces } from '@/features/agent-platform'
 
-export const Route = createFileRoute(
-  '/_authenticated/agent-platform/w/$workspace_id'
-)({
-  component: AgentPlatformWorkspace,
+export const Route = createFileRoute('/agent-platform/workspaces')({
+  component: AgentPlatformWorkspaces,
 })

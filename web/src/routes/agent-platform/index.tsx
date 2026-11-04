@@ -16,12 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { AgentPlatformWorkspaces } from '@/features/agent-platform'
-
-export const Route = createFileRoute(
-  '/_authenticated/agent-platform/workspaces'
-)({
-  component: AgentPlatformWorkspaces,
+export const Route = createFileRoute('/agent-platform/')({
+  beforeLoad: () => {
+    throw redirect({ to: '/agent-platform/workspaces', replace: true })
+  },
 })

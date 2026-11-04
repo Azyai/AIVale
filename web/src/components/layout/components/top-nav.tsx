@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { Link } from '@tanstack/react-router'
 import { Menu } from 'lucide-react'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -29,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
-import { type TopNavLink } from '../types'
+import type { TopNavLink } from '../types'
 
 type TopNavProps = React.HTMLAttributes<HTMLElement> & {
   links: TopNavLink[]
@@ -40,6 +41,7 @@ type TopNavProps = React.HTMLAttributes<HTMLElement> & {
  * 在大屏幕显示水平导航，在小屏幕显示下拉菜单
  */
 export function TopNav({ className, links, ...props }: TopNavProps) {
+  const { t } = useTranslation()
   // 规范化链接，确保所有可选属性都有默认值
   const normalizedLinks = useMemo(
     () =>
@@ -58,13 +60,21 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
       <div className='lg:hidden'>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger
+            aria-label={t('Toggle navigation menu')}
             render={<Button size='icon' variant='outline' className='size-7' />}
           >
-            <Menu />
+            <Menu aria-hidden='true' />
           </DropdownMenuTrigger>
           <DropdownMenuContent side='bottom' align='start'>
             {normalizedLinks.map(
-              ({ title, href, isActive, disabled, external }) => (
+              ({
+                title,
+                href,
+                isActive,
+                disabled,
+                external,
+                matchDescendants,
+              }) => (
                 <DropdownMenuItem
                   key={`${title}-${href}`}
                   render={
@@ -80,14 +90,22 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
                     ) : (
                       <Link
                         to={href}
-                        className={!isActive ? 'text-muted-foreground' : ''}
+                        activeOptions={{
+                          exact: !matchDescendants,
+                          includeSearch: false,
+                        }}
+                        className={
+                          !isActive
+                            ? 'text-muted-foreground data-[status=active]:text-primary'
+                            : undefined
+                        }
                         disabled={disabled}
                       >
                         {title}
                       </Link>
                     )
                   }
-                ></DropdownMenuItem>
+                />
               )
             )}
           </DropdownMenuContent>
@@ -96,33 +114,40 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
 
       {/* 桌面端水平导航 */}
       <nav
-        className={cn(
-          'hidden items-center gap-1 lg:flex',
-          className
-        )}
+        className={cn('hidden items-center gap-1 lg:flex', className)}
         {...props}
       >
-        {normalizedLinks.map(({ title, href, isActive, disabled, external }) =>
-          external ? (
-            <a
-              key={`${title}-${href}`}
-              href={href}
-              target='_blank'
-              rel='noopener noreferrer'
-              className={`min-w-0 truncate rounded-lg px-3.5 py-3 text-lg transition-colors duration-200 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              {title}
-            </a>
-          ) : (
-            <Link
-              key={`${title}-${href}`}
-              to={href}
-              disabled={disabled}
-              className={`min-w-0 truncate rounded-lg px-3.5 py-3 text-lg transition-colors duration-200 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              {title}
-            </Link>
-          )
+        {normalizedLinks.map(
+          ({ title, href, isActive, disabled, external, matchDescendants }) =>
+            external ? (
+              <a
+                key={`${title}-${href}`}
+                href={href}
+                target='_blank'
+                rel='noopener noreferrer'
+                className={`min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 xl:px-3.5 xl:text-lg ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {title}
+              </a>
+            ) : (
+              <Link
+                key={`${title}-${href}`}
+                to={href}
+                disabled={disabled}
+                activeOptions={{
+                  exact: !matchDescendants,
+                  includeSearch: false,
+                }}
+                className={cn(
+                  'min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 xl:px-3.5 xl:text-lg',
+                  isActive
+                    ? 'text-primary font-medium'
+                    : 'text-muted-foreground hover:text-foreground data-[status=active]:text-primary data-[status=active]:font-medium'
+                )}
+              >
+                {title}
+              </Link>
+            )
         )}
       </nav>
     </>

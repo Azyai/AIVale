@@ -654,6 +654,7 @@
         "src/features/agent-platform/__tests__/routes.test.tsx",
         "src/lib/__tests__/query-client.test.ts",
         "src/components/layout/__tests__/agent-platform-navigation.test.tsx",
+        "src/components/layout/__tests__/dashboard-navigation.test.tsx",
         "src/context/__tests__/search-provider.test.tsx",
         "--reporter=json"
       ],
@@ -667,6 +668,7 @@
         "web/src/features/agent-platform/__tests__/routes.test.tsx",
         "web/src/lib/__tests__/query-client.test.ts",
         "web/src/components/layout/__tests__/agent-platform-navigation.test.tsx",
+        "web/src/components/layout/__tests__/dashboard-navigation.test.tsx",
         "web/src/context/__tests__/search-provider.test.tsx",
         "web/src/features/agent-platform/__tests__/query-fixtures.tsx",
         "web/src/test-setup.ts",
@@ -680,6 +682,7 @@
         "src/features/agent-platform/__tests__/routes.test.tsx",
         "src/lib/__tests__/query-client.test.ts",
         "src/components/layout/__tests__/agent-platform-navigation.test.tsx",
+        "src/components/layout/__tests__/dashboard-navigation.test.tsx",
         "src/context/__tests__/search-provider.test.tsx"
       ]
     },

@@ -19,7 +19,9 @@ For commercial licensing, please contact support@quantumnous.com
 import { createFileRoute } from '@tanstack/react-router'
 
 import { AgentPlatformLayout } from '@/features/agent-platform/components/agent-platform-layout'
+import { requireAuthenticatedRoute } from '@/lib/require-authenticated-route'
 
-export const Route = createFileRoute('/_authenticated/agent-platform')({
+export const Route = createFileRoute('/agent-platform')({
+  beforeLoad: ({ location }) => requireAuthenticatedRoute(location.href),
   component: AgentPlatformLayout,
 })
