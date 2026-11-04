@@ -162,6 +162,12 @@ P01-T05 不改表、索引或驱动。成员列表先以工作区、Team、当�
 
 成功授权变更与 `workspace_member_audit` v2 事件同主库事务，包含目标用户引用和固定角色差异；不与原 `workspace_audit` v1 kind 混写。投影端处理两个白名单 kind，其他 outbox 不领取；旧节点可继续投影 v1。拒绝日志按现有独立路径记录。
 
+### 8.6 工作区运行 Key 授权
+
+P01-T06 只在主库加 `ag_token_grants`，不迁移旧 Key 权限；唯一 `(token_id, workspace_id, scope, resource_type, resource_id)` 及查询索引 `(workspace_id, token_id, status)`。资源限定工作区 ID，状态 active/revoked，期限和撤销时间用 UTC 毫秒；撤销保留行及版本，旧收据不可恢复权限。
+
+创建与既有 `ag_idempotency_keys` 完成收据及 `token_grant_audit` v3 同事务。显式重复元组不重复审计；撤销使用范围/状态/revision 条件更新；日志仅投影规范引用、scope 和理由摘要。运行解析用一次主库查询读取最新凭据、租户及授权事实，不从缓存或旧 Scope 决定。
+
 ## 9. 留存、归档与删除
 
 运行元数据、事件内容、文件、版本、幂等记录与费用关联分别管理保留期，具体默认值按计划 §5.17；部署调整只改变未来清理策略，不能静默立即删除历史数据。
