@@ -25,6 +25,7 @@ import { ErrorState } from '@/components/error-state'
 import { LoadingState } from '@/components/loading-state'
 import { Button } from '@/components/ui/button'
 
+import type { WorkspaceListSearch } from '../lib/workspace-list-search'
 import { useAgentWorkspaces } from '../queries'
 import type { AgentWorkspacePage } from '../workspace-list-api'
 import {
@@ -34,6 +35,26 @@ import {
 import { WorkspaceListTable } from './workspace-list-table'
 
 export function WorkspaceList(props: WorkspaceListControls) {
+  const { t } = useTranslation()
+  return (
+    <section
+      aria-labelledby='agent-workspaces-heading'
+      className='mt-8 min-w-0 border-t pt-6'
+    >
+      <h2 id='agent-workspaces-heading' className='mb-4 text-xl font-semibold'>
+        {t('Workspaces')}
+      </h2>
+      <WorkspaceListContent {...props} />
+    </section>
+  )
+}
+
+export function WorkspaceListContent(
+  props: WorkspaceListControls & {
+    returnSearch?: WorkspaceListSearch
+    onWorkspaceSelect?: () => void
+  }
+) {
   const { t } = useTranslation()
   const href = useLocation({ select: (location) => location.href })
   const { signedIn, query } = useAgentWorkspaces(props.search)
@@ -66,7 +87,11 @@ export function WorkspaceList(props: WorkspaceListControls) {
         />
       </div>
     )
-  } else if (!query.isSuccess || !query.isFetchedAfterMount) {
+  } else if (
+    !query.isSuccess ||
+    !query.isFetchedAfterMount ||
+    query.isFetching
+  ) {
     content = (
       <div role='status' aria-live='polite'>
         <LoadingState message={t('Loading workspaces...')} />
@@ -79,16 +104,10 @@ export function WorkspaceList(props: WorkspaceListControls) {
   }
 
   return (
-    <section
-      aria-labelledby='agent-workspaces-heading'
-      className='mt-8 min-w-0 border-t pt-6'
-    >
-      <h2 id='agent-workspaces-heading' className='mb-4 text-xl font-semibold'>
-        {t('Workspaces')}
-      </h2>
+    <>
       {signedIn && <WorkspaceListFilters {...props} />}
       {content}
-    </section>
+    </>
   )
 }
 

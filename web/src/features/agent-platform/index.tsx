@@ -16,19 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link } from '@tanstack/react-router'
-import {
-  Bot,
-  FolderLock,
-  LibraryBig,
-  Plug,
-  type LucideIcon,
-} from 'lucide-react'
+import { Bot, LibraryBig, Plug, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { EmptyState } from '@/components/empty-state'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 
 import { WorkspaceList } from './components/workspace-list'
 import type { WorkspaceListControls } from './components/workspace-list-filters'
@@ -94,28 +85,5 @@ export function AgentPlatformWorkspaces(props: WorkspaceListControls) {
         </ul>
       </section>
     </>
-  )
-}
-
-/** This shell neither resolves a workspace nor grants access to its resources. */
-export function AgentPlatformWorkspace() {
-  const { t } = useTranslation()
-
-  return (
-    <section aria-label={t('Workspace')} className='mt-10'>
-      <EmptyState
-        icon={FolderLock}
-        title={t('Workspace details are not available yet')}
-        description={t('Return to the workspace list to continue.')}
-        action={
-          <Button
-            variant='outline'
-            render={<Link to='/agent-platform/workspaces' />}
-          >
-            {t('Back to workspaces')}
-          </Button>
-        }
-      />
-    </section>
   )
 }
