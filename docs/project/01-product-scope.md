@@ -2,9 +2,9 @@
 
 ## 1. 定位与使用边界
 
-AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运行调度与治理。客户使用同一控制台、账号、模型 Token 和账务体系，完成模型调用与智能体开发。
+AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运行调度与治理。客户从站点顶部“模型广场”右侧进入独立的“智能体工作台”；工作台与模型网关控制台共享账号、Team、模型 Token 和账务体系。
 
-本规范依据已确认开发计划第 1–4、9 章，约束后续实现，不代替计划中的任务依赖、接口清单或验收门禁。除第 2 节明确列出的代码事实外，下文的 Workspace、Agent 发布与 Run 流程均是待按阶段交付的目标，不能作为当前可用功能宣传。
+本规范依据已确认开发计划第 1–4、7、9 章，约束后续实现，不代替计划中的任务依赖、接口清单或验收门禁。除第 2 节明确列出的代码事实外，下文的 Workspace、Agent 发布与 Run 流程均是待按阶段交付的目标，不能作为当前可用功能宣传。
 
 - 保持同仓库模块化单体：现有 Gin 服务承载控制面和模型网关，同仓库 worker 承载执行编排，客户脚本进入独立隔离环境。
 - 原生运行路线为 Go + Eino；平台保有状态、权限、事件和计量契约，不对外暴露框架内部对象。
@@ -20,7 +20,7 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | 新命名空间准入 gate | `middleware/agent_platform.go` | 控制新请求准入，不代替身份认证、租户授权或运行取消 |
 | 内部作用域与请求上下文 | `model/agent_scope.go`、`service/agent/context.go` | 仅元数据载体；`AgentScope` 不是数据库表，也不能证明访问已授权 |
 | 公开全局能力探测 | `router/agent-router.go`、`controller/agent_platform.go`、`service/agent/capabilities.go` | 只读有效开关，当前 `runtime_ready` 固定为 `false` |
-| 工作台导航壳 | `web/src/features/agent-platform/`、认证父路由及现有导航 | P00-T07提供受动态开关控制的空页面，不读取真实工作区或赋予资源权限 |
+| 独立工作台入口与页面壳 | `web/src/features/agent-platform/`、站点顶部导航和独立工作台路由 | P00-T07a 调整原 P00-T07 页面壳：桌面顶部、移动导航及控制台头部按同一开关显示；继续使用现有会话，不读取真实工作区或赋予资源权限 |
 | 单步骤适配基座 | `service/agentexecution/`、根模块固定的Eino及官方MCP SDK依赖 | P00-T08提供内部窄接口与显式构造的Eino单步适配器；MCP只做本地内存协议验证，不提供客户连接或Run服务 |
 | 工作区持久化基础 | `model/agent_workspace.go`、主库迁移 | P01-T01提供工作区/成员两表及带Team范围的基础仓储；持久化本身不构成访问授权 |
 | 管理工作区访问判定 | `service/agent/workspace_access.go`、`middleware/agent_workspace.go` | P01-T02提供实时管理会话/用户/成员/角色判定及可复用guard；候选角色范围不等于私密资源或运行许可 |
@@ -38,13 +38,15 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 | `agent_setting.skills_enabled` | 总开关与 Skills 开关均开启 |
 | `agent_setting.scripts_enabled` | 总开关、Skills 与脚本开关均开启 |
 
-`GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的工作区写入、Run、审批、MCP 或脚本处理器；公开探测不替代未来的工作区权限探测。
+`GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的 Run、审批、MCP 或脚本处理器；公开探测不替代工作区权限判定。
 
 已注册的`GET /api/agent-platform/workspaces`与`GET /api/agent-platform/workspaces/:workspace_id`只返回当前主体获准读取的工作区元数据，拒绝PAT和模型Token。列表在服务端授权范围内筛选、COUNT和分页，名称`q`按区分大小写的字面子串匹配。响应采用显式白名单和`no-store`，角色/状态对应的`effective_permissions`仅是当次工作区层权限摘要，不授予资源执行权；前端仍为导航壳，不能据此宣称客户工作区管理页面或运行引擎已经交付。
 
 单步骤适配器只执行服务端显式注入的处理函数，不接入主启动链、读取模型凭据或客户文件。内部资源引用不是授权；本地测试可以验证运行与协作取消，但不能据此将`runtime_ready`改为`true`或开放真实客户执行。完整状态机、租约、模型计量、远程MCP及技能存储分别按后续任务交付。
 
 P01-T04进一步接入工作区创建、编辑与归档三个管理写接口。创建限当前Team owner，并原子建立初始管理员；修改与归档需预期revision，两个POST使用持久化幂等收据。工作区变更和安全审计事实同事务保存，日志库仅为后续投影。归档保留数据，当前仅开放运行资源接入前的场景；活动计数或未来Run/Schedule依赖未满足时拒绝，不能由归档成功推断已实现排空、停止计划或历史运行页面。
+
+工作台首页 `/agent-platform/workspaces` 由 `/agent-platform` 进入，工作区深链接 `/agent-platform/w/:workspace_id` 保持兼容。总开关默认关闭；开启后访客可见导航，登录后才能进入页面。控制台侧栏和命令面板不重复承载工作台入口。当前只展示工作区准备状态和待交付工具简介，不把 P01-T03/T04 的后端接口视作已上线的页面；真实工作区与成员交互按 P01-T08 接入。
 
 ## 3. 租户、身份与资源
 

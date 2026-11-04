@@ -2,7 +2,7 @@
 
 ## 1. 适用范围与事实边界
 
-本规范落实已确认开发计划第 2、3、6、8 章，不修改计划的业务范围、任务依赖或阶段出口。产品边界见 [产品范围](01-product-scope.md)，执行语义见 [Agent 运行规范](02-agent-runtime.md)，集成与调度见 [适配器与任务规范](03-adapters-and-jobs.md)。
+本规范落实已确认开发计划第 2、3、6–8 章，不修改计划的业务范围、任务依赖或阶段出口。产品边界见 [产品范围](01-product-scope.md)，执行语义见 [Agent 运行规范](02-agent-runtime.md)，集成与调度见 [适配器与任务规范](03-adapters-and-jobs.md)。
 
 下文代码路径均相对于实际 Git 仓库 `new-api/`。目录存在、配置开启、类型可编译均不能单独证明业务功能已经实现。
 
@@ -15,7 +15,7 @@
 | Agent 最小基础 | `setting/agent_setting/`、`service/agent/`、`types/agent/`、能力探测接口 | 当前是开关、内部上下文及只读探测，不是运行引擎 |
 | 运行适配基础 | 根`go.mod`固定Eino `v0.9.22`与官方MCP Go SDK `v1.8.0` | 仅内部单步骤适配及本地协议PoC；完整Run引擎与真实连接仍按后续阶段实现 |
 
-当前`service/agent/capabilities.go`仍固定返回`runtime_ready:false`。前端`features/agent-platform/`已有受动态开关控制的工作台导航壳；`service/agentexecution/`仅提供显式构造的Eino单步骤适配器与内部窄接口，不接入API或Worker启动。P01已具工作区持久化、管理访问判定及读写生命周期API；Run队列、租约/检查点、远程MCP、技能存储及沙箱仍需按计划实现，不能由依赖存在或本地PoC推断已可供客户使用。
+当前`service/agent/capabilities.go`仍固定返回`runtime_ready:false`。前端`features/agent-platform/`提供受动态开关控制的顶层入口和独立工作台页面壳；`service/agentexecution/`仅提供显式构造的Eino单步骤适配器与内部窄接口，不接入API或Worker启动。P01已具工作区持久化、管理访问判定及读写生命周期API；Run队列、租约/检查点、远程MCP、技能存储及沙箱仍需按计划实现，不能由依赖存在或本地PoC推断已可供客户使用。
 
 ## 2. 模块化单体与进程边界
 
@@ -53,7 +53,7 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 | `service/skill/`、`service/mcp/` | 技能包与工具连接适配 | 规划，不把供应商任务插件当客户 Skills |
 | `service/agentartifact/` | 产物存储、授权读取、清理 | 规划，不把既有禁用存储实现称为可用 |
 | `service/authz/` | 扩展资源动作及现有权限框架 | 已有，工作区归属仍需显式实现 |
-| `web/src/features/agent-platform/` | 平台 API、类型、后续工作区壳 | 当前仅 API / types |
+| `web/src/features/agent-platform/` | 能力查询、类型、独立工作台布局及后续业务页面 | 已提供开关查询、准备状态与详情占位；P01-T08 才接入真实工作区及成员交互 |
 | `web/src/features/agents/`、`skills/`、`mcp/`、`agent-runs/` | 各业务页面、表单、查询和交互 | 规划，避免提前创建空壳 |
 
 独立 Worker 入口与单二进制角色只能按冻结方案选择，不能同时维护两套无必要的启动装配。
@@ -132,6 +132,8 @@ P01-T04另注册创建、编辑和归档三个管理写接口，复用同一type
 
 - 业务代码放 `web/src/features/<feature>/`，按需组织 `components/`、`hooks/`、`lib/`、`api.ts`、`types.ts`；不为目录形式创建空文件。
 - 路由放 `web/src/routes/`，使用 TanStack Router 的路由声明、搜索参数校验、导航与错误边界；保持构建生成的路由信息一致。
+- 工作台浏览器路由 `/agent-platform/**` 独立于控制台布局，复用站点头部、现有会话与登录回跳，不复用控制台侧栏。根地址、工作区首页与带工作区 ID 的深链接保持兼容；移动工作台不迁移 `/api/agent-platform/**`。
+- 工作台入口在共享顶部导航的“模型广场”之后；公共头部、控制台头部、桌面及移动端共用排序和可见性逻辑。能力未验证、关闭或失败时隐藏入口；登录后的直接访问保留地址并在独立页面展示状态。
 - 页面权限和导航能力探测用于交互控制，服务端授权始终执行；全局 capabilities 不能替代工作区权限查询。
 - 服务端数据交给 TanStack Query；临时组件状态放本地，跨页面客户端状态才放 Zustand，不在多个 store 复制同一查询结果。
 - Workspace 相关 Query key 包含 workspace、资源及必要权限版本；切换工作区或退出时取消过期请求并清理不再可见的数据。
