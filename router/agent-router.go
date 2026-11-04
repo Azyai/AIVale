@@ -25,6 +25,8 @@ func SetAgentRouter(apiRouter *gin.RouterGroup) {
 	workspaces.PUT("/:workspace_id/members/:user_id", controller.PutAgentWorkspaceMember)
 	workspaces.DELETE("/:workspace_id/members/:user_id", controller.DeleteAgentWorkspaceMember)
 	workspaces.GET("/:workspace_id/token-grants", controller.ListAgentWorkspaceTokenGrants)
+	workspaces.GET("/:workspace_id/token-grants/permissions", controller.GetAgentWorkspaceTokenGrantPermissions)
 	workspaces.POST("/:workspace_id/token-grants", controller.CreateAgentWorkspaceTokenGrant)
+	workspaces.POST("/:workspace_id/token-grants/:grant_id/renew", controller.RenewAgentWorkspaceTokenGrant)
 	workspaces.DELETE("/:workspace_id/token-grants/:grant_id", controller.RevokeAgentWorkspaceTokenGrant)
 }

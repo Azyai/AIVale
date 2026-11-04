@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AIVale workspace token grants API",
-    "version": "1.0.0",
-    "description": "P01-T06 allows a dashboard session to list, create and revoke explicit workspace grants on eligible Team model Keys. Existing model authorization stays independent. No public Run endpoint is registered."
+    "version": "1.1.0",
+    "description": "Dashboard management of explicit workspace grants on eligible Team model Keys, including P01-T07 revision-fenced renewal and permission summaries. Model authorization stays independent. No public Run endpoint is registered."
   },
   "security": [
     {
@@ -98,7 +98,7 @@
         "operationId": "createWorkspaceTokenGrant",
         "x-api-id": "API-013",
         "summary": "Grant one exact scope for the current workspace",
-        "description": "Requires an active workspace, a controlled enabled/unexpired same-Team model Key and a live eligible Key owner. A natural duplicate with the same expiry reuses the active grant. A revoked, expired or different-expiry tuple is not reactivated or replaced. No query parameters.",
+        "description": "Requires an active workspace, a controlled enabled/unexpired same-Team model Key and a live eligible Key owner. An original-generation natural duplicate with the same expiry reuses the active grant. Revoked, expired, renewed or different-expiry tuples are never changed by create; use explicit revision-fenced renewal for an expired or revoked grant. No query parameters.",
         "parameters": [
           {
             "$ref": "#/components/parameters/IdempotencyKey"
@@ -218,13 +218,13 @@
         "operationId": "revokeWorkspaceTokenGrant",
         "x-api-id": "API-014",
         "summary": "Revoke a controlled Team Key grant",
-        "description": "Requires current workspace authority and control of the grant's same-Team model Key. The first revocation retains the row; later authorized revocations return the original revocation facts. No query parameters.",
+        "description": "Requires current workspace authority and control of the grant’s same-Team model Key. Revocation retains the row. Supply the exact active revision for a renewed grant; reason-only requests are compatible with the initial generation and its first revocation. Repeating an authorized revocation for the same generation returns the retained facts. No query parameters.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./workspace-token-grants.schema.json#/$defs/revokeRequest"
+                "$ref": "./workspace-token-grant-governance.schema.json#/$defs/revokeRequest"
               }
             }
           }
@@ -243,7 +243,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./workspace-token-grants.schema.json#/$defs/revokeResponse"
+                  "$ref": "./workspace-token-grant-governance.schema.json#/$defs/revokeResponse"
                 }
               }
             }
@@ -261,7 +261,7 @@
             "$ref": "#/components/responses/NotFound"
           },
           "409": {
-            "description": "The grant is not in a valid state for this transition.",
+            "description": "The revision changed, a required revision was omitted, or the grant is not in a valid state for this transition.",
             "headers": {
               "Cache-Control": {
                 "$ref": "#/components/headers/CacheControl"
@@ -280,6 +280,167 @@
           },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/PlatformUnavailable"
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}/token-grants/{grant_id}/renew": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/WorkspaceId"
+        },
+        {
+          "name": "grant_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "./workspace-token-grants.schema.json#/$defs/id"
+          },
+          "description": "Canonical workspace grant ID."
+        }
+      ],
+      "post": {
+        "operationId": "renewWorkspaceTokenGrant",
+        "x-api-id": "API-013A",
+        "summary": "Explicitly renew an expired or revoked workspace grant",
+        "description": "Uses the exact current revision and preserves the existing grant ID, token, scope and resource. Requires an active workspace, a controlled eligible Team Key and current scope authority. A current-generation retry replays the same receipt; old receipts do not restore permission. No query parameters.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-token-grant-governance.schema.json#/$defs/renewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current renewed grant, with a new revision and finite expiry.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "Idempotency-Key-Expires-At": {
+                "$ref": "#/components/headers/IdempotencyExpiresAt"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grant-governance.schema.json#/$defs/renewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SessionRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Revision mismatch, state not eligible for renewal, or a conflicting or retired idempotency receipt.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/PlatformUnavailable"
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}/token-grants/permissions": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/WorkspaceId"
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspaceTokenGrantPermissions",
+        "x-api-id": "API-012A",
+        "summary": "Summarize current workspace-scope candidates for one controlled Team Key",
+        "description": "Accepts only one token_id. Returns an empty scopes array when the controlled Key or its grant conditions currently do not qualify. The summary does not check caller IP, model policy or downstream resource facts, and cannot authorize execution.",
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/id"
+            },
+            "description": "One canonical model Key ID. The credential itself is never accepted in this parameter."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace-level candidate grants in ascending scope order.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grant-governance.schema.json#/$defs/permissionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SessionRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           },
           "500": {
             "$ref": "#/components/responses/InternalError"

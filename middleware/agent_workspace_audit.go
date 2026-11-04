@@ -33,6 +33,8 @@ func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
 			action, method, route = "token_grant.create.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/token-grants"
 		case "DELETE /api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id":
 			action, method, route = "token_grant.revoke.rejected", http.MethodDelete, "/api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id"
+		case "POST /api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id/renew":
+			action, method, route = "token_grant.renew.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id/renew"
 		default:
 			c.Next()
 			return

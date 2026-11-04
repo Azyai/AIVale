@@ -21,3 +21,16 @@ type AgentWorkspaceTokenGrantRevocation struct {
 	Revision  int64  `json:"revision"`
 	RevokedAt int64  `json:"revoked_at"`
 }
+
+// AgentWorkspaceTokenGrantPermissions is an advisory workspace scope summary.
+type AgentWorkspaceTokenGrantPermissions struct {
+	TokenID string                               `json:"token_id"`
+	Scopes  []AgentWorkspaceTokenGrantPermission `json:"scopes"`
+}
+
+type AgentWorkspaceTokenGrantPermission struct {
+	Scope     string `json:"scope"`
+	GrantID   string `json:"grant_id"`
+	Revision  int64  `json:"revision"`
+	ExpiresAt *int64 `json:"expires_at"`
+}

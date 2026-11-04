@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:workspace-token-grant-governance:1.0.0",
+  "title": "AIVale workspace token grant governance contract 1.0.0",
+  "description": "P01-T07 management-only renewal and current workspace-scope summary. Does not create public Run endpoints.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P01-T07",
+    "base_contract": "urn:aivale:agent-platform:workspace-token-grants:1.0.0",
+    "api_ids": [
+      "API-012A",
+      "API-013A",
+      "API-014"
+    ],
+    "authentication": "Current dashboard Bearer session and same-Team Key control; platform switch required.",
+    "idempotency": "A renewal receipt is replayable only for the same still-current eligible generation."
+  },
+  "$defs": {
+    "renewRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "x-json-lexical-integer": true,
+          "description": "Exact current grant revision as a canonical positive safe JSON integer."
+        },
+        "expires_at": {
+          "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/millis",
+          "x-json-lexical-integer": true,
+          "description": "Required future UTC Unix milliseconds; must not exceed the Key lifetime. Explicit null is rejected."
+        }
+      },
+      "required": [
+        "expected_revision",
+        "expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "renewResponse": {
+      "allOf": [
+        {
+          "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/createResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "revision": {
+                  "minimum": 2
+                },
+                "expires_at": {
+                  "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/millis"
+                },
+                "revoked_at": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "revokeRequest": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/revokeRequest/properties/reason"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "x-json-lexical-integer": true,
+          "description": "Required to revoke a renewed grant. Legacy reason-only requests apply to the initial grant generation."
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "revokeResponse": {
+      "allOf": [
+        {
+          "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/revokeResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "revision": {
+                  "minimum": 2
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "permission": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/scope"
+        },
+        "grant_id": {
+          "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/id"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/millis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "scope",
+        "grant_id",
+        "revision",
+        "expires_at"
+      ],
+      "if": {
+        "properties": {
+          "revision": {
+            "minimum": 2
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "expires_at": {
+            "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/millis"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "permissionsResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "token_id": {
+              "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/id"
+            },
+            "scopes": {
+              "type": "array",
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/permission"
+              },
+              "description": "Current workspace-level candidate grants, one entry per scope in ascending scope order. Not runtime authorization."
+            }
+          },
+          "required": [
+            "token_id",
+            "scopes"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:workspace-token-grants:1.0.0#/$defs/errorResponse"
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/renewResponse"
+    },
+    {
+      "$ref": "#/$defs/revokeResponse"
+    },
+    {
+      "$ref": "#/$defs/permissionsResponse"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    }
+  ]
+}

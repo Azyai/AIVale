@@ -142,7 +142,7 @@ func CreateAgentWorkspaceTokenGrant(c *gin.Context) {
 		return
 	}
 	if result == nil || result.Grant.TokenID != tokenID || result.Grant.ResourceID != resourceID || result.Grant.Scope != scope || result.Grant.Status != model.AgentTokenGrantStatusActive ||
-		(result.HTTPStatus != http.StatusCreated && result.HTTPStatus != http.StatusOK) ||
+		result.Grant.Revision != 1 || (result.HTTPStatus != http.StatusCreated && result.HTTPStatus != http.StatusOK) ||
 		result.IdempotencyExpiresAt < 1 || result.IdempotencyExpiresAt > agenttypes.MaxSafeInteger {
 		agentapi.WriteError(c, agenttypes.NewError(agenttypes.InternalError, nil))
 		return
@@ -172,7 +172,7 @@ func RevokeAgentWorkspaceTokenGrant(c *gin.Context) {
 		agentapi.WriteError(c, err)
 		return
 	}
-	fields, err := agentapi.ReadJSONObject(c, "reason")
+	fields, err := agentapi.ReadJSONObject(c, "reason", "expected_revision")
 	if err != nil {
 		agentapi.WriteError(c, err)
 		return
@@ -182,12 +182,23 @@ func RevokeAgentWorkspaceTokenGrant(c *gin.Context) {
 		agentapi.WriteError(c, err)
 		return
 	}
-	result, err := agent.RevokeTokenGrant(c.Request.Context(), model.DB, identity, workspaceID, grantID, strings.TrimSpace(reason), agentapi.RequestID(c))
+	var expectedRevision []int64
+	if raw, present := fields["expected_revision"]; present {
+		revision, err := agentapi.ParseJSONRevision(raw)
+		if err != nil {
+			agentapi.WriteError(c, err)
+			return
+		}
+		expectedRevision = append(expectedRevision, revision)
+	}
+	result, err := agent.RevokeTokenGrant(c.Request.Context(), model.DB, identity, workspaceID, grantID, strings.TrimSpace(reason), agentapi.RequestID(c), expectedRevision...)
 	if err != nil {
 		agentapi.WriteError(c, err)
 		return
 	}
-	if result == nil || result.ID != grantID || result.ResourceID != workspaceID || result.Status != model.AgentTokenGrantStatusRevoked {
+	if result == nil || result.ID != grantID || result.ResourceID != workspaceID || result.Status != model.AgentTokenGrantStatusRevoked ||
+		len(expectedRevision) == 0 && result.Revision != 2 ||
+		len(expectedRevision) == 1 && result.Revision != expectedRevision[0] && result.Revision != expectedRevision[0]+1 {
 		agentapi.WriteError(c, agenttypes.NewError(agenttypes.InternalError, nil))
 		return
 	}
@@ -202,20 +213,7 @@ func RevokeAgentWorkspaceTokenGrant(c *gin.Context) {
 
 func newAgentWorkspaceTokenGrant(value agent.TokenGrantView) (dto.AgentWorkspaceTokenGrant, error) {
 	if value.ID <= 0 || value.TokenID <= 0 || value.ResourceID <= 0 || value.ResourceType != model.AgentTokenGrantResourceWorkspace || !model.ValidAgentTokenGrantScope(value.Scope) ||
-		value.Revision < 1 || value.Revision > agenttypes.MaxSafeInteger || value.CreatedAt < 1 || value.UpdatedAt < value.CreatedAt || value.UpdatedAt > agenttypes.MaxSafeInteger ||
-		(value.ExpiresAt != nil && (*value.ExpiresAt <= value.CreatedAt || *value.ExpiresAt > agenttypes.MaxSafeInteger)) {
-		return dto.AgentWorkspaceTokenGrant{}, agenttypes.NewError(agenttypes.InternalError, nil)
-	}
-	switch value.Status {
-	case model.AgentTokenGrantStatusActive:
-		if value.RevokedAt != nil {
-			return dto.AgentWorkspaceTokenGrant{}, agenttypes.NewError(agenttypes.InternalError, nil)
-		}
-	case model.AgentTokenGrantStatusRevoked:
-		if value.RevokedAt == nil || *value.RevokedAt < value.CreatedAt || *value.RevokedAt > value.UpdatedAt {
-			return dto.AgentWorkspaceTokenGrant{}, agenttypes.NewError(agenttypes.InternalError, nil)
-		}
-	default:
+		!model.ValidAgentTokenGrantVersion(value.Status, value.Revision, value.CreatedAt, value.UpdatedAt, value.ExpiresAt, value.RevokedAt) {
 		return dto.AgentWorkspaceTokenGrant{}, agenttypes.NewError(agenttypes.InternalError, nil)
 	}
 	return dto.AgentWorkspaceTokenGrant{

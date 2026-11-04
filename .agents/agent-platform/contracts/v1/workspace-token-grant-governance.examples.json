@@ -1,0 +1,152 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P01-T07",
+  "description": "Synthetic developer examples; not execution evidence.",
+  "examples": [
+    {
+      "name": "token-grant-renew",
+      "schema": "renewResponse",
+      "http_status": 200,
+      "request": {
+        "expected_revision": 2,
+        "expires_at": 1793750400000
+      },
+      "response_headers": {
+        "Idempotency-Key-Expires-At": "1793750500000"
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-renew",
+        "data": {
+          "id": "1001",
+          "token_id": "72",
+          "scope": "agent:run",
+          "resource_type": "workspace",
+          "resource_id": "101",
+          "status": "active",
+          "expires_at": 1793750400000,
+          "revision": 3,
+          "created_at": 1793664004000,
+          "updated_at": 1793664100000,
+          "revoked_at": null
+        }
+      }
+    },
+    {
+      "name": "token-grant-renew-replay",
+      "schema": "renewResponse",
+      "http_status": 200,
+      "request": {
+        "expected_revision": 2,
+        "expires_at": 1793750400000
+      },
+      "response_headers": {
+        "Idempotency-Key-Expires-At": "1793750500000"
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-renew-replay",
+        "data": {
+          "id": "1001",
+          "token_id": "72",
+          "scope": "agent:run",
+          "resource_type": "workspace",
+          "resource_id": "101",
+          "status": "active",
+          "expires_at": 1793750400000,
+          "revision": 3,
+          "created_at": 1793664004000,
+          "updated_at": 1793664100000,
+          "revoked_at": null
+        }
+      }
+    },
+    {
+      "name": "token-grant-permissions",
+      "schema": "permissionsResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-permissions",
+        "data": {
+          "token_id": "72",
+          "scopes": [
+            {
+              "scope": "agent:run",
+              "grant_id": "1001",
+              "revision": 3,
+              "expires_at": 1793750400000
+            },
+            {
+              "scope": "run:read",
+              "grant_id": "1002",
+              "revision": 1,
+              "expires_at": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "token-grant-permissions-empty",
+      "schema": "permissionsResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-permissions-empty",
+        "data": {
+          "token_id": "72",
+          "scopes": []
+        }
+      }
+    },
+    {
+      "name": "token-grant-revoke-renewed",
+      "schema": "revokeResponse",
+      "http_status": 200,
+      "request": {
+        "reason": "Retire workspace automation",
+        "expected_revision": 3
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-revoke-renewed",
+        "data": {
+          "id": "1001",
+          "status": "revoked",
+          "revision": 4,
+          "revoked_at": 1793664105000
+        }
+      }
+    },
+    {
+      "name": "token-grant-renew-stale-revision",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "request": {
+        "expected_revision": 2,
+        "expires_at": 1793750400000
+      },
+      "response": {
+        "success": false,
+        "code": "AG_DRAFT_REVISION_CONFLICT",
+        "message": "The draft revision has changed",
+        "request_id": "token-grant-renew-stale-revision",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    }
+  ]
+}
