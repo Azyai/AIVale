@@ -17,13 +17,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import {
+  CancelledError,
   queryOptions,
   useQuery,
   type UseQueryResult,
 } from '@tanstack/react-query'
 
+import { useAuthStore } from '@/stores/auth-store'
+
 import { getAgentPlatformCapabilities } from './api'
+import type { WorkspaceListSearch } from './lib/workspace-list-search'
 import type { AgentPlatformCapabilities } from './types'
+import { listAgentWorkspaces } from './workspace-list-api'
 
 export const agentPlatformCapabilitiesQueryKey = [
   'agent-platform',
@@ -46,6 +51,46 @@ export const agentPlatformCapabilitiesQueryOptions = queryOptions({
 
 export function useAgentPlatformCapabilities(): UseQueryResult<AgentPlatformCapabilities> {
   return useQuery(agentPlatformCapabilitiesQueryOptions)
+}
+
+export function useAgentWorkspaces(search: WorkspaceListSearch) {
+  const userId = useAuthStore((state) => state.auth.user?.id)
+  const sessionId = useAuthStore((state) => state.auth.session?.sid)
+  const hasAccessToken = useAuthStore((state) =>
+    Boolean(state.auth.accessToken)
+  )
+  const signedIn = userId != null && Boolean(sessionId) && hasAccessToken
+
+  const query = useQuery({
+    queryKey: ['agent-platform', 'workspaces', userId, sessionId, search],
+    enabled: signedIn,
+    queryFn: async ({ signal }) => {
+      const assertCurrentSession = () => {
+        const { auth } = useAuthStore.getState()
+        if (
+          signal.aborted ||
+          !auth.accessToken ||
+          auth.user?.id !== userId ||
+          auth.session?.sid !== sessionId
+        ) {
+          throw new CancelledError({ silent: true })
+        }
+      }
+      assertCurrentSession()
+      const page = await listAgentWorkspaces(search, signal)
+      assertCurrentSession()
+      return page
+    },
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    meta: { errorToast: false, errorRedirect: false },
+  })
+
+  return { signedIn, query }
 }
 
 /**
