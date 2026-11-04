@@ -53,7 +53,7 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 | `service/skill/`、`service/mcp/` | 技能包与工具连接适配 | 规划，不把供应商任务插件当客户 Skills |
 | `service/agentartifact/` | 产物存储、授权读取、清理 | 规划，不把既有禁用存储实现称为可用 |
 | `service/authz/` | 扩展资源动作及现有权限框架 | 已有，工作区归属仍需显式实现 |
-| `web/src/features/agent-platform/` | 能力查询、类型、独立工作台布局及业务页面 | 提供开关查询和工作区只读列表；详情占位及其他管理页面按 P01-T08 后续子项接入 |
+| `web/src/features/agent-platform/` | 能力查询、类型、独立工作台布局及业务页面 | 提供开关查询、工作区只读列表、深链接详情及按授权列表切换；管理页面按 P01-T08 后续子项接入 |
 | `web/src/features/agents/`、`skills/`、`mcp/`、`agent-runs/` | 各业务页面、表单、查询和交互 | 规划，避免提前创建空壳 |
 
 独立 Worker 入口与单二进制角色只能按冻结方案选择，不能同时维护两套无必要的启动装配。
