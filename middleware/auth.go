@@ -638,6 +638,7 @@ func TokenAuth() func(c *gin.Context) {
 		if err != nil {
 			return
 		}
+		c.Set(agentModelTokenIdentityContextKey, model.NewAgentModelTokenIdentity(token, key, c.ClientIP()))
 		c.Next()
 	}
 }

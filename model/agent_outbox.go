@@ -19,9 +19,10 @@ import (
 const (
 	agentOutboxKindWorkspaceAudit       = "workspace_audit"
 	AgentOutboxKindWorkspaceMemberAudit = "workspace_member_audit"
+	AgentOutboxKindTokenGrantAudit      = "token_grant_audit"
 )
 
-// AgentOutbox 保存工作区及成员审计事实，不启动worker。
+// AgentOutbox 保存工作区、成员及运行Key授权审计事实，不启动worker。
 type AgentOutbox struct {
 	ID             int64   `json:"-" gorm:"primaryKey;index:idx_ag_outbox_ready_id,priority:3"`                // 主库事件自增主键。
 	CreatedAt      int64   `json:"-" gorm:"type:bigint;not null;autoCreateTime:false"`                         // 事实创建时间，UTC毫秒。
@@ -30,7 +31,7 @@ type AgentOutbox struct {
 	TeamID         int64   `json:"-" gorm:"type:bigint;not null"`                                              // 服务端已核对的现有Team引用。
 	WorkspaceID    int64   `json:"-" gorm:"type:bigint;not null"`                                              // 同事务业务工作区引用，不使用0哨兵。
 	EventKey       string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_outbox_event_key"`      // 全局唯一小写64位十六进制事件键，兼作日志EventID。
-	Kind           string  `json:"-" gorm:"type:varchar(32);not null"`                                         // workspace_audit或workspace_member_audit。
+	Kind           string  `json:"-" gorm:"type:varchar(32);not null"`                                         // 固定工作区/成员/Key授权审计类别。
 	AggregateType  string  `json:"-" gorm:"type:varchar(24);not null"`                                         // 聚合对象类别，本批仅workspace。
 	AggregateID    int64   `json:"-" gorm:"type:bigint;not null"`                                              // 业务对象主键，本批必须等于WorkspaceID。
 	PayloadJSON    string  `json:"-" gorm:"type:text;not null"`                                                // 版本化引用载荷，最多16KiB，无正文或凭据。
@@ -79,6 +80,9 @@ type WorkspaceAuditPayload struct {
 	TargetUserID     string   `json:"target_user_id,omitempty"`
 	PreviousRole     string   `json:"previous_role,omitempty"`
 	Role             string   `json:"role,omitempty"`
+	TokenID          string   `json:"token_id,omitempty"`
+	GrantID          string   `json:"grant_id,omitempty"`
+	GrantScope       string   `json:"grant_scope,omitempty"`
 }
 
 func workspaceAuditPayloadValid(event *AgentOutbox, payload WorkspaceAuditPayload) bool {
@@ -91,6 +95,25 @@ func workspaceAuditPayloadValid(event *AgentOutbox, payload WorkspaceAuditPayloa
 	}
 	if event.Kind == AgentOutboxKindWorkspaceMemberAudit {
 		return workspaceMemberAuditPayloadValid(payload)
+	}
+	if event.Kind == AgentOutboxKindTokenGrantAudit {
+		if payload.SchemaVersion != 3 || !ValidAgentTokenGrantScope(payload.GrantScope) {
+			return false
+		}
+		for _, id := range []string{payload.TokenID, payload.GrantID} {
+			value, err := strconv.ParseInt(id, 10, 64)
+			if err != nil || value <= 0 || strconv.FormatInt(value, 10) != id {
+				return false
+			}
+		}
+		switch payload.Operation {
+		case "token_grant.create":
+			return payload.PreviousRevision == 0 && payload.ReasonHash == "" && slices.Equal(payload.ChangedFields, []string{"scope", "status"})
+		case "token_grant.revoke":
+			return payload.PreviousRevision > 0 && agentDigestValid(payload.ReasonHash) && slices.Equal(payload.ChangedFields, []string{"status"})
+		default:
+			return false
+		}
 	}
 	if event.Kind != agentOutboxKindWorkspaceAudit || payload.SchemaVersion != 1 ||
 		!slices.Contains([]string{"workspace.create", "workspace.update", "workspace.archive"}, payload.Operation) ||
@@ -150,6 +173,9 @@ func decodeWorkspaceAuditPayload(kind, raw string) (WorkspaceAuditPayload, error
 	case AgentOutboxKindWorkspaceMemberAudit:
 		required = append(required, "target_user_id", "role")
 		optional = "previous_role"
+	case AgentOutboxKindTokenGrantAudit:
+		required = append(required, "token_id", "grant_id", "grant_scope")
+		optional = "reason_hash"
 	default:
 		return payload, ErrAgentWorkspaceInvalid
 	}
@@ -182,7 +208,7 @@ func agentRequestIDValid(value string) bool {
 	return true
 }
 
-// ProjectWorkspaceAudit 是显式有界恢复入口。只处理两种工作区审计事件；
+// ProjectWorkspaceAudit 是显式有界恢复入口，只处理已实现的工作区审计事件。
 // 主事实已提交后才调用。ClickHouse暂无唯一EventID保证，保留pending且返回错误。
 func ProjectWorkspaceAudit(ctx context.Context, mainDB, logDB *gorm.DB, limit int) (int, error) {
 	if ctx == nil || mainDB == nil || mainDB.Config == nil || mainDB.Dialector == nil || mainDB.Statement == nil || mainDB.Statement.ConnPool == nil || logDB == nil || logDB.Config == nil || logDB.Dialector == nil || logDB.Statement == nil || logDB.Statement.ConnPool == nil || limit < 1 || limit > 100 {
@@ -199,7 +225,7 @@ func ProjectWorkspaceAudit(ctx context.Context, mainDB, logDB *gorm.DB, limit in
 	}
 	var events []AgentOutbox
 	err := mainDB.WithContext(ctx).Where(agentWorkspaceExactColumn(mainDB, "kind")+" IN ? AND "+agentWorkspaceExactColumn(mainDB, "status")+" = ? AND available_at <= ?",
-		[]string{agentOutboxKindWorkspaceAudit, AgentOutboxKindWorkspaceMemberAudit}, "pending", time.Now().UnixMilli()).Order("id ASC").Limit(limit).Find(&events).Error
+		[]string{agentOutboxKindWorkspaceAudit, AgentOutboxKindWorkspaceMemberAudit, AgentOutboxKindTokenGrantAudit}, "pending", time.Now().UnixMilli()).Order("id ASC").Limit(limit).Find(&events).Error
 	if err != nil {
 		return 0, err
 	}
@@ -246,8 +272,11 @@ func projectWorkspaceAuditEvent(ctx context.Context, logDB *gorm.DB, payload Wor
 			params["previous_role"] = payload.PreviousRole
 		}
 	}
+	if payload.SchemaVersion == 3 {
+		params["token_id"], params["grant_id"], params["grant_scope"] = payload.TokenID, payload.GrantID, payload.GrantScope
+	}
 	status := 200
-	if payload.Operation == "workspace.create" {
+	if payload.Operation == "workspace.create" || payload.Operation == "token_grant.create" {
 		status = 201
 	}
 	entry := AuditLog{EventId: payload.EventID, UserId: actor, ActorRole: payload.ActorRole, CreatedAt: payload.Timestamp / 1000,

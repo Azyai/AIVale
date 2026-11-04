@@ -21,10 +21,10 @@ type AgentIdempotencyKey struct {
 	ScopeHash      string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_idempotency_scope_key,priority:1"` // Team、主体及操作范围的SHA-256小写十六进制。
 	KeyHash        string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_idempotency_scope_key,priority:2"` // 原始Idempotency-Key的SHA-256，绝不保存原Key。
 	RequestHash    string  `json:"-" gorm:"type:varchar(64);not null"`                                                    // 规范化目标/主体/业务输入的SHA-256。
-	Operation      string  `json:"-" gorm:"type:varchar(48);not null"`                                                    // 本批workspace.create或workspace.archive。
+	Operation      string  `json:"-" gorm:"type:varchar(48);not null"`                                                    // 工作区创建/归档或运行 Key 授权创建。
 	State          string  `json:"-" gorm:"type:varchar(16);not null"`                                                    // 本批仅事务完成的completed，后续阶段扩展状态机。
-	ResourceType   *string `json:"-" gorm:"type:varchar(24)"`                                                             // 结果资源类别；计划允许NULL，本批completed必须workspace。
-	ResourceID     *int64  `json:"-" gorm:"type:bigint"`                                                                  // 结果主键；计划允许NULL，本批必须等于WorkspaceID。
+	ResourceType   *string `json:"-" gorm:"type:varchar(24)"`                                                             // 已提交结果类别 workspace 或 token_grant。
+	ResourceID     *int64  `json:"-" gorm:"type:bigint"`                                                                  // 已提交工作区或授权主键，按 Operation 校验。
 	ResponseStatus *int32  `json:"-" gorm:"type:int"`                                                                     // 已提交HTTP成功状态；本批201/200，completed不可NULL。
 	ResponseJSON   *string `json:"-" gorm:"type:text"`                                                                    // 最多60KiB不可变安全收据，无权限/秘密；completed不可NULL。
 	ExpiresAt      int64   `json:"-" gorm:"type:bigint;not null;index:idx_ag_idempotency_expiry_id,priority:1"`           // UTC毫秒，至少创建后24h；本批到期仍不清理/复用。
@@ -38,10 +38,21 @@ func (record *AgentIdempotencyKey) BeforeCreate(_ *gorm.DB) error {
 		record.ExpiresAt = now + int64(24*time.Hour/time.Millisecond)
 	}
 	if record.ID != 0 || record.TeamID <= 0 || record.WorkspaceID <= 0 || !agentDigestValid(record.ScopeHash) || !agentDigestValid(record.KeyHash) || !agentDigestValid(record.RequestHash) ||
-		(record.Operation != "workspace.create" && record.Operation != "workspace.archive") || record.State != "completed" ||
-		record.ResourceType == nil || *record.ResourceType != "workspace" || record.ResourceID == nil || *record.ResourceID != record.WorkspaceID ||
+		record.State != "completed" || record.ResourceType == nil || record.ResourceID == nil || *record.ResourceID <= 0 ||
 		record.ResponseStatus == nil || (*record.ResponseStatus != 200 && *record.ResponseStatus != 201) || record.ResponseJSON == nil ||
 		!utf8.ValidString(*record.ResponseJSON) || len(*record.ResponseJSON) > 60*1024 || record.ExpiresAt < now+int64(24*time.Hour/time.Millisecond) || record.ExpiresAt > 9007199254740991 {
+		return ErrAgentWorkspaceInvalid
+	}
+	switch record.Operation {
+	case "workspace.create", "workspace.archive":
+		if *record.ResourceType != "workspace" || *record.ResourceID != record.WorkspaceID {
+			return ErrAgentWorkspaceInvalid
+		}
+	case "token_grant.create":
+		if *record.ResourceType != "token_grant" {
+			return ErrAgentWorkspaceInvalid
+		}
+	default:
 		return ErrAgentWorkspaceInvalid
 	}
 	var response map[string]common.RawMessage
