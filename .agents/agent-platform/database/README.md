@@ -24,6 +24,8 @@ P01-T04改用`--profile workspace-write --task P01-T04`，仍为25项；引擎�
 
 P01-T05 使用 `--profile workspace-members --task P01-T05`，仍为 25 项。单引擎 `--members` 隐含前三个参数并增加第五阶段 `TestAgentWorkspaceMembersDatabaseMatrix`；准备本地 `router/agent_workspace_members_database_test.go` 与 workspace-members 公开契约。三库不复用旧运行，不接触业务实例。
 
+P01-T06 使用 `--profile workspace-grants --task P01-T06`，仍为 25 项。单引擎 `--grants` 隐含前五阶段并增加 `TestAgentTokenGrantDatabaseMatrix`，需要本地 `router/agent_token_grant_database_test.go` 与 workspace-token-grants 公开契约。验证主库迁移与唯一索引、管理范围、持久化幂等、旧 `/v1/models` 兼容和真实 TokenAuth 解析/撤销。两场景各 21 项行为、三次连接启动及实际请求数；六阶段同次匹配，仍须正常关闭隔离数据库。
+
 开发时可单独验证一个引擎（输出必须是 delivery 忽略目录下尚不存在的新目录）：
 
 ```powershell

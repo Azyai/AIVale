@@ -71,7 +71,7 @@ def snapshot(repo: Path, base: str, checks: list[dict], config: dict) -> dict:
     }
 
 
-WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'workspace-write', 'workspace-members')
+WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'workspace-write', 'workspace-members', 'workspace-grants')
 PROFILES = ('build', 'foundation', *WORKSPACE_PROFILES)
 
 
@@ -125,8 +125,10 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
             raise ValueError('Workspace read requires the live HTTP read stage on every database engine.')
         if profile in WORKSPACE_PROFILES[3:] and any(check.get('write') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace write requires the live lifecycle stage on every database engine.')
-        if profile == 'workspace-members' and any(check.get('members') is not True for check in selected if check['kind'] == 'database'):
+        if profile in WORKSPACE_PROFILES[4:] and any(check.get('members') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace members requires the live member management stage on every database engine.')
+        if profile == 'workspace-grants' and any(check.get('grants') is not True for check in selected if check['kind'] == 'database'):
+            raise ValueError('Workspace grants requires the live token grant stage on every database engine.')
     return selected
 
 
@@ -305,7 +307,25 @@ def validate_workspace_members_evidence(evidence: dict, engine: str, run_id: str
             raise ValueError('Workspace members lacks executed HTTP requests or required membership evidence.')
 
 
-def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False) -> dict:
+def validate_workspace_grants_evidence(evidence: dict, engine: str, run_id: str) -> None:
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Workspace grants evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Workspace grants must execute on fresh and upgraded databases.')
+    fields = (
+        'isolated_schema', 'indexes_verified', 'prior_rows_preserved', 'default_closed', 'session_only',
+        'workspace_visibility', 'token_control', 'target_isolation', 'strict_inputs', 'pagination', 'schema_contract',
+        'idempotency_replay', 'idempotency_conflict', 'natural_duplicate', 'revoke_idempotent', 'legacy_models',
+        'runtime_scope', 'immediate_revocation', 'transaction_rollback', 'audit_recovery', 'denied_audit',
+    )
+    for scenario in scenarios:
+        starts, requests = scenario.get('startup_passes'), scenario.get('http_requests')
+        if type(starts) is not int or starts != 3 or type(requests) is not int or requests < 1 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('Workspace grants lacks executed HTTP requests or required authorization evidence.')
+
+
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False) -> dict:
     report = json.loads(path.read_text(encoding='utf-8-sig'))
     if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
         raise ValueError('The live database runner did not complete successfully.')
@@ -350,6 +370,15 @@ def database_result(path: Path, engine: str, access: bool = False, read: bool = 
             raise ValueError('Workspace members receipt differs from the actual Go events and summary.')
         if actual_members['tests']['top_level_passed'] != 1 or actual_members['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Workspace members must use the same real database version and exact top-level test.')
+    if grants:
+        exit_code = report.get('grants_go_exit_code')
+        if not access or not read or not write or not members or report.get('grants_requested') is not True or type(exit_code) is not int or exit_code != 0:
+            raise ValueError('The token grant stage and all its prerequisites were not executed successfully.')
+        actual_grants = workspace_grants_log_result(path.parent / 'grants-go-test.stdout.log', engine, report['run_id'])
+        if report.get('grants_tests') != actual_grants['tests'] or report.get('grants_evidence') != actual_grants['evidence']:
+            raise ValueError('Workspace grants receipt differs from the actual Go events and summary.')
+        if actual_grants['tests']['top_level_passed'] != 1 or actual_grants['evidence']['version'] != actual['evidence']['version']:
+            raise ValueError('Workspace grants must use the same real database version and exact top-level test.')
     return report
 
 
@@ -404,6 +433,12 @@ def workspace_members_log_result(path: Path, engine: str, run_id: str) -> dict:
     return result
 
 
+def workspace_grants_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentTokenGrantDatabaseMatrix', 'AGENT_TOKEN_GRANT_DATABASE_RESULT ')
+    validate_workspace_grants_evidence(result['evidence'], engine, run_id)
+    return result
+
+
 def run_check(repo: Path, output: Path, check: dict) -> dict:
     argv = list(check['argv'])
     report_path = output / (check['id'] + '.results.json')
@@ -447,7 +482,7 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
         elif check['kind'] == 'vitest':
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
-            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members')}
+            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants')}
             database = database_result(database_output / 'result.json', check['engine'], **stages)
             result['tests'] = dict(database['tests'])
             result['database'] = {
