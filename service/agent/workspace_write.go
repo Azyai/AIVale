@@ -416,19 +416,26 @@ func workspaceWriteDecodeReceipt(raw string, fields []string, result any) error 
 }
 
 func workspaceWriteAudit(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts, workspaceID int64, operation string, previous, revision int64, requestID string, changed []string, reasonHash string) error {
+	return persistWorkspaceAudit(tx, facts, workspaceID, "workspace_audit", model.WorkspaceAuditPayload{
+		SchemaVersion: 1, Operation: operation, PreviousRevision: previous, Revision: revision,
+		RequestID: requestID, ChangedFields: changed, ReasonHash: reasonHash,
+	})
+}
+
+func persistWorkspaceAudit(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts, workspaceID int64, kind string, payload model.WorkspaceAuditPayload) error {
 	var random [32]byte
 	if _, err := rand.Read(random[:]); err != nil {
 		return err
 	}
-	eventKey := hex.EncodeToString(random[:])
-	payload := model.WorkspaceAuditPayload{SchemaVersion: 1, EventID: eventKey, ActorID: strconv.FormatInt(facts.UserID, 10), ActorRole: facts.ActorRole,
-		TeamID: strconv.FormatInt(facts.TeamID, 10), WorkspaceID: strconv.FormatInt(workspaceID, 10), Operation: operation, PreviousRevision: previous, Revision: revision,
-		RequestID: requestID, Timestamp: time.Now().UnixMilli(), ChangedFields: changed, ReasonHash: reasonHash}
+	payload.EventID = hex.EncodeToString(random[:])
+	payload.ActorID, payload.ActorRole = strconv.FormatInt(facts.UserID, 10), facts.ActorRole
+	payload.TeamID, payload.WorkspaceID = strconv.FormatInt(facts.TeamID, 10), strconv.FormatInt(workspaceID, 10)
+	payload.Timestamp = time.Now().UnixMilli()
 	encoded, err := common.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	return tx.Create(&model.AgentOutbox{TeamID: facts.TeamID, WorkspaceID: workspaceID, EventKey: eventKey, Kind: "workspace_audit", AggregateType: "workspace", AggregateID: workspaceID, PayloadJSON: string(encoded), Status: "pending"}).Error
+	return tx.Create(&model.AgentOutbox{TeamID: facts.TeamID, WorkspaceID: workspaceID, EventKey: payload.EventID, Kind: kind, AggregateType: "workspace", AggregateID: workspaceID, PayloadJSON: string(encoded), Status: "pending"}).Error
 }
 
 func workspaceWriteProjectAudit(db *gorm.DB, requestID string) {
