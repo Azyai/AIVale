@@ -16,10 +16,28 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, type SearchSchemaInput } from '@tanstack/react-router'
 
 import { AgentPlatformWorkspaces } from '@/features/agent-platform'
+import {
+  workspaceListSearchSchema,
+  type WorkspaceListSearch,
+} from '@/features/agent-platform/lib/workspace-list-search'
 
 export const Route = createFileRoute('/agent-platform/workspaces')({
-  component: AgentPlatformWorkspaces,
+  validateSearch: (search: Partial<WorkspaceListSearch> & SearchSchemaInput) =>
+    workspaceListSearchSchema.parse(search),
+  component: AgentPlatformWorkspacesRoute,
 })
+
+function AgentPlatformWorkspacesRoute() {
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+
+  return (
+    <AgentPlatformWorkspaces
+      search={search}
+      onSearchChange={(next) => void navigate({ search: next })}
+    />
+  )
+}

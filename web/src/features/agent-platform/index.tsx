@@ -20,7 +20,6 @@ import { Link } from '@tanstack/react-router'
 import {
   Bot,
   FolderLock,
-  Layers,
   LibraryBig,
   Plug,
   type LucideIcon,
@@ -30,6 +29,9 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/empty-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+
+import { WorkspaceList } from './components/workspace-list'
+import type { WorkspaceListControls } from './components/workspace-list-filters'
 
 function WorkbenchTool(props: {
   icon: LucideIcon
@@ -51,7 +53,7 @@ function WorkbenchTool(props: {
   )
 }
 
-export function AgentPlatformWorkspaces() {
+export function AgentPlatformWorkspaces(props: WorkspaceListControls) {
   const { t } = useTranslation()
 
   return (
@@ -60,54 +62,37 @@ export function AgentPlatformWorkspaces() {
         {t('Build and manage agents with your team in a shared workspace.')}
       </p>
 
-      <div className='mt-10 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-12'>
-        <section
-          aria-labelledby='agent-workspaces-heading'
-          className='border-border bg-card text-card-foreground overflow-hidden rounded-2xl border'
-        >
-          <header className='border-border bg-primary/5 border-b px-5 py-5 sm:px-7'>
-            <h2 id='agent-workspaces-heading' className='text-lg font-semibold'>
-              {t('Workspaces')}
-            </h2>
-          </header>
-          <EmptyState
-            icon={Layers}
-            title={t('The agent workbench is being prepared.')}
+      <WorkspaceList {...props} />
+      <section
+        aria-labelledby='agent-tools-heading'
+        className='mt-10 min-w-0 border-t pt-6'
+      >
+        <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
+          <h2 id='agent-tools-heading' className='text-lg font-semibold'>
+            {t('Workbench tools')}
+          </h2>
+          <Badge variant='secondary'>{t('In development')}</Badge>
+        </div>
+        <ul className='divide-border mt-3 divide-y md:grid md:grid-cols-3 md:gap-8 md:divide-y-0'>
+          <WorkbenchTool
+            icon={Bot}
+            name={t('Agent builder')}
             description={t(
-              'Workspace management will be available here once it is ready.'
+              'Configure models, instructions, and tools for an agent.'
             )}
-            className='min-h-64'
           />
-        </section>
-
-        <section aria-labelledby='agent-tools-heading' className='min-w-0'>
-          <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
-            <h2 id='agent-tools-heading' className='text-lg font-semibold'>
-              {t('Workbench tools')}
-            </h2>
-            <Badge variant='secondary'>{t('In development')}</Badge>
-          </div>
-          <ul className='divide-border mt-3 divide-y'>
-            <WorkbenchTool
-              icon={Bot}
-              name={t('Agent builder')}
-              description={t(
-                'Configure models, instructions, and tools for an agent.'
-              )}
-            />
-            <WorkbenchTool
-              icon={LibraryBig}
-              name={t('Skill library')}
-              description={t('Reuse and version skills across agents.')}
-            />
-            <WorkbenchTool
-              icon={Plug}
-              name={t('MCP connections')}
-              description={t('Connect agents to tools and data sources.')}
-            />
-          </ul>
-        </section>
-      </div>
+          <WorkbenchTool
+            icon={LibraryBig}
+            name={t('Skill library')}
+            description={t('Reuse and version skills across agents.')}
+          />
+          <WorkbenchTool
+            icon={Plug}
+            name={t('MCP connections')}
+            description={t('Connect agents to tools and data sources.')}
+          />
+        </ul>
+      </section>
     </>
   )
 }

@@ -26,6 +26,7 @@ import { applyFaviconToDom } from '@/lib/dom-utils'
 import '@/lib/dayjs'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
 import { createAppQueryClient } from '@/lib/query-client'
+import { parseAppSearch } from '@/lib/router-search'
 import { readCachedStatus, statusQueryOptions } from '@/lib/status-query'
 
 import { DirectionProvider } from './context/direction-provider'
@@ -50,6 +51,7 @@ const queryClient = createAppQueryClient(() => {
 // Create a new router instance
 const router = createRouter({
   routeTree,
+  parseSearch: parseAppSearch,
   context: { queryClient },
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,

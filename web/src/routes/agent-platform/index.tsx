@@ -18,8 +18,16 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
+import { workspaceListSearchSchema } from '@/features/agent-platform/lib/workspace-list-search'
+
 export const Route = createFileRoute('/agent-platform/')({
-  beforeLoad: () => {
-    throw redirect({ to: '/agent-platform/workspaces', replace: true })
+  beforeLoad: ({ location }) => {
+    throw redirect({
+      to: '/agent-platform/workspaces',
+      search: location.searchStr
+        ? workspaceListSearchSchema.parse(location.search)
+        : undefined,
+      replace: true,
+    })
   },
 })
