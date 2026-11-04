@@ -71,7 +71,7 @@ def snapshot(repo: Path, base: str, checks: list[dict], config: dict) -> dict:
     }
 
 
-WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'workspace-write', 'workspace-members', 'workspace-grants')
+WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'workspace-write', 'workspace-members', 'workspace-grants', 'workspace-grant-governance')
 PROFILES = ('build', 'foundation', *WORKSPACE_PROFILES)
 
 
@@ -127,8 +127,10 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
             raise ValueError('Workspace write requires the live lifecycle stage on every database engine.')
         if profile in WORKSPACE_PROFILES[4:] and any(check.get('members') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace members requires the live member management stage on every database engine.')
-        if profile == 'workspace-grants' and any(check.get('grants') is not True for check in selected if check['kind'] == 'database'):
+        if profile in WORKSPACE_PROFILES[5:] and any(check.get('grants') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace grants requires the live token grant stage on every database engine.')
+        if profile == 'workspace-grant-governance' and any(check.get('governance') is not True for check in selected if check['kind'] == 'database'):
+            raise ValueError('Workspace grant governance requires the live renewal stage on every database engine.')
     return selected
 
 
@@ -325,7 +327,25 @@ def validate_workspace_grants_evidence(evidence: dict, engine: str, run_id: str)
             raise ValueError('Workspace grants lacks executed HTTP requests or required authorization evidence.')
 
 
-def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False) -> dict:
+def validate_workspace_governance_evidence(evidence: dict, engine: str, run_id: str) -> None:
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Workspace governance evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Workspace governance must execute on fresh and upgraded databases.')
+    fields = (
+        'isolated_schema', 'prior_rows_preserved', 'default_closed', 'session_only', 'target_isolation', 'token_control',
+        'strict_inputs', 'schema_contract', 'revoked_renewal', 'expired_renewal', 'revision_cas', 'idempotency_replay',
+        'idempotency_conflict', 'stale_receipts', 'revocation_fence', 'permission_summary', 'runtime_fence',
+        'transaction_rollback', 'audit_history',
+    )
+    for scenario in scenarios:
+        starts, requests = scenario.get('startup_passes'), scenario.get('http_requests')
+        if type(starts) is not int or starts != 3 or type(requests) is not int or requests < 1 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('Workspace governance lacks executed HTTP requests or required renewal evidence.')
+
+
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False) -> dict:
     report = json.loads(path.read_text(encoding='utf-8-sig'))
     if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
         raise ValueError('The live database runner did not complete successfully.')
@@ -379,6 +399,15 @@ def database_result(path: Path, engine: str, access: bool = False, read: bool = 
             raise ValueError('Workspace grants receipt differs from the actual Go events and summary.')
         if actual_grants['tests']['top_level_passed'] != 1 or actual_grants['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Workspace grants must use the same real database version and exact top-level test.')
+    if governance:
+        exit_code = report.get('governance_go_exit_code')
+        if not (access and read and write and members and grants) or report.get('governance_requested') is not True or type(exit_code) is not int or exit_code != 0:
+            raise ValueError('The token grant renewal stage and all its prerequisites were not executed successfully.')
+        actual_governance = workspace_governance_log_result(path.parent / 'governance-go-test.stdout.log', engine, report['run_id'])
+        if report.get('governance_tests') != actual_governance['tests'] or report.get('governance_evidence') != actual_governance['evidence']:
+            raise ValueError('Workspace governance receipt differs from the actual Go events and summary.')
+        if actual_governance['tests']['top_level_passed'] != 1 or actual_governance['evidence']['version'] != actual['evidence']['version']:
+            raise ValueError('Workspace governance must use the same real database version and exact top-level test.')
     return report
 
 
@@ -439,6 +468,12 @@ def workspace_grants_log_result(path: Path, engine: str, run_id: str) -> dict:
     return result
 
 
+def workspace_governance_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentTokenGrantRenewalDatabaseMatrix', 'AGENT_TOKEN_GRANT_RENEWAL_DATABASE_RESULT ')
+    validate_workspace_governance_evidence(result['evidence'], engine, run_id)
+    return result
+
+
 def run_check(repo: Path, output: Path, check: dict) -> dict:
     argv = list(check['argv'])
     report_path = output / (check['id'] + '.results.json')
@@ -482,7 +517,7 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
         elif check['kind'] == 'vitest':
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
-            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants')}
+            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance')}
             database = database_result(database_output / 'result.json', check['engine'], **stages)
             result['tests'] = dict(database['tests'])
             result['database'] = {

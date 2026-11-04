@@ -30,6 +30,7 @@ python .agents/agent-platform/delivery/gate.py --profile build --base-ref HEAD -
 | `workspace-write` | 基础21项、管理会话适配，以及三个引擎各自迁移、访问、只读HTTP、写生命周期四阶段验证，共25项 | 仅P01-T04工作区创建/编辑/归档和所选基础，`acceptance=selected_workspace_write`；不代表后续Run或通用outbox已交付 |
 | `workspace-members` | 基础21项、管理会话适配，以及三个引擎在上述四阶段后增加成员管理，共25项 | 仅P01-T05成员列表/添加/改角色/移除及所选回归，`acceptance=selected_workspace_members`；不代表工作区页面或Run已交付 |
 | `workspace-grants` | 基础21项、管理会话适配，三个引擎在上述五阶段后增加 Key 授权，共25项 | 仅 P01-T06 工作区授权表、管理接口、实时解析和所选回归，`acceptance=selected_workspace_grants`；不代表 Run 或模型结算已验证 |
+| `workspace-grant-governance` | 基础21项、管理会话适配，三库在前六阶段后增加续发与摘要，共25项 | 仅 P01-T07 续发、权限摘要、代次复查和所选回归，`acceptance=selected_workspace_grant_governance` |
 
 现有公共 CI 继续只做构建和静态检查。它没有本地测试源码，不因 `build` 返回 0 而完成验收。
 
@@ -72,5 +73,7 @@ P01-T04使用`--profile workspace-write --task P01-T04`及开发前基准，限�
 P01-T05 使用 `--profile workspace-members --task P01-T05` 与开发前基准。成员阶段校验真实生产会话、租户隔离、owner/admin层级、最后管理员及竞争、修订和撤权、严格输入/分页/契约、事务及审计。固定配置要求三库皆含五阶段，成员阶段本地源码必须存在。各 fresh/upgrade 核对 19 项布尔值、精确 3 次连接启动及正整数请求数，按同运行编号/引擎版本和原始事件核对收据；2160 秒引擎上限覆盖启动、5×330 秒阶段及停止。此模式只允许 P01-T05 已声明影响范围，不作为数据库或全量测试豁免。
 
 P01-T06 使用 `--profile workspace-grants --task P01-T06` 与开发前基准。三库各跑六阶段；Key 阶段 fresh/upgrade 各要求 21 项行为、精确三次连接启动及正整数请求数，以同次实际原始 Go 事件核对收据，禁止复用旧证据。单引擎上限 2520 秒。管理接口走真实生产路由；运行鉴权使用仅本地探针，不开放生产 Run 路由。
+
+P01-T07 使用 `--profile workspace-grant-governance --task P01-T07` 与开发前基准。续发阶段在同次前六阶段之后执行；fresh/upgrade 各有 19 项严格行为、三次连接启动和真实请求数。单引擎上限 2820 秒；原始事件、收据与停机缺一不可，旧证据不能替代。
 
 计划中 P00-T01 的历史全量失败/超时保持未决。旧模型的固定离线转换、流和模型列表鉴权回归只证明其所选范围，不关闭历史问题，也不等同真实模型调用或扣费 E2E。
