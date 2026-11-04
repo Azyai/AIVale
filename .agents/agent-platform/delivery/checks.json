@@ -2011,8 +2011,20 @@
   },
   "workspace_write_scope": {
     "tasks": [
-      "P01-T04"
+      "P01-T04",
+      "P01-T08"
     ],
+    "task_impact_paths": {
+      "P01-T08": [
+        "controller/agent_workspace.go",
+        "controller/agent_workspace_write.go",
+        "dto/agent_workspace.go",
+        "middleware/access_token_routes.go",
+        "router/agent-router.go",
+        "service/agent/workspace_read.go",
+        "service/agent/workspace_write.go"
+      ]
+    },
     "allowed_impact_paths": [
       "model/main.go",
       "model/agent_workspace_write.go",

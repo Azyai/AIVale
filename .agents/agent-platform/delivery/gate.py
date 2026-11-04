@@ -345,7 +345,16 @@ def validate_workspace_governance_evidence(evidence: dict, engine: str, run_id: 
             raise ValueError('Workspace governance lacks executed HTTP requests or required renewal evidence.')
 
 
-def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False) -> dict:
+def validate_workspace_create_evidence(evidence: dict) -> None:
+    for scenario in evidence['scenarios']:
+        requests = scenario.get('create_eligibility_http_requests')
+        if scenario.get('create_eligibility') is not True or type(requests) is not int or not 0 < requests <= scenario['http_requests']:
+            raise ValueError('Workspace create eligibility and Team precondition need executed HTTP evidence in both scenarios.')
+
+
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False) -> dict:
+    if create_eligibility and not write:
+        raise ValueError('Workspace create eligibility requires the lifecycle stage.')
     report = json.loads(path.read_text(encoding='utf-8-sig'))
     if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
         raise ValueError('The live database runner did not complete successfully.')
@@ -381,6 +390,8 @@ def database_result(path: Path, engine: str, access: bool = False, read: bool = 
             raise ValueError('Workspace write receipt differs from the actual Go events and summary.')
         if actual_write['tests']['top_level_passed'] != 1 or actual_write['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Workspace write must use the same real database version and exact top-level test.')
+        if create_eligibility:
+            validate_workspace_create_evidence(actual_write['evidence'])
     if members:
         exit_code = report.get('members_go_exit_code')
         if not access or not read or not write or report.get('members_requested') is not True or type(exit_code) is not int or exit_code != 0:
@@ -518,7 +529,8 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
             stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance')}
-            database = database_result(database_output / 'result.json', check['engine'], **stages)
+            create_eligibility = check.get('create_eligibility') is True
+            database = database_result(database_output / 'result.json', check['engine'], **stages, create_eligibility=create_eligibility)
             result['tests'] = dict(database['tests'])
             result['database'] = {
                 'engine': check['engine'], 'version': database['evidence']['version'],
@@ -528,6 +540,8 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
                 if enabled:
                     result['tests'] = {key: value + database[stage + '_tests'][key] for key, value in result['tests'].items()}
                     result['database'][stage + '_verified'] = True
+            if create_eligibility:
+                result['database']['create_eligibility_verified'] = True
         result['status'] = 'passed'
         return result
     except KeyboardInterrupt:
@@ -605,6 +619,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         base = git(repo, 'rev-parse', '--verify', '--end-of-options', base_ref + '^{commit}').decode().strip()
         report['base_commit'] = base
         selected = validate_checks(repo, config, profile)
+        if profile == 'workspace-write' and task == 'P01-T08':
+            selected = [dict(check, create_eligibility=True) if check['kind'] == 'database' else check for check in selected]
         report['checks'] = [{'id': check['id'], 'status': 'not_run', 'reason': 'Awaiting preceding checks.'} for check in selected]
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
@@ -620,7 +636,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
                 raise ValueError('Schema/database-impacting scope requires the missing live three-engine gate.')
         if profile in WORKSPACE_PROFILES:
             scope = config[profile.replace('-', '_') + '_scope']
-            unsupported = sorted(set(database_paths) - set(scope['allowed_impact_paths']))
+            allowed_impact_paths = scope.get('task_impact_paths', {}).get(task, scope['allowed_impact_paths'])
+            unsupported = sorted(set(database_paths) - set(allowed_impact_paths))
             if task not in scope['tasks'] or unsupported:
                 raise ValueError('Workspace checks cover only their declared task and database-impact paths; unsupported paths: ' + ', '.join(unsupported))
         for executable in ('go', 'bun', 'git'):
