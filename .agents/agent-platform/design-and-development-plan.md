@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.15 工作区级运行 Key 授权
+版本：1.16 运行 Key 授权续发与治理
 
 日期：2026 年 11 月 4 日
 
@@ -8,7 +8,7 @@
 
 交付范围：设计、实施计划与已实现边界；仅任务复选框和对应代码、验证证据共同确认的内容视为已完成。各阶段尚未完成的页面、接口和运行能力仍是规划。
 
-**文档规模**：29张数据表、129项计划内接口及3项扩展预留接口、23个业务页面、12个开发阶段、108个主任务及若干子任务、36个建议批次。
+**文档规模**：29张数据表、129项主接口及2项治理子路由、3项扩展预留接口、23个业务页面、12个开发阶段、108个主任务及若干子任务、36个建议批次。
 
 **目录与执行入口**
 
@@ -542,7 +542,7 @@ P01-T05 复用已有表与索引。首次授权 revision 为 1；移除将原行
 
 唯一 `(token_id, workspace_id, scope, resource_type, resource_id)`；查询 `(workspace_id, token_id, status)`。现有 Token 未配置 grant 时不获得新增 Agent 权限，旧模型调用行为保持原样。删除 Agent 采用归档，grant 仍可审计；撤销 Token 时立即失效，不必依赖逐条更新此表。运行 API 的最终权限取 Token、本用户、Workspace、Agent 与资源 grant 的交集。
 
-P01-T06 仅主库加表，无旧 Key 回填或默认授权；`resource_type=workspace` 且 `resource_id=workspace_id`。创建为 active/revision 1；撤销保留原行、写入撤销毫秒和操作者并递增为 revision 2。过期仍保留 active 历史状态，但不再有权限。当前同一元组不可续期或恢复；有意续发另按 P01-T07 设计，不能用过期收据或新幂等键恢复已撤权限。现有 Key 状态和范围独立生效，不回写费用、余额或旧鉴权逻辑。
+P01-T06 仅主库加表，无旧 Key 回填或默认授权；`resource_type=workspace` 且 `resource_id=workspace_id`。创建为 active/revision 1；撤销保留原行、写入撤销毫秒和操作者并递增 revision。过期仍保留 active 状态，但不再有权限。P01-T07 以 `revision` 作为授权代次，不新增表或列：只有已撤销或已到期的同一元组可显式续发，ID、Key、scope、归属和创建时间保持原样；原位写新期限、状态及更高 revision。旧收据、旧代次或普通创建接口均不能恢复权限。现有 Key 状态和范围独立生效，不回写费用、余额或旧鉴权逻辑。
 
 ### 5.5 Agent 定义与发布
 
@@ -744,6 +744,8 @@ P01-T04仅写`workspace_audit`事件，与工作区、初始管理员和适用�
 P01-T05 增加独立 `workspace_member_audit` kind（原工作区 v1 事件保持兼容）；v2 增加目标用户 ID 和固定前后角色，revision 指成员行版本。新增/重授权、改角色和移除分别记录 `workspace.member.add/update/remove`。与实际授权变更原子写入，复用有界关系库投影、固定 EventID 和失败 pending；旧版本不领取新 kind。幂等空操作不生成变更事件。没有新增表、索引或 worker。
 
 P01-T06 的独立 `token_grant_audit` v3 事件包含 Token/授权 ID、scope、revision、请求 ID 与固定变更类别，撤销理由只保存摘要。实际授权变更、创建收据与成功审计同主库事务；空操作不增加变更事件。沿用有界关系日志投影及失败恢复，旧节点不消费此 kind。
+
+P01-T07 续发另写 `token_grant_renewal_audit` v4，记录原状态、原期限/撤销时间（如存在）、新期限、前后 revision 和最小引用。它与续发 CAS 及专用 completed 收据同事务保存；原创建/撤销审计不改写。独立 kind 使旧节点仍能处理其支持的历史事件。只在关系日志库投影，不开启通用 worker。
 
 三个写入口的失败另使用现有审计实体记录security拒绝事件，避免普通UserAuth没有管理审计兜底造成漏记。仅记录可信/未知主体、静态动作、HTTP状态、服务端request_id及规范化的尝试对象ID，不复制原始URL、body、query、Key、SID、IP或User-Agent；独立短Context，日志故障按既有best-effort诊断处理，不生成成功事件或额外业务副作用。平台gate在其前，GET和成功写入不重复记录拒绝事件。
 
@@ -1385,6 +1387,8 @@ P00-T06将公共core契约显式演进为1.1.0：在原错误目录外增加`500
 | API-012 / P01 | GET `W/token-grants` | token-grant:manage + Key 控制权 | 必填 token_id，可选 page/page_size | 分页前限定 Team/Workspace/Key；可查看已撤销或已过期记录 |
 | API-013 / P01 | POST `W/token-grants` | token-grant:manage + Key 控制权 + scope 交集 | token_id、scope、resource_type、resource_id、可选 expires_at、必填 Idempotency-Key | 新建 201，同有效元组及期限 200，生成审计；禁止通过重复请求恢复撤销 |
 | API-014 / P01 | DELETE `W/token-grants/:grant_id` | token-grant:manage + Key 控制权 | 必填 JSON reason；返回撤销收据 | 重复撤销不二次写入；下一次授权判定即时拒绝，已发出的调用不回收 |
+| API-012A / P01 | GET `W/token-grants/permissions` | token-grant:manage + Key 控制权 | 单值 `token_id`；返回 `token_id/scopes` | 只返回当前工作区 scope 候选，固定按 scope 排序 |
+| API-013A / P01 | POST `W/token-grants/:grant_id/renew` | token-grant:manage + Key 控制权 + scope 交集 | `expected_revision`、有限 `expires_at`、`Idempotency-Key` | 仅到期或已撤销时生成新代次；200 返回当前安全收据 |
 
 P01-T03只注册API-001与API-003，受默认关闭的总开关控制，且只接受既有管理会话。列表data固定为`items/total/page/page_size/empty_reason`；无空态时empty_reason为null，否则为`no_team/no_results/page_out_of_range`。summary仅有字符串id、slug、name、status、current_role、created_at、updated_at、revision及effective_permissions，详情另含description。内部team/actorID、policy和预算字段不返回；权限摘要按当前角色与状态批准，不含需要额外资源事实的动作。
 
@@ -1399,6 +1403,12 @@ P01-T06 按本次范围将工作区级 API-012/013/014 与表和解析器同批�
 POST 仅允许工作区范围，实际目标与路径一致；仅接受四个精确 scope。创建须工作区 active、Key 当前有效且授予者与 Key 持有人都有 scope 的工作区层候选权限。可选到期为正的 UTC 毫秒安全整数，须将来且不超 Key 自身期限；省略仍受 Key 期限。相同幂等键异请求 409 `AG_IDEMPOTENCY_CONFLICT`，重放须重新通过当前授权与有效期校验并匹配原收据；成功返回 `Idempotency-Key-Expires-At`。同元组不同期限、过期或撤销后再建均 409 `AG_INVALID_STATE`。列表和撤销可清理 suspended 工作区内禁用/过期但仍可控制的 Key；跨 Team、不存在、移动或软删除的 Key 不可读写。DELETE 严格单对象 JSON `{reason}`、无 query，理由修剪后非空且不超过 1024 UTF-8 字节，原文不留存。公开契约见 `.agents/agent-platform/contracts/v1/workspace-token-grants.{schema,openapi,examples}.json`。
 
 运行主体解析只接受真实 `TokenAuth` 绑定的类型身份；用同一次主库查询核对凭据摘要、Key 状态/期限/IP/当前可用额度、持有人、Team、工作区角色和确切授权。普通旧 Key 未授予时无 Agent scope，原模型路由仍按旧策略；撤销、过期、停用、移组和成员权限丢失立即作用于下一次解析。结果为单次工作区范围事实；Run/Artifact 所有权、模型限制、工具、资金和下一副作用的重新授权仍由后续运行域实现。此处不注册 `/v1/agents` 或 `/v1/agent-runs` 执行入口。
+
+P01-T07 续发沿用管理会话、总开关和当前 Key 控制权。POST 仅接收 `expected_revision` 和新 `expires_at` 两个安全正整数，无 query；必须使用当前 revision 且已撤销或已到期，期限须在未来并受父 Key 期限约束。续发使用独立操作 scope 和持久化 `Idempotency-Key`，同键异请求 409，重放仅在当前代次仍是原结果且实时授权有效时返回同一收据及到期头。更新后的代次、过期或撤销均拒绝旧收据；已有 active 未过期时不能用续发延长。修订冲突 409 `AG_DRAFT_REVISION_CONFLICT`，不满足状态前提 409 `AG_INVALID_STATE`。
+
+DELETE 增加可选 `expected_revision`：初次授权或其第一次撤销仍兼容原 reason 请求；续发后的操作必须明确当前代次，已撤销时当前版本或对应的前一版本允许重复确认。迟到的旧 DELETE 不得撤销新代次。权限摘要只返回 `token_id` 和当前可用的 `scope/grant_id/revision/expires_at`；无可用 scope 返回空数组。该读取没有提供者 IP 上下文，期限是授权行配置，运行仍独立核对 Key IP、状态、期限、模型及具体资源。OpenAPI 更新为 1.1.0，新增治理契约及合成示例，不修改旧成功 DTO。
+
+后续 Run 受理时必须保存可信 `grant_id/revision`；恢复、领取、受控模型/工具/产物动作前用 `RecheckRunTokenGrant` 核对同一 Key、持有人、Team、工作区、scope 和原代次。已撤销代次不能借同一 grant ID 的后续续发生效；新请求可解析新代次。该接口只完成实时授权边界，未来有副作用写入还须在其自身事务或受控执行点闭合检查。Agent 级授权继续拒绝，等待真实 Agent 对象及按 `(team,workspace,type,id)` 约束的独立契约。
 
 归档不同于物理删除。第一期管理接口不提供工作区一键彻底清空；资料删除、账务留存和审计留存按第 5 章分类执行。
 
@@ -2473,6 +2483,10 @@ fresh/upgrade各要求新增两表只在主库、索引/唯一约束、三次连
 
 真实生产管理接口验证默认关闭、会话限定、租户和 Key 控制权、严格契约、持久化幂等和事务审计；旧 Key 走原 `/v1/models` 验证本地兼容，独立本地探针使用真实 TokenAuth 验证新解析，覆盖默认拒绝、scope 隔离、同一身份撤销/过期后的拒绝。探针不能上线，也不调用真实模型或账务链路。历史开放项、三库最低版本和 ClickHouse 审计不借本批关闭。
 
+#### 10.2.9 运行 Key 授权治理门禁（P01-T07）
+
+使用 `workspace-grant-governance --task P01-T07`，在同次三库隔离验证中保留前六阶段。新建库与升级库各要求三次连接启动、19 项行为和实际请求数；逐项校验事件、场景和停机。覆盖到期和撤销后续发、并发 CAS、旧收据和旧撤销拒绝、实时摘要、旧代次复查拒绝及审计原子性。只有本地运行探针，没有生产运行路由和真实模型调用。
+
 ### 10.3 固定验收数据
 
 建立测试Team A/B；A有两个Workspace A1/A2。分别创建owner、developer、operator、viewer以及已移出成员。为A/B各建有效、过期、撤销、模型受限、额度不足的Token；Agent grant独立配置。
@@ -2934,16 +2948,17 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P01-T07 补齐 Key 授权续发与治理
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
 - **前置依赖**：P01-T05、P01-T06。
 - **目标**：在 P01-T06 已交付的工作区授权接口上补齐续发、权限摘要与后续执行的接线约束。
 - **具体操作**：
   1. 冻结并实现过期或已撤销授权的显式续发流程，使用当前 revision/代次区分新意图；旧幂等收据不能恢复旧权限，历史审计必须保留。
-  2. 设计最小权限摘要及未来 Agent 资源范围兼容方案；没有真实 Agent 对象前仍拒绝 Agent 级授予。非管理员不扩大到他人的 Key 或未获 scope。
-  3. 为 P03 受理和后续受控步骤明确复查点、错误及验收入口；本阶段仍不开启真实 Run。
-- **交付物与落点**：续发契约与权限摘要，运行域接入约束及本地负例。
+  2. 实现最小权限摘要，读取当前 Key、持有人与工作区事实。未交付 Agent 对象前拒绝 Agent 级授予；非管理员不扩大到他人的 Key 或未获 scope。
+  3. 增加授权代次复查，定义 P03 受理和后续受控步骤如何使用；本阶段仍不开启真实 Run。
+  4. 运行第 10.2.9 节三库门禁，保留旧请求契约和历史审计，详细验收证据仅存本地。
+- **交付物与落点**：续发、摘要接口与公开契约，运行域代次复查，七阶段三库门禁。
 - **验收**：新意图须重新校验控制权，旧收据、已撤销代次及缓存均不能授权下一次受控请求；日志不含密钥。
-- **回退**：关闭授权编辑功能，已有授权保持最小读取或统一禁用。
+- **回退**：用现有平台总开关关闭 Agent 管理和运行鉴权后再回退代码；旧版本不识别已续发代次，不回写 revision 或删除历史审计。现有模型 Key 链路独立运行。
 - **估算与门禁**：0.5 人日；G-AUTH、G-API、G-SEC。
 
 <a id="task-p01-t08"></a>
