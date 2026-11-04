@@ -6,6 +6,8 @@ P01-T03在共享1.1.0契约上新增独立版本1.0.0的工作区只读接口描
 
 P01-T04以独立1.0.0版本的`workspace-writes.*`补充API-002/004/005工作区创建、编辑和运行域尚未接入前的归档；不改既有读取或探测响应。新建/归档返回不可变收据，编辑返回既有详情形状；运行执行与计划排空仍未开放。
 
+P01-T05以独立1.0.0版本的`workspace-members.*`发布API-006/007/008：显式授权列表、添加/改角色/重新授权、撤销。工作区管理会话只操作当前Team内已启用用户，不创建Team成员，不开放PAT、模型Token或运行授权。
+
 ## 文件与验证入口
 
 | 文件 | 用途 |
@@ -23,6 +25,9 @@ P01-T04以独立1.0.0版本的`workspace-writes.*`补充API-002/004/005工作区
 | `workspace-writes.schema.json` | P01-T04创建/编辑/归档请求、最小不可变收据和固定响应；编辑复用既有详情Schema |
 | `workspace-writes.openapi.json` | API-002/004/005的管理会话、严格JSON、revision、幂等键及归档限制 |
 | `workspace-writes.examples.json` | 合成的创建/重放、编辑、归档及安全错误开发示例，不是执行报告 |
+| `workspace-members.schema.json` | P01-T05严格PUT输入、成员分页、授权与撤销白名单响应；复用公共固定错误 |
+| `workspace-members.openapi.json` | API-006/007/008的会话、参数、最后管理员保护及no-store约定 |
+| `workspace-members.examples.json` | 合成的成员列表、授权、重新授权、撤销和固定错误开发示例，不是执行报告 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -120,6 +125,16 @@ P00-T06的共享工具复用本契约；测试源码、负向案例和详细结�
 两个POST必须携带单值`Idempotency-Key`，长度16–128，字符为可见ASCII 0x21–0x7e，不修剪；原key不进入存储或审计。成功和同key成功重放返回`Idempotency-Key-Expires-At`响应头，值为原收据的UTC Unix毫秒规范十进制字符串，初始保留期至少24小时。本版本不清理/替换过期行：超过该时间仍返回已存同请求收据，异请求继续409，不将过期key复用为新的副作用。每次重放仍检查当前授权；创建目标已归档不可重放，归档同key重放仅对当前仍有该对象管理权的主体返回原收据。PATCH由revision CAS控制，不要求该header。
 
 工作区变更、完成收据和去内容化审计outbox同一主库事务落地；审计投影到独立日志存储的失败不能把已提交业务改报回滚。HTTP始终只返回固定安全envelope和no-store，不暴露内部审计payload、SQL、原key或私密请求内容。公开示例用于开发说明，不能作为本地或生产执行结果。
+
+## P01-T05 工作区成员管理
+
+三个成员入口继续受平台总开关与显式Bearer管理会话约束，限定active/suspended工作区的实时`member:manage`。跨Team、无可见授权、不存在或已归档工作区返回固定404；可见工作区角色不足返回403；不存在、停用、软删或不属于当前Team的目标用户统一404。拒绝响应不公开用户或工作区身份事实。
+
+`GET .../members`仅接受单值`page/page_size`，默认1/20、每页最多100，按创建时间和内部成员ID倒序稳定分页。输出`items/total/page/page_size`；每项只含字符串`user_id`、显式`role/status`及安全整数`revision/created_at/updated_at`。列表包含当前Team启用用户的active和blocked显式行，不合成隐式owner行，也不返回姓名、邮箱、凭据或审计信息。blocked保留旧角色及当前revision供重新授权，不能取得任何显式成员权限。
+
+`PUT .../members/:user_id`只接受精确的JSON字段`role/expected_revision`。revision的0只在该授权行不存在时创建；正值必须匹配当前行，已撤销后也不能使用0重新创建。与当前active角色完全相同且revision匹配时成功而不重复写入；修改或重新授权则推进revision。错误响应不包含当前revision，请用已授权列表刷新。角色只能是`admin/developer/operator/viewer`。Team owner目标不可修改或撤销；只有当前有效的隐式owner可授予admin或变更其他admin，显式admin可主动降级或撤销自身，但不得移除最后一个有效管理员。
+
+`DELETE .../members/:user_id`不接受query或body。活动授权改为blocked并递增revision；仍满足当前授权和目标资格时，重复删除或无授权行返回相同的`user_id/revoked:true`，不重复写审计。删除面向执行时的授权状态，无客户端revision；重新授权后发起的删除会作用于该当前授权。所有业务写入及成功审计事实同事务，降权或撤销提交后下一次受控请求读取实时事实。还未接入的在途Run和调度不在此契约内。
 
 ## P00-T05 全局只读能力探测
 

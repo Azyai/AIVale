@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AgentWorkspaceRejectedAudit records only failed lifecycle writes. It runs
+// AgentWorkspaceRejectedAudit records only failed workspace and member writes. It runs
 // before authentication so anonymous rejections are visible, and does not read
 // or retain request/response bodies. Successful changes use the atomic outbox.
 func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
@@ -25,6 +25,10 @@ func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
 			action, method, route = "workspace.update.rejected", http.MethodPatch, "/api/agent-platform/workspaces/:workspace_id"
 		case "POST /api/agent-platform/workspaces/:workspace_id/archive":
 			action, method, route = "workspace.archive.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/archive"
+		case "PUT /api/agent-platform/workspaces/:workspace_id/members/:user_id":
+			action, method, route = "workspace.member.put.rejected", http.MethodPut, "/api/agent-platform/workspaces/:workspace_id/members/:user_id"
+		case "DELETE /api/agent-platform/workspaces/:workspace_id/members/:user_id":
+			action, method, route = "workspace.member.remove.rejected", http.MethodDelete, "/api/agent-platform/workspaces/:workspace_id/members/:user_id"
 		default:
 			c.Next()
 			return
@@ -37,6 +41,9 @@ func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
 		params := model.AuditFields{"http_status": status}
 		if workspaceID, err := agentapi.ParseID(c.Param("workspace_id")); err == nil {
 			params["attempted_workspace_id"] = strconv.FormatInt(workspaceID, 10)
+		}
+		if userID, err := agentapi.ParseID(c.Param("user_id")); err == nil {
+			params["attempted_user_id"] = strconv.FormatInt(userID, 10)
 		}
 		entry := model.AuditLog{
 			AuthMethod: "unknown", Category: model.AuditCategorySecurity,

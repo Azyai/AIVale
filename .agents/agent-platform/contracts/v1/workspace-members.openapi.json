@@ -1,0 +1,567 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale workspace members API",
+    "version": "1.0.0",
+    "description": "P01-T05 session-only workspace member management; no Team enrollment, PAT access, or runtime authorization grant."
+  },
+  "security": [
+    {
+      "DashboardSession": []
+    }
+  ],
+  "paths": {
+    "/api/agent-platform/workspaces/{workspace_id}/members": {
+      "parameters": [
+        {
+          "name": "workspace_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "./workspace-members.schema.json#/$defs/id"
+          },
+          "description": "Canonical workspace ID."
+        }
+      ],
+      "get": {
+        "operationId": "listWorkspaceMembers",
+        "x-api-id": "API-006",
+        "summary": "List explicit workspace grants",
+        "description": "Requires live member:manage on an active or suspended workspace. The list contains explicit active or blocked grants for current enabled same-Team users only, sorted by created_at descending then internal member ID descending. No synthetic owner row is added. Only page and page_size are accepted.",
+        "responses": {
+          "200": {
+            "description": "Authorized page of explicit grants.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/listResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed workspace ID, query encoding or pagination, duplicate parameter or unknown parameter.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid live dashboard Bearer session (cookies, PAT and model keys are not accepted).",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Visible workspace but insufficient current authority, including an owner target or an unauthorized admin change.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace is absent, archived or invisible; write target is not an enabled current user of this Team.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; the safe envelope excludes internal data.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform feature is disabled.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1
+            },
+            "description": "A single canonical positive decimal integer."
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "A single canonical decimal integer from 1 to 100."
+          }
+        ]
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}/members/{user_id}": {
+      "parameters": [
+        {
+          "name": "workspace_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "./workspace-members.schema.json#/$defs/id"
+          },
+          "description": "Canonical workspace ID."
+        },
+        {
+          "name": "user_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "./workspace-members.schema.json#/$defs/id"
+          },
+          "description": "Canonical user ID; identity and Team scope are resolved by the server."
+        }
+      ],
+      "put": {
+        "operationId": "putWorkspaceMember",
+        "x-api-id": "API-007",
+        "summary": "Add or update an explicit workspace grant",
+        "description": "Requires live member:manage. The target must be an enabled current user in the same Team. The Team owner is immutable; only the valid implicit owner may grant admin or change another existing admin. An explicit admin may demote themself if another effective admin remains. An exact revision plus the same active role succeeds as a no-op. Use the current blocked revision to regrant; zero never replaces an existing row. No query is accepted. The revision is the concurrency boundary; no Idempotency-Key is required.",
+        "responses": {
+          "200": {
+            "description": "Current active explicit grant after the write or no-op.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/putResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed ID, any query, invalid content type or encoding, malformed JSON, unsupported fields, invalid role or revision.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid live dashboard Bearer session (cookies, PAT and model keys are not accepted).",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Visible workspace but insufficient current authority, including an owner target or an unauthorized admin change.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace is absent, archived or invisible; write target is not an enabled current user of this Team.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision conflict (AG_DRAFT_REVISION_CONFLICT) or demotion would remove the last effective admin (AG_RESOURCE_IN_USE).",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; the safe envelope excludes internal data.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform feature is disabled.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Only application/json with optional charset=utf-8, identity content encoding, and one complete object with unique exact keys. Max 1 MiB.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-members.schema.json#/$defs/putRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWorkspaceMember",
+        "x-api-id": "API-008",
+        "summary": "Revoke an explicit workspace grant",
+        "description": "Requires live member:manage. The target must be an enabled current user in the same Team. The Team owner is immutable; an explicit admin cannot revoke another admin but may revoke themself if another effective admin remains. An absent or already blocked grant is an authorized no-op. DELETE applies to the grant current at execution and does not accept a query or request body.",
+        "responses": {
+          "200": {
+            "description": "Revoked result for both actual transition and no-op.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/deleteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed ID, any query or nonempty request body.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid live dashboard Bearer session (cookies, PAT and model keys are not accepted).",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Visible workspace but insufficient current authority, including an owner target or an unauthorized admin change.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace is absent, archived or invisible; write target is not an enabled current user of this Team.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revocation would remove the last effective admin (AG_RESOURCE_IN_USE).",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; the safe envelope excludes internal data.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform feature is disabled.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-members.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DashboardSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Existing dashboard access JWT backed by a live session; not a PAT or model key."
+      }
+    },
+    "headers": {
+      "CacheControl": {
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
+      },
+      "RequestId": {
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": "Server-owned request ID, equal to response request_id."
+      }
+    }
+  }
+}

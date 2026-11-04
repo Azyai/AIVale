@@ -21,4 +21,7 @@ func SetAgentRouter(apiRouter *gin.RouterGroup) {
 	workspaces.POST("", controller.CreateAgentWorkspace)
 	workspaces.PATCH("/:workspace_id", controller.UpdateAgentWorkspace)
 	workspaces.POST("/:workspace_id/archive", controller.ArchiveAgentWorkspace)
+	workspaces.GET("/:workspace_id/members", controller.ListAgentWorkspaceMembers)
+	workspaces.PUT("/:workspace_id/members/:user_id", controller.PutAgentWorkspaceMember)
+	workspaces.DELETE("/:workspace_id/members/:user_id", controller.DeleteAgentWorkspaceMember)
 }

@@ -42,11 +42,14 @@ func accessTokenScopeRule(scope string) accessTokenRouteRule {
 // DeclareAccessTokenPermissionRoute when they are registered.
 var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	// router/agent-router.go: browser-session-only workspace lifecycle.
-	"GET /api/agent-platform/workspaces":                        accessTokenSessionRule,
-	"GET /api/agent-platform/workspaces/:workspace_id":          accessTokenSessionRule,
-	"POST /api/agent-platform/workspaces":                       accessTokenSessionRule,
-	"PATCH /api/agent-platform/workspaces/:workspace_id":        accessTokenSessionRule,
-	"POST /api/agent-platform/workspaces/:workspace_id/archive": accessTokenSessionRule,
+	"GET /api/agent-platform/workspaces":                                   accessTokenSessionRule,
+	"GET /api/agent-platform/workspaces/:workspace_id":                     accessTokenSessionRule,
+	"POST /api/agent-platform/workspaces":                                  accessTokenSessionRule,
+	"PATCH /api/agent-platform/workspaces/:workspace_id":                   accessTokenSessionRule,
+	"POST /api/agent-platform/workspaces/:workspace_id/archive":            accessTokenSessionRule,
+	"GET /api/agent-platform/workspaces/:workspace_id/members":             accessTokenSessionRule,
+	"PUT /api/agent-platform/workspaces/:workspace_id/members/:user_id":    accessTokenSessionRule,
+	"DELETE /api/agent-platform/workspaces/:workspace_id/members/:user_id": accessTokenSessionRule,
 	// router/api-router.go: top level
 	"GET /api/models":                     accessTokenScopeRule("profile:read"),
 	"GET /api/status/test":                accessTokenScopeRule("log:read"),

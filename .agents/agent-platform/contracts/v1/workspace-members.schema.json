@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:workspace-members:1.0.0",
+  "title": "AIVale workspace members contract 1.0.0",
+  "description": "P01-T05 lists and mutates explicit workspace grants using a live dashboard session. No Team membership or token grant is created.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P01-T05",
+    "core_version": "1.1.0",
+    "api_ids": [
+      "API-006",
+      "API-007",
+      "API-008"
+    ],
+    "authentication": "existing dashboard Bearer session only; cookies, PAT and model tokens do not authorize requests",
+    "query": {
+      "allowed": [
+        "page",
+        "page_size"
+      ],
+      "single_value": true,
+      "sort": [
+        "created_at desc",
+        "id desc"
+      ],
+      "write_query": "none"
+    },
+    "request_body_limit_bytes": 1048576,
+    "put_expected_revision": "0 creates only when there is no stored row; a positive value must match the current grant revision, including a blocked grant",
+    "delete_semantics": "Revokes an active explicit grant by preserving a blocked row; repeated absence of an active grant is a no-op."
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "maxLength": 19,
+      "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+    },
+    "role": {
+      "enum": [
+        "admin",
+        "developer",
+        "operator",
+        "viewer"
+      ]
+    },
+    "putRequest": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "x-json-lexical-integer": true,
+          "description": "Required canonical nonnegative decimal JSON integer (0 or a positive integer without leading zeros). Strings, minus signs, fractions, exponents and null are rejected by the HTTP parser."
+        }
+      },
+      "required": [
+        "role",
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "member": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "$ref": "#/$defs/id"
+        },
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "blocked"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "created_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "updated_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "user_id",
+        "role",
+        "status",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "description": "Only stored grant facts. A blocked row keeps its former role and current revision without authorizing access. Timestamps are UTC Unix milliseconds."
+    },
+    "memberList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/member"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size"
+      ],
+      "additionalProperties": false
+    },
+    "removal": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "$ref": "#/$defs/id"
+        },
+        "revoked": {
+          "const": true
+        }
+      },
+      "required": [
+        "user_id",
+        "revoked"
+      ],
+      "additionalProperties": false,
+      "description": "The user has no active explicit grant after the operation; does not distinguish an actual transition from an authorized no-op."
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    },
+    "listResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/memberList"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "putResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/member"
+            },
+            {
+              "properties": {
+                "status": {
+                  "const": "active"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "deleteResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/removal"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/listResponse"
+    },
+    {
+      "$ref": "#/$defs/putResponse"
+    },
+    {
+      "$ref": "#/$defs/deleteResponse"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    }
+  ]
+}
