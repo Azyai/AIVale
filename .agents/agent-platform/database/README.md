@@ -22,6 +22,8 @@ P01-T03改用`--profile workspace-read --task P01-T03`，仍为25项；每个引
 
 P01-T04改用`--profile workspace-write --task P01-T04`，仍为25项；引擎入口`--write`隐含`--read/--access`，增加第四阶段创建、编辑及归档验证。准备本地`router/agent_workspace_write_database_test.go`及独立workspace-writes公开契约；后阶段仅修改自己夹具，前阶段数据及独立日志库结构须保留。
 
+P01-T05 使用 `--profile workspace-members --task P01-T05`，仍为 25 项。单引擎 `--members` 隐含前三个参数并增加第五阶段 `TestAgentWorkspaceMembersDatabaseMatrix`；准备本地 `router/agent_workspace_members_database_test.go` 与 workspace-members 公开契约。三库不复用旧运行，不接触业务实例。
+
 开发时可单独验证一个引擎（输出必须是 delivery 忽略目录下尚不存在的新目录）：
 
 ```powershell
@@ -55,5 +57,7 @@ MySQL/PostgreSQL 必须以状态中的同一运行编号正常停止，关闭命
 写阶段要求新幂等/outbox两表只在主库、真实索引与唯一冲突、三次连接启动后schema和数据稳定；通过真实管理会话验证owner创建/管理员原子性、角色和租户范围、严格JSON边界、幂等及即时撤权、revision与并发、归档活动计数和未来依赖拒绝、审计脱敏/投影失败恢复/事务回滚、实际响应Schema。各场景29项行为全true、startup_passes精确整数3及正整数HTTP请求数；四阶段必须同运行编号/版本且各有完整原始事件及唯一摘要。1800秒上限覆盖启动240秒、四阶段各330秒及停止90秒；失败仍正常收尾，不复用旧运行目录。
 
 开发单引擎可追加`--write`；完整交付仍须workspace-write三个引擎及基础检查。新表提前用于本批真实业务，不代表Token授权、后台运行outbox或ClickHouse投影完成；当前归档只开放运行资源接入前的安全边界。
+
+成员阶段沿用四隔离目标，保留各旧阶段数据和结构。真实 HTTP 验证当前 Team 和角色、最后管理员及两管理员竞争、原会话即时撤权、blocked 版本与重授权、严格输入、真实响应契约和成员审计回滚/恢复。两场景均需 19 项行为、精确 3 次连接启动及实际请求数；五阶段原始 Go 事件与同次收据一致，正常收尾。单引擎上限 2160 秒覆盖启动 240 秒、五阶段各 330 秒及停止 90 秒。成员审核不改变已有 ClickHouse/Run 能力边界。
 
 结论只覆盖实际记录版本；本批不使用新版本专有 SQL，不提高仓库最低数据库版本，也不因此声称所有历史库、最低版本、全部认证或账务路径已验证。P00-T01 的历史开放项在本地批次报告单独登记。

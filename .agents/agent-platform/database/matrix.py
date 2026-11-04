@@ -18,7 +18,10 @@ import uuid
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / '.agents/agent-platform/delivery'))
-from gate import database_log_result, stop_process, workspace_access_log_result, workspace_read_log_result, workspace_write_log_result
+from gate import (
+    database_log_result, stop_process, workspace_access_log_result,
+    workspace_members_log_result, workspace_read_log_result, workspace_write_log_result,
+)
 
 
 def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int) -> int:
@@ -35,7 +38,8 @@ def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int
             raise
 
 
-def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False) -> dict:
+def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False) -> dict:
+    write = write or members
     read = read or write
     access = access or read
     run_id = datetime.now(timezone.utc).strftime('%y%m%d%H%M%S') + uuid.uuid4().hex[:8]
@@ -46,6 +50,7 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
         'access_requested': access,
         'read_requested': read,
         'write_requested': write,
+        'members_requested': members,
     }
     owned_output = None
     state_path = None
@@ -74,6 +79,8 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
             raise ValueError('The required local workspace HTTP read database test is missing.')
         if write and not (REPO / 'router/agent_workspace_write_database_test.go').is_file():
             raise ValueError('The required local workspace lifecycle database test is missing.')
+        if members and not (REPO / 'router/agent_workspace_members_database_test.go').is_file():
+            raise ValueError('The required local workspace members database test is missing.')
         env = os.environ.copy()
         env['GOWORK'] = 'off'
         env['TEST_AGENT_WORKSPACE_ENGINE'] = engine
@@ -159,6 +166,18 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
                 raise ValueError('Workspace lifecycle must match the migration database version and exact test.')
             report['write_tests'] = actual_write['tests']
             report['write_evidence'] = actual_write['evidence']
+        if members:
+            members_argv = [shutil.which('go'), 'test', '-mod=readonly', '-count=1', '-json', '-timeout=5m', './router', '-run', '^TestAgentWorkspaceMembersDatabaseMatrix$']
+            report['members_go_argv'] = members_argv
+            report['members_go_exit_code'] = run_logged(members_argv, env, output, 'members-go-test', 330)
+            if report['members_go_exit_code'] != 0:
+                report['status'] = 'failed'
+                raise ValueError('The real workspace members test failed; inspect ignored Go logs.')
+            actual_members = workspace_members_log_result(output / 'members-go-test.stdout.log', engine, run_id)
+            if actual_members['tests']['top_level_passed'] != 1 or actual_members['evidence']['version'] != report['evidence']['version']:
+                raise ValueError('Workspace members must match the migration database version and exact test.')
+            report['members_tests'] = actual_members['tests']
+            report['members_evidence'] = actual_members['evidence']
         report['status'] = 'passed'
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         report['reason'] = str(error) or type(error).__name__
@@ -197,8 +216,9 @@ def main() -> int:
     parser.add_argument('--access', action='store_true', help='After migration validation, execute P01-T02 live workspace authorization cases.')
     parser.add_argument('--read', action='store_true', help='Execute migration, access and P01-T03 real workspace HTTP read stages in order.')
     parser.add_argument('--write', action='store_true', help='Execute migration, access, reads and P01-T04 lifecycle stages in order.')
+    parser.add_argument('--members', action='store_true', help='Execute the four prerequisite stages and P01-T05 members in order.')
     args = parser.parse_args()
-    report = execute(args.engine, args.output, args.access, args.read, args.write)
+    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members)
     print(json.dumps({key: report.get(key) for key in ('engine', 'status', 'run_id', 'reason', 'cleanup')}, ensure_ascii=False))
     return {'passed': 0, 'failed': 1, 'incomplete': 2}[report['status']]
 
