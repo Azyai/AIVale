@@ -152,7 +152,15 @@ P01-T04提前建立计划内ag_idempotency_keys和ag_outbox，后续Token授权�
 
 归档不删除成员、slug或历史；活动计数大于零拒绝，损坏计数拒绝。当前没有运行/调度归档适配，元数据查询失败或出现ag_runs/ag_schedules/ag_schedule_fires等依赖表时关闭归档放行，待对应领域补真实停止触发和资源检查。
 
-审计outbox只保存最小引用、主体、动作、revision、request_id与时间，不存原始名称/描述/原因、凭据或请求体。提交后关系型日志投影使用固定EventID唯一约束防重，失败留pending，通过有界入口恢复；只处理workspace_audit且不持业务事务锁。ClickHouse当前缺少同等唯一保证，本阶段不投影并保留pending，不据关系库结果宣称CH投影已验证。尚未实现后台通用outbox worker，未投递事实不清理。
+审计outbox只保存最小引用、主体、动作、revision、request_id与时间，不存原始名称/描述/原因、凭据或请求体。提交后关系型日志投影使用固定EventID唯一约束防重，失败留pending，通过有界入口恢复且不持业务事务锁。ClickHouse当前缺少同等唯一保证，本阶段不投影并保留pending，不据关系库结果宣称CH投影已验证。尚未实现后台通用outbox worker，未投递事实不清理。
+
+### 8.5 工作区成员事务
+
+P01-T05 不改表、索引或驱动。成员列表先以工作区、Team、当前可登录用户和已知角色状态过滤再 COUNT、稳定分页。修改在现有工作区事务内锁定目标 User/TeamMember 和授权记录，CAS 包含归属、revision、角色及状态；移除保留 `blocked` 和递增 revision，重授权复用该行。
+
+撤销有效管理员前锁定一个仍有效的隐式 owner 或显式 admin 作为保留条件；同 Team 写操作经过同一 Team/工作区锁。SQLite 用事务写冲突和 CAS，三库仅对确认回滚的特定并发冲突有界重试。旧 Team/User 停用或退组仍可改变事务提交后的资格，访问按最新资格重判；本批不重写旧生命周期操作。
+
+成功授权变更与 `workspace_member_audit` v2 事件同主库事务，包含目标用户引用和固定角色差异；不与原 `workspace_audit` v1 kind 混写。投影端处理两个白名单 kind，其他 outbox 不领取；旧节点可继续投影 v1。拒绝日志按现有独立路径记录。
 
 ## 9. 留存、归档与删除
 

@@ -1,6 +1,6 @@
 # AIVale 一体化智能体平台详细设计与分批开发计划
 
-版本：1.13 独立智能体工作台与顶层入口
+版本：1.14 工作区成员与角色管理
 
 日期：2026 年 11 月 4 日
 
@@ -524,6 +524,8 @@ erDiagram
 
 唯一 `(workspace_id, user_id)`；查询 `(team_id, user_id, status)`。Team owner 隐式拥有 Workspace admin，无需每个工作区插入一条；不可通过此表锁掉最后一个团队 owner。其他用户无显式有效行时拒绝访问，不能继承 default_member_role。删除成员授权立即撤销工作区访问；退出 Team 后即使该行仍存在也失效，清理可以异步，但服务端检查不能等待清理。
 
+P01-T05 复用已有表与索引。首次授权 revision 为 1；移除将原行原地置 `blocked` 并递增 revision，保留创建时间和原角色供审计与明确重授权，不回收唯一键。重授权需当前 tombstone revision；旧创建或编辑请求不得复活已移除授权。空操作不改 revision。团队退组或停用由当前资格校验即时挡住，独立的 Team/User 生命周期不自动重写历史授权行；本批不改变重新入队政策，也不拦截由旧 Team/User 操作造成的后续无人可管理状态。
+
 #### 5.4.3 ag_token_grants
 
 字段组：B、U、T、W、A。阶段 P01。
@@ -733,6 +735,8 @@ P09 的 Workflow 通过 `Agent.kind=workflow` 暴露给统一运行接口；所�
 唯一 `(event_key)`；索引 `(status, available_at, id)`。Outbox 与业务变更同事务写入，投递采用至少一次语义；消费者再以业务唯一键去重。超过阈值进入 dead 并告警，可以重投同一事件，不能重新生成 Run。已投递记录按短期留存清理，dead 记录处理前保留。
 
 P01-T04仅写`workspace_audit`事件，与工作区、初始管理员和适用幂等收据原子提交；payload只含可信主体/Team/Workspace、动作、revision前后、request_id、时间及固定changed_fields，不包含名称、描述、原始原因或凭据。提交后向现有关系型日志库投影，固定EventID唯一约束防重；失败保留pending，显式有界恢复入口仅处理该kind，不创建后台worker。ClickHouse当前日志表没有同等唯一保证，此阶段保留pending，不声称已投影。未投递事实不清理，P03实现通用租约/退避/dead与后台恢复时继续验收。
+
+P01-T05 增加独立 `workspace_member_audit` kind（原工作区 v1 事件保持兼容）；v2 增加目标用户 ID 和固定前后角色，revision 指成员行版本。新增/重授权、改角色和移除分别记录 `workspace.member.add/update/remove`。与实际授权变更原子写入，复用有界关系库投影、固定 EventID 和失败 pending；旧版本不领取新 kind。幂等空操作不生成变更事件。没有新增表、索引或 worker。
 
 三个写入口的失败另使用现有审计实体记录security拒绝事件，避免普通UserAuth没有管理审计兜底造成漏记。仅记录可信/未知主体、静态动作、HTTP状态、服务端request_id及规范化的尝试对象ID，不复制原始URL、body、query、Key、SID、IP或User-Agent；独立短Context，日志故障按既有best-effort诊断处理，不生成成功事件或额外业务副作用。平台gate在其前，GET和成功写入不重复记录拒绝事件。
 
@@ -1365,9 +1369,9 @@ P00-T06将公共core契约显式演进为1.1.0：在原错误目录外增加`500
 | API-003 / P01 | GET `W` | workspace:read | 输出基础信息、状态、revision、effective_permissions | 权限来自实时后端计算；跨租户返回404 |
 | API-004 / P01 | PATCH `W` | workspace:manage | name、description、expected_revision | 禁止客户端修改 team_id；冲突409 |
 | API-005 / P01 | POST `W/archive` | workspace:manage | reason；输出归档状态和阻塞资源数量 | 有活跃Run返回409；先停计划，保留账单与审计 |
-| API-006 / P01 | GET `W/members` | member:manage | page/page_size；输出成员和工作区角色 | 不回显Token、邮箱等非必要信息 |
-| API-007 / P01 | PUT `W/members/:user_id` | member:manage | role、expected_revision；输出成员授权 | 只接受同Team有效用户；角色变更使授权缓存失效 |
-| API-008 / P01 | DELETE `W/members/:user_id` | member:manage | 无；输出已撤销 | 重复删除幂等；不能删除隐式owner权限 |
+| API-006 / P01 | GET `W/members` | member:manage | page/page_size；输出当前同 Team 启用用户的显式授权页（含 blocked） | 授权范围先于 COUNT 和分页，不回显邮箱、Token 或内部主体 |
+| API-007 / P01 | PUT `W/members/:user_id` | member:manage | role、expected_revision；200 输出当前 active 授权 | 仅同 Team 启用用户；0 只新建，已有行用精确 revision |
+| API-008 / P01 | DELETE `W/members/:user_id` | member:manage | 无 body/query；200 输出 user_id/revoked | 原地停用，重复幂等；不能修改 owner 或撤掉最后有效管理员 |
 | API-009 / P01 | GET `W/policy` | workspace:read | 输出本人可见政策与可选上限 | 凭据密文与平台内部规则不返回 |
 | API-010 / P06 | PUT `W/policy` | workspace:manage | 并发/预算/工具/保留政策、revision | 不得突破平台上限；变更影响新Run及实时撤销规则 |
 | API-011 / P03 | GET `W/funding-tokens` | run:create | 输出当前可使用Token ID、名称、有效状态与模型范围摘要 | 不返回任何完整Key；必须过滤其他成员私有Token |
@@ -1378,6 +1382,10 @@ P00-T06将公共core契约显式演进为1.1.0：在原错误目录外增加`500
 P01-T03只注册API-001与API-003，受默认关闭的总开关控制，且只接受既有管理会话。列表data固定为`items/total/page/page_size/empty_reason`；无空态时empty_reason为null，否则为`no_team/no_results/page_out_of_range`。summary仅有字符串id、slug、name、status、current_role、created_at、updated_at、revision及effective_permissions，详情另含description。内部team/actorID、policy和预算字段不返回；权限摘要按当前角色与状态批准，不含需要额外资源事实的动作。
 
 page默认1、page_size默认20且最大100；sort复用第6.1节，只允许created_at/id和asc/desc，ID稳定补序。q单值、合法UTF-8/无NUL，修剪前最多128字符/512字节，修剪后区分大小写地匹配名称字面子串，特殊字符无通配含义。未知、重复、空分页、非法编码及溢出拒绝；详情不接受query。名称过滤及授权范围先于COUNT和分页，三库语义一致，末页不执行巨大OFFSET。详情对跨租户、归档、不存在和不可见统一404，失效会话401；全部业务和认证响应使用新固定envelope及no-store。公开精确契约见`.agents/agent-platform/contracts/v1/workspaces.{schema,openapi,examples}.json`。
+
+P01-T05 的三个端点默认随平台关闭，仅管理会话 Bearer。当前有 `member:manage` 的 owner/显式管理员可管理 active 或 suspended 工作区；归档、不存在、跨租户或不可见工作区统一 404；可见但无动作权限 403。成员列表只接收 `page/page_size`（默认 1/20，最多 100），固定 `created_at desc,id desc`；不合成 owner 行。成员 DTO 严格为字符串 `user_id`、枚举 `role/status`、安全整数 `revision/created_at/updated_at`，不返回用户资料；分页 `items/total/page/page_size`，空页 `items:[]`。
+
+PUT 仅接收 JSON `role` 和安全整数 `expected_revision`，不接收 query。当前 Team.owner_user_id 是保护目标，成员 API 不写该行；只有当前双事实 owner 可对其他用户授予 admin 或变更其 admin 授权。显式 admin 可管理较低角色并自降权/自撤销，不能管理其他 admin 授权。PUT 同角色、active 且 revision 匹配为无变更 200；revision 不匹配返回 `AG_DRAFT_REVISION_CONFLICT`。DELETE 对同 Team 有效目标的缺行或已 blocked 返回相同的撤销响应，不创建空行；真实撤销递增 revision。DELETE 的目标是撤销当前授权；如用户在两次 DELETE 之间被明确重新授权，后一次经当前权限核对后撤销新授权。不存在/不属于当前有效 Team 的目标统一 404。未认证 401、受保护或权限不足 403、最后有效管理员 409 `AG_RESOURCE_IN_USE`；全部响应 no-store。公开契约见 `.agents/agent-platform/contracts/v1/workspace-members.{schema,openapi,examples}.json`。
 
 归档不同于物理删除。第一期管理接口不提供工作区一键彻底清空；资料删除、账务留存和审计留存按第 5 章分类执行。
 
@@ -2440,6 +2448,12 @@ fresh/upgrade各要求新增两表只在主库、索引/唯一约束、三次连
 
 执行受影响 Vitest、类型检查、定向 lint / 格式、前端生产构建，再用真实构建验证地址及主要交互；按影响范围执行根 Go 构建和既有局部回归。产物、测试与实际结果留在本地忽略目录。此验证不等于客户 CRUD、后端三库矩阵或产品运行能力验收。
 
+#### 10.2.7 工作区成员管理门禁（P01-T05）
+
+以开发前提交为基准运行 `.agents/agent-platform/delivery/gate.py --profile workspace-members --task P01-T05`。沿用基础 21 项和管理会话适配，在 SQLite、MySQL、PostgreSQL 的各自四个隔离库上按迁移、访问、只读、写生命周期、成员管理五阶段依次执行。fresh/upgrade 各核对三次连接启动、19 项成员行为和实际请求计数；以同次运行的原始 Go 事件、唯一场景摘要、引擎版本、各阶段退出码和清理收据放行。不能拿 T04 旧收据、系统库、单库或 mock 替代。
+
+重点覆盖跨 Team 的调用方及目标、团队 owner 和显式管理员层级、同 revision 竞争、停用记录保留与重授权、原 Bearer 下一次请求的即时撤权，以及在 owner 无效时两位管理员同时自撤/降权。审计失败时回滚业务；日志库暂不可用时保留 pending 并可恢复。原表及其他阶段数据须保持，未引入成员页面、Token grants 或运行时执行。
+
 ### 10.3 固定验收数据
 
 建立测试Team A/B；A有两个Workspace A1/A2。分别创建owner、developer、operator、viewer以及已移出成员。为A/B各建有效、过期、撤销、模型受限、额度不足的Token；Agent grant独立配置。
@@ -2864,17 +2878,20 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P01-T05 实现成员与角色管理
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
 - **前置依赖**：P01-T04。
 - **目标**：让客户配置开发与运行人员。
 - **具体操作**：
-  1. 实现成员列表、加入、角色更新和移除接口，仅允许现有team成员。
-  2. 保护最后一个有效管理员，记录角色变更审计。
-  3. 撤权时使权限缓存失效，定义活动Run后续步骤的授权复查。
-- **交付物与落点**：成员管理API与撤权行为。
-- **验收**：最后管理员不可移除；越级提权、跨team加入和已移除成员访问均被拒绝。
-- **回退**：关闭成员变更入口，保留现有成员数据及访问校验。
-- **估算与门禁**：1 人日；G-AUTH、G-DB。
+  1. 冻结 API-006/007/008 及公开契约，沿用总开关和管理会话；拒绝客户端指定 Team、异常 ID、未知分页或 JSON 字段。
+  2. 按当前工作区、Team、启用用户和精确枚举过滤后再 COUNT 和分页。只投影显式授权所需字段，保留可重授权的 blocked 行。
+  3. 在已有短事务内校验 actor 和 target。保护团队 owner；显式管理员不能给他人授予 admin 或修改其他 admin。新增/改角色/重授权按 revision 竞争，移除保留递增版本的 blocked 行。
+  4. 撤销有效 admin 前锁定仍有效的 owner 或其他显式 admin；若不存在返回 409。竞争重试必须确认回滚，提交结果不明时不自动重放。停用后既有会话下一次受控请求重新读库。
+  5. 同事务保存成功授权审计，提交后有界投影；按固定动作和规范对象 ID 记录拒绝，日志不含请求正文或认证材料。
+  6. 按第 10.2.7 节跑门禁，记录本地证据。运行域接入时复用主库实时授权，在领取、恢复和下一次受控副作用前复查；本批没有 Run 可以自动取消或继续执行。
+- **交付物与落点**：`model/agent_workspace_members.go`、`service/agent/workspace_members.go`、HTTP/DTO、公开契约、审计和固定门禁配置。
+- **验收**：跨租户隔离、最后有效管理员保护与现有 Bearer 即时撤权通过；修订冲突、事务回滚、三库重复启动与日志恢复证据齐备。
+- **回退**：关闭平台准入或移除新增路由，保留显式授权、blocked 行和审计事实；不恢复已撤销角色，不执行数据库回退。
+- **估算与门禁**：1 人日；G-AUTH、G-DB、G-API、G-BASE。
 
 <a id="task-p01-t06"></a>
 
