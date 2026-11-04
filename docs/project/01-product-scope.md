@@ -40,7 +40,7 @@ AIVale 在现有模型网关内增加智能体开发、Skills、MCP 接入、运
 
 `GET /api/status` 的 `data.agent_platform` 也只表达有效配置。不得据此显示 worker 在线或已完成客户准入。开启所有开关不会创建尚未实现的 Run、审批、MCP 或脚本处理器；公开探测不替代工作区权限判定。
 
-已注册的`GET /api/agent-platform/workspaces`与`GET /api/agent-platform/workspaces/:workspace_id`只返回当前主体获准读取的工作区元数据，拒绝PAT和模型Token。列表在服务端授权范围内筛选、COUNT和分页，名称`q`按区分大小写的字面子串匹配。响应采用显式白名单和`no-store`，角色/状态对应的`effective_permissions`仅是当次工作区层权限摘要，不授予资源执行权；前端仍为导航壳，不能据此宣称客户工作区管理页面或运行引擎已经交付。
+已注册的`GET /api/agent-platform/workspaces`与`GET /api/agent-platform/workspaces/:workspace_id`只返回当前主体获准读取的工作区元数据，拒绝PAT和模型Token。列表在服务端授权范围内筛选、COUNT和分页，名称`q`按区分大小写的字面子串匹配。响应采用显式白名单和`no-store`，角色/状态对应的`effective_permissions`仅是当次工作区层权限摘要，不授予资源执行权。
 
 单步骤适配器只执行服务端显式注入的处理函数，不接入主启动链、读取模型凭据或客户文件。内部资源引用不是授权；本地测试可以验证运行与协作取消，但不能据此将`runtime_ready`改为`true`或开放真实客户执行。完整状态机、租约、模型计量、远程MCP及技能存储分别按后续任务交付。
 
@@ -50,9 +50,9 @@ P01-T05 开放工作区成员列表、添加、角色修改和移除的管理接
 
 P01-T06 提供工作区级运行 Key 授权查看、授予和撤销，默认随平台关闭。已有模型 Key 只有显式获得 scope 后才能通过工作区级 Agent 权限解析；原模型权限保持独立。Agent 和 Run 资源尚未开放真实执行。
 
-P01-T07 支持对已撤销或过期的工作区授权按当前 revision 显式续发，并提供当前 Key 的最小 scope 摘要。旧授权代次不会因为续发重新生效；运行与工作区页面仍在后续阶段接入。
+P01-T07 支持对已撤销或过期的工作区授权按当前 revision 显式续发，并提供当前 Key 的最小 scope 摘要。旧授权代次不会因为续发重新生效；实际运行仍在后续阶段接入。
 
-工作台首页 `/agent-platform/workspaces` 由 `/agent-platform` 进入，工作区深链接 `/agent-platform/w/:workspace_id` 保持兼容。总开关默认关闭；开启后访客可见导航，登录后才能进入页面。控制台侧栏和命令面板不重复承载工作台入口。当前只展示工作区准备状态和待交付工具简介，不把 P01-T03/T04/T05 的后端接口视作已上线的页面；真实工作区与成员交互按 P01-T08 接入。
+工作台首页 `/agent-platform/workspaces` 由 `/agent-platform` 进入，工作区深链接 `/agent-platform/w/:workspace_id` 保持兼容。总开关默认关闭；开启后访客可见导航，登录后才能进入页面。控制台侧栏和命令面板不重复承载工作台入口。P01-T08a 首页只读展示当前账号获准的工作区，支持 URL 保存名称筛选、排序和分页。详情、创建、编辑、归档与成员交互由 P01-T08 后续子项接入。
 
 ## 3. 租户、身份与资源
 
