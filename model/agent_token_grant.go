@@ -21,14 +21,14 @@ type AgentTokenGrant struct {
 	Scope        string `json:"-" gorm:"type:varchar(32);not null;uniqueIndex:ux_ag_token_grants_tuple,priority:3"`                                                        // 固定 Agent 权限枚举，与模型权限分离。
 	ResourceType string `json:"-" gorm:"type:varchar(24);not null;uniqueIndex:ux_ag_token_grants_tuple,priority:4"`                                                        // 本阶段只允许 workspace。
 	ResourceID   int64  `json:"-" gorm:"type:bigint;not null;uniqueIndex:ux_ag_token_grants_tuple,priority:5"`                                                             // 本阶段等于 WorkspaceID，非零引用。
-	Status       string `json:"-" gorm:"type:varchar(16);not null;index:idx_ag_token_grants_workspace_token_status,priority:3"`                                            // active 或 revoked，撤销永久保留。
+	Status       string `json:"-" gorm:"type:varchar(16);not null;index:idx_ag_token_grants_workspace_token_status,priority:3"`                                            // active 或 revoked，撤销事实保留在审计中。
 	ExpiresAt    *int64 `json:"-" gorm:"type:bigint"`                                                                                                                      // 可选授予截止 UTC 毫秒；NULL 仍受模型 Key 自身期限约束。
 	CreatedAt    int64  `json:"-" gorm:"type:bigint;not null;autoCreateTime:false"`                                                                                        // 创建 UTC 毫秒。
 	UpdatedAt    int64  `json:"-" gorm:"type:bigint;not null;autoUpdateTime:false"`                                                                                        // 最后状态变化 UTC 毫秒。
 	Revision     int64  `json:"-" gorm:"type:bigint;not null"`                                                                                                             // 条件更新版本，从 1 开始。
 	CreatedBy    int64  `json:"-" gorm:"type:bigint;not null"`                                                                                                             // 首次授予的管理会话用户。
-	UpdatedBy    *int64 `json:"-" gorm:"type:bigint"`                                                                                                                      // 最后撤销用户；NULL 表示仍未撤销。
-	RevokedAt    *int64 `json:"-" gorm:"type:bigint"`                                                                                                                      // 撤销 UTC 毫秒；NULL 表示尚未撤销。
+	UpdatedBy    *int64 `json:"-" gorm:"type:bigint"`                                                                                                                      // 最后续发或撤销的用户；NULL 表示仍是初始授权。
+	RevokedAt    *int64 `json:"-" gorm:"type:bigint"`                                                                                                                      // 当前版本的撤销 UTC 毫秒；active 为 NULL。
 }
 
 func (AgentTokenGrant) TableName() string { return "ag_token_grants" }
@@ -37,6 +37,23 @@ func ValidAgentTokenGrantScope(scope string) bool {
 	switch scope {
 	case "agent:run", "run:read", "run:cancel", "artifact:read":
 		return true
+	default:
+		return false
+	}
+}
+
+// ValidAgentTokenGrantVersion 校验授权的持久化代次；是否已过期由调用方按当前时间判断。
+func ValidAgentTokenGrantVersion(status string, revision, createdAt, updatedAt int64, expiresAt, revokedAt *int64) bool {
+	const maxSafeInteger = 9007199254740991
+	if revision <= 0 || revision > maxSafeInteger || createdAt <= 0 || updatedAt < createdAt || updatedAt > maxSafeInteger ||
+		(expiresAt != nil && (*expiresAt <= createdAt || *expiresAt > maxSafeInteger)) {
+		return false
+	}
+	switch status {
+	case AgentTokenGrantStatusActive:
+		return revokedAt == nil && (revision == 1 && updatedAt == createdAt || revision > 1 && expiresAt != nil && *expiresAt > updatedAt)
+	case AgentTokenGrantStatusRevoked:
+		return revision >= 2 && revokedAt != nil && *revokedAt == updatedAt && (revision == 2 || expiresAt != nil)
 	default:
 		return false
 	}
@@ -54,10 +71,10 @@ func (grant *AgentTokenGrant) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
-// LockAgentGrantManagementToken 只读取管理所需的元数据，不取 Key 或可计费字段。
+// LockAgentGrantManagementToken 只读取管理和可用性判定所需事实，不取 Key。
 func LockAgentGrantManagementToken(tx *gorm.DB, teamID, tokenID int64) (*Token, error) {
 	var token Token
-	err := lockForUpdate(tx).Select("id", "team_id", "user_id", "status", "expired_time").
+	err := lockForUpdate(tx).Select("id", "team_id", "user_id", "status", "expired_time", "unlimited_quota", "remain_quota").
 		Where("team_id = ? AND id = ?", teamID, tokenID).Take(&token).Error
 	if err != nil {
 		return nil, err
@@ -105,6 +122,41 @@ func LockAgentTokenWorkspaceGrant(tx *gorm.DB, teamID, workspaceID, tokenID int6
 		return nil, err
 	}
 	return &grant, nil
+}
+
+// AgentActiveTokenGrantScopes 读取当前工作区内四种精确的活动授权候选；过期判断由服务层处理。
+func AgentActiveTokenGrantScopes(tx *gorm.DB, teamID, workspaceID, tokenID int64) ([]AgentTokenGrant, error) {
+	var grants []AgentTokenGrant
+	err := lockForUpdate(tx).Where("team_id = ? AND workspace_id = ? AND token_id = ? AND resource_id = ?", teamID, workspaceID, tokenID, workspaceID).
+		Where(agentWorkspaceExactColumn(tx, "resource_type")+" = ? AND "+agentWorkspaceExactColumn(tx, "status")+" = ?",
+			AgentTokenGrantResourceWorkspace, AgentTokenGrantStatusActive).
+		Where(agentWorkspaceExactColumn(tx, "scope")+" IN ?", []string{"agent:run", "artifact:read", "run:cancel", "run:read"}).
+		Order(agentWorkspaceExactColumn(tx, "scope") + " ASC").Find(&grants).Error
+	return grants, err
+}
+
+// RenewAgentTokenGrant replaces a revoked or expired generation without changing its identity.
+func RenewAgentTokenGrant(tx *gorm.DB, grant *AgentTokenGrant, actorID, now, updatedAt, expiresAt int64) (bool, error) {
+	query := tx.Model(&AgentTokenGrant{}).
+		Where("id = ? AND team_id = ? AND workspace_id = ? AND token_id = ? AND resource_id = ? AND revision = ? AND updated_at = ?",
+			grant.ID, grant.TeamID, grant.WorkspaceID, grant.TokenID, grant.ResourceID, grant.Revision, grant.UpdatedAt).
+		Where(agentWorkspaceExactColumn(tx, "status")+" = ? AND "+agentWorkspaceExactColumn(tx, "scope")+" = ? AND "+agentWorkspaceExactColumn(tx, "resource_type")+" = ?",
+			grant.Status, grant.Scope, grant.ResourceType)
+	if grant.Status == AgentTokenGrantStatusRevoked && grant.RevokedAt != nil {
+		query = query.Where("revoked_at = ?", *grant.RevokedAt)
+	} else if grant.Status == AgentTokenGrantStatusActive && grant.ExpiresAt != nil {
+		query = query.Where("revoked_at IS NULL AND expires_at <= ?", now)
+	} else {
+		return false, ErrAgentWorkspaceInvalid
+	}
+	if grant.ExpiresAt == nil {
+		query = query.Where("expires_at IS NULL")
+	} else {
+		query = query.Where("expires_at = ?", *grant.ExpiresAt)
+	}
+	result := query.Updates(map[string]any{"status": AgentTokenGrantStatusActive, "revision": grant.Revision + 1,
+		"revoked_at": nil, "expires_at": expiresAt, "updated_at": updatedAt, "updated_by": actorID})
+	return result.RowsAffected == 1, result.Error
 }
 
 // RevokeAgentTokenGrant 对匹配范围和版本的有效状态写入撤销标记，不删除唯一元组。

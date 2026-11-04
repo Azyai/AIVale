@@ -21,7 +21,7 @@ type AgentIdempotencyKey struct {
 	ScopeHash      string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_idempotency_scope_key,priority:1"` // Team、主体及操作范围的SHA-256小写十六进制。
 	KeyHash        string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_idempotency_scope_key,priority:2"` // 原始Idempotency-Key的SHA-256，绝不保存原Key。
 	RequestHash    string  `json:"-" gorm:"type:varchar(64);not null"`                                                    // 规范化目标/主体/业务输入的SHA-256。
-	Operation      string  `json:"-" gorm:"type:varchar(48);not null"`                                                    // 工作区创建/归档或运行 Key 授权创建。
+	Operation      string  `json:"-" gorm:"type:varchar(48);not null"`                                                    // 工作区创建/归档或运行 Key 授权创建/续发。
 	State          string  `json:"-" gorm:"type:varchar(16);not null"`                                                    // 本批仅事务完成的completed，后续阶段扩展状态机。
 	ResourceType   *string `json:"-" gorm:"type:varchar(24)"`                                                             // 已提交结果类别 workspace 或 token_grant。
 	ResourceID     *int64  `json:"-" gorm:"type:bigint"`                                                                  // 已提交工作区或授权主键，按 Operation 校验。
@@ -50,6 +50,10 @@ func (record *AgentIdempotencyKey) BeforeCreate(_ *gorm.DB) error {
 		}
 	case "token_grant.create":
 		if *record.ResourceType != "token_grant" {
+			return ErrAgentWorkspaceInvalid
+		}
+	case "token_grant.renew":
+		if *record.ResourceType != "token_grant" || *record.ResponseStatus != 200 {
 			return ErrAgentWorkspaceInvalid
 		}
 	default:

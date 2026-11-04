@@ -27,3 +27,21 @@ func recordTokenGrantAudit(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts, o
 		ChangedFields: changed, ReasonHash: reasonHash,
 	})
 }
+
+// recordTokenGrantRenewalAudit retains the prior authorization state even
+// though the grant row is reused at a higher revision.
+func recordTokenGrantRenewalAudit(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts, prior, next *model.AgentTokenGrant, requestID string) error {
+	if facts == nil || facts.Workspace == nil || prior == nil || next == nil || next.ID <= 0 || prior.ID != next.ID ||
+		next.TeamID != facts.TeamID || next.WorkspaceID != facts.Workspace.ID || prior.TeamID != next.TeamID || prior.WorkspaceID != next.WorkspaceID ||
+		prior.TokenID != next.TokenID || prior.Scope != next.Scope || prior.ResourceType != next.ResourceType || prior.ResourceID != next.ResourceID ||
+		next.ResourceType != model.AgentTokenGrantResourceWorkspace || next.ResourceID != next.WorkspaceID ||
+		next.Status != model.AgentTokenGrantStatusActive || next.RevokedAt != nil || next.ExpiresAt == nil {
+		return model.ErrAgentWorkspaceInvalid
+	}
+	return persistWorkspaceAudit(tx, facts, next.WorkspaceID, model.AgentOutboxKindTokenGrantRenewalAudit, model.WorkspaceAuditPayload{
+		SchemaVersion: 4, Operation: "token_grant.renew", RequestID: requestID, TokenID: strconv.FormatInt(next.TokenID, 10),
+		GrantID: strconv.FormatInt(next.ID, 10), GrantScope: next.Scope, PreviousRevision: prior.Revision, Revision: next.Revision,
+		ChangedFields: []string{"expires_at", "status"}, PreviousGrantStatus: prior.Status, PreviousGrantExpiresAt: prior.ExpiresAt,
+		PreviousGrantRevokedAt: prior.RevokedAt, GrantExpiresAt: next.ExpiresAt,
+	})
+}

@@ -88,7 +88,8 @@ func ListTokenGrants(ctx context.Context, db *gorm.DB, identity model.AuthSessio
 }
 
 // CreateTokenGrant serializes tuple creation, the durable receipt and audit under
-// the same workspace transaction. A revoked tuple cannot be reissued in P01.
+// the same workspace transaction. A previously renewed tuple cannot be adopted
+// through the initial creation endpoint.
 func CreateTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, workspaceID int64, input CreateTokenGrantInput, requestID string) (*CreateTokenGrantResult, error) {
 	if err := validateWorkspaceSessionInput(ctx, db, identity); err != nil {
 		return nil, err
@@ -176,7 +177,7 @@ func CreateTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessi
 		if err != nil {
 			return err
 		}
-		if view.Status != model.AgentTokenGrantStatusActive || !sameGrantExpiry(view.ExpiresAt, input.ExpiresAt) ||
+		if view.Status != model.AgentTokenGrantStatusActive || view.Revision != 1 || !sameGrantExpiry(view.ExpiresAt, input.ExpiresAt) ||
 			(view.ExpiresAt != nil && *view.ExpiresAt <= time.Now().UnixMilli()) {
 			return agenttypes.NewError(agenttypes.InvalidState, nil)
 		}
@@ -185,7 +186,7 @@ func CreateTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessi
 			return err
 		}
 		if receipt != nil {
-			if err := validateTokenGrantReceipt(receipt, facts, grant, encoded, now.UnixMilli()); err != nil {
+			if err := validateTokenGrantReceipt(receipt, facts, grant, tokenGrantCreateOperation, encoded, now.UnixMilli()); err != nil {
 				return err
 			}
 			result = &CreateTokenGrantResult{Grant: view, HTTPStatus: int(*receipt.ResponseStatus), IdempotencyExpiresAt: receipt.ExpiresAt}
@@ -216,7 +217,7 @@ func CreateTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessi
 }
 
 // RevokeTokenGrant keeps a tombstone and records the hash of the explanation.
-func RevokeTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, workspaceID, grantID int64, reason, requestID string) (*TokenGrantView, error) {
+func RevokeTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, workspaceID, grantID int64, reason, requestID string, expectedRevision ...int64) (*TokenGrantView, error) {
 	if err := validateWorkspaceSessionInput(ctx, db, identity); err != nil {
 		return nil, err
 	}
@@ -225,6 +226,9 @@ func RevokeTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessi
 	}
 	if len(reason) > 1024 || !utf8.ValidString(reason) || strings.ContainsRune(reason, 0) || strings.TrimSpace(reason) == "" {
 		return nil, agenttypes.NewInvalidArgument("reason", "Reason must contain at most 1024 valid UTF-8 bytes")
+	}
+	if len(expectedRevision) > 1 || len(expectedRevision) == 1 && (expectedRevision[0] <= 0 || expectedRevision[0] > agenttypes.MaxSafeInteger) {
+		return nil, agenttypes.NewInvalidArgument("expected_revision", "Expected revision must be a positive safe integer")
 	}
 	reasonHash := workspaceWriteDigest(strings.TrimSpace(reason))
 	requestID = workspaceWriteRequestID(requestID)
@@ -246,9 +250,20 @@ func RevokeTokenGrant(ctx context.Context, db *gorm.DB, identity model.AuthSessi
 		if err != nil {
 			return err
 		}
-		if grant.Status == model.AgentTokenGrantStatusRevoked {
+		revoked := grant.Status == model.AgentTokenGrantStatusRevoked
+		if len(expectedRevision) == 0 {
+			if (!revoked && grant.Revision != 1) || (revoked && grant.Revision != 2) {
+				return agenttypes.NewError(agenttypes.DraftRevisionConflict, nil)
+			}
+		} else if expectedRevision[0] != grant.Revision && !(revoked && expectedRevision[0] == grant.Revision-1) {
+			return agenttypes.NewError(agenttypes.DraftRevisionConflict, nil)
+		}
+		if revoked {
 			result = &view
 			return nil
+		}
+		if grant.Revision >= agenttypes.MaxSafeInteger {
+			return agenttypes.NewError(agenttypes.InvalidState, nil)
 		}
 		now := max(grant.UpdatedAt, time.Now().UnixMilli())
 		updated, err := model.RevokeAgentTokenGrant(tx, grant, facts.UserID, now)
@@ -320,27 +335,34 @@ func requireGrantOwnerScope(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts, 
 	if !runTokenScopePermitted(actorRole, scope) {
 		return agenttypes.NewError(agenttypes.PermissionDenied, nil)
 	}
-	if int64(token.UserId) == facts.UserID {
-		return nil // The actor's locked workspace facts are also the Key owner's.
-	}
-	member, err := model.LockAgentWorkspaceMemberTarget(tx, facts, int64(token.UserId))
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	ownerRole, err := tokenGrantOwnerRole(tx, facts, token, actorRole)
+	if err != nil {
 		return err
 	}
-	if member == nil || member.Status != model.AgentWorkspaceMemberStatusActive || !runTokenScopePermitted(member.Role, scope) {
+	if !runTokenScopePermitted(ownerRole, scope) {
 		return agenttypes.NewError(agenttypes.PermissionDenied, nil)
 	}
 	return nil
 }
 
+func tokenGrantOwnerRole(tx *gorm.DB, facts *model.AgentWorkspaceWriteFacts, token *model.Token, actorRole string) (string, error) {
+	if int64(token.UserId) == facts.UserID {
+		return actorRole, nil // The actor's locked workspace facts are also the Key owner's.
+	}
+	member, err := model.LockAgentWorkspaceMemberTarget(tx, facts, int64(token.UserId))
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", err
+	}
+	if member == nil || member.Status != model.AgentWorkspaceMemberStatusActive {
+		return "", nil
+	}
+	return member.Role, nil
+}
+
 func tokenGrantView(grant *model.AgentTokenGrant) (TokenGrantView, error) {
 	if grant.ID <= 0 || grant.TeamID <= 0 || grant.WorkspaceID <= 0 || grant.TokenID <= 0 || !model.ValidAgentTokenGrantScope(grant.Scope) ||
 		grant.ResourceType != model.AgentTokenGrantResourceWorkspace || grant.ResourceID != grant.WorkspaceID ||
-		grant.CreatedAt <= 0 || grant.UpdatedAt < grant.CreatedAt || grant.UpdatedAt > agenttypes.MaxSafeInteger ||
-		(grant.ExpiresAt != nil && (*grant.ExpiresAt <= grant.CreatedAt || *grant.ExpiresAt > agenttypes.MaxSafeInteger)) ||
-		(grant.Status != model.AgentTokenGrantStatusActive && grant.Status != model.AgentTokenGrantStatusRevoked) ||
-		(grant.Status == model.AgentTokenGrantStatusActive && (grant.RevokedAt != nil || grant.Revision != 1)) ||
-		(grant.Status == model.AgentTokenGrantStatusRevoked && (grant.RevokedAt == nil || *grant.RevokedAt != grant.UpdatedAt || grant.Revision != 2)) {
+		!model.ValidAgentTokenGrantVersion(grant.Status, grant.Revision, grant.CreatedAt, grant.UpdatedAt, grant.ExpiresAt, grant.RevokedAt) {
 		return TokenGrantView{}, agenttypes.NewError(agenttypes.InternalError, nil)
 	}
 	return TokenGrantView{ID: grant.ID, TokenID: grant.TokenID, Scope: grant.Scope, ResourceType: grant.ResourceType, ResourceID: grant.ResourceID,
@@ -360,10 +382,11 @@ func encodeTokenGrantReceipt(view TokenGrantView) (string, error) {
 	return string(encoded), err
 }
 
-func validateTokenGrantReceipt(receipt *model.AgentIdempotencyKey, facts *model.AgentWorkspaceWriteFacts, grant *model.AgentTokenGrant, encoded string, now int64) error {
-	if receipt.State != "completed" || receipt.Operation != tokenGrantCreateOperation || receipt.TeamID != facts.TeamID || receipt.WorkspaceID != facts.Workspace.ID ||
+func validateTokenGrantReceipt(receipt *model.AgentIdempotencyKey, facts *model.AgentWorkspaceWriteFacts, grant *model.AgentTokenGrant, operation, encoded string, now int64) error {
+	if receipt.State != "completed" || receipt.Operation != operation || receipt.TeamID != facts.TeamID || receipt.WorkspaceID != facts.Workspace.ID ||
 		receipt.ResourceType == nil || *receipt.ResourceType != "token_grant" || receipt.ResourceID == nil || *receipt.ResourceID != grant.ID ||
 		receipt.ResponseStatus == nil || (*receipt.ResponseStatus != http.StatusCreated && *receipt.ResponseStatus != http.StatusOK) ||
+		(operation == tokenGrantRenewOperation && *receipt.ResponseStatus != http.StatusOK) ||
 		receipt.ResponseJSON == nil || *receipt.ResponseJSON != encoded || receipt.ExpiresAt <= 0 || receipt.ExpiresAt > agenttypes.MaxSafeInteger {
 		return agenttypes.NewError(agenttypes.InternalError, nil)
 	}

@@ -68,12 +68,31 @@ func ResolveRunTokenGrant(ctx context.Context, db *gorm.DB, identity model.Agent
 		return nil, agenttypes.NewError(agenttypes.ResourceNotFound, nil)
 	}
 	if !runTokenScopePermitted(role, scope) || facts.GrantID == nil || *facts.GrantID <= 0 || facts.GrantScope != scope || facts.GrantStatus != model.AgentTokenGrantStatusActive ||
-		facts.GrantRevision != 1 || facts.GrantRevokedAt != nil || facts.GrantCreatedAt < 1 || facts.GrantUpdatedAt != facts.GrantCreatedAt || facts.GrantCreatedAt > agenttypes.MaxSafeInteger ||
-		(facts.GrantExpiresAt != nil && (*facts.GrantExpiresAt <= max(facts.GrantCreatedAt, time.Now().UnixMilli()) || *facts.GrantExpiresAt > agenttypes.MaxSafeInteger)) {
+		!model.ValidAgentTokenGrantVersion(facts.GrantStatus, facts.GrantRevision, facts.GrantCreatedAt, facts.GrantUpdatedAt, facts.GrantExpiresAt, facts.GrantRevokedAt) ||
+		(facts.GrantExpiresAt != nil && *facts.GrantExpiresAt <= time.Now().UnixMilli()) {
 		return nil, agenttypes.NewError(agenttypes.PermissionDenied, nil)
 	}
 	return &RunTokenGrantAccess{TokenID: facts.TokenID, UserID: facts.UserID, TeamID: facts.TeamID, WorkspaceID: workspaceID,
 		GrantID: *facts.GrantID, GrantRevision: facts.GrantRevision, Scope: scope}, nil
+}
+
+// RecheckRunTokenGrant fences a previously admitted operation to its original
+// grant revision. A fresh request can use a renewal, but an older operation
+// must never acquire its authority by silently switching to the new revision.
+// Future Run handlers still need resource/policy checks and a transaction for
+// their own effects; no production Run handler calls this in P01.
+func RecheckRunTokenGrant(ctx context.Context, db *gorm.DB, identity model.AgentModelTokenIdentity, admitted RunTokenGrantAccess) (*RunTokenGrantAccess, error) {
+	if admitted.TokenID <= 0 || admitted.UserID <= 0 || admitted.TeamID <= 0 || admitted.WorkspaceID <= 0 || admitted.GrantID <= 0 || admitted.GrantRevision < 1 || admitted.GrantRevision > agenttypes.MaxSafeInteger || !model.ValidAgentTokenGrantScope(admitted.Scope) {
+		return nil, agenttypes.NewError(agenttypes.PermissionDenied, nil)
+	}
+	current, err := ResolveRunTokenGrant(ctx, db, identity, admitted.WorkspaceID, admitted.Scope)
+	if err != nil {
+		return nil, err
+	}
+	if *current != admitted {
+		return nil, agenttypes.NewError(agenttypes.PermissionDenied, nil)
+	}
+	return current, nil
 }
 
 // These are only workspace-layer candidates. Run reads/cancels and artifact

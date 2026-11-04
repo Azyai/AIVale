@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	agentOutboxKindWorkspaceAudit       = "workspace_audit"
-	AgentOutboxKindWorkspaceMemberAudit = "workspace_member_audit"
-	AgentOutboxKindTokenGrantAudit      = "token_grant_audit"
+	agentOutboxKindWorkspaceAudit         = "workspace_audit"
+	AgentOutboxKindWorkspaceMemberAudit   = "workspace_member_audit"
+	AgentOutboxKindTokenGrantAudit        = "token_grant_audit"
+	AgentOutboxKindTokenGrantRenewalAudit = "token_grant_renewal_audit"
 )
 
 // AgentOutbox 保存工作区、成员及运行Key授权审计事实，不启动worker。
@@ -64,25 +65,29 @@ func (event *AgentOutbox) BeforeCreate(_ *gorm.DB) error {
 
 // WorkspaceAuditPayload 只保存引用及变更类别，不保存正文、原始理由或认证材料。
 type WorkspaceAuditPayload struct {
-	SchemaVersion    int      `json:"schema_version"`
-	EventID          string   `json:"event_id"`
-	ActorID          string   `json:"actor_id"`
-	ActorRole        int      `json:"actor_role"`
-	TeamID           string   `json:"team_id"`
-	WorkspaceID      string   `json:"workspace_id"`
-	Operation        string   `json:"operation"`
-	PreviousRevision int64    `json:"previous_revision"`
-	Revision         int64    `json:"revision"`
-	RequestID        string   `json:"request_id"`
-	Timestamp        int64    `json:"timestamp"`
-	ChangedFields    []string `json:"changed_fields"`
-	ReasonHash       string   `json:"reason_hash,omitempty"`
-	TargetUserID     string   `json:"target_user_id,omitempty"`
-	PreviousRole     string   `json:"previous_role,omitempty"`
-	Role             string   `json:"role,omitempty"`
-	TokenID          string   `json:"token_id,omitempty"`
-	GrantID          string   `json:"grant_id,omitempty"`
-	GrantScope       string   `json:"grant_scope,omitempty"`
+	SchemaVersion          int      `json:"schema_version"`
+	EventID                string   `json:"event_id"`
+	ActorID                string   `json:"actor_id"`
+	ActorRole              int      `json:"actor_role"`
+	TeamID                 string   `json:"team_id"`
+	WorkspaceID            string   `json:"workspace_id"`
+	Operation              string   `json:"operation"`
+	PreviousRevision       int64    `json:"previous_revision"`
+	Revision               int64    `json:"revision"`
+	RequestID              string   `json:"request_id"`
+	Timestamp              int64    `json:"timestamp"`
+	ChangedFields          []string `json:"changed_fields"`
+	ReasonHash             string   `json:"reason_hash,omitempty"`
+	TargetUserID           string   `json:"target_user_id,omitempty"`
+	PreviousRole           string   `json:"previous_role,omitempty"`
+	Role                   string   `json:"role,omitempty"`
+	TokenID                string   `json:"token_id,omitempty"`
+	GrantID                string   `json:"grant_id,omitempty"`
+	GrantScope             string   `json:"grant_scope,omitempty"`
+	PreviousGrantStatus    string   `json:"previous_grant_status,omitempty"`
+	PreviousGrantExpiresAt *int64   `json:"previous_grant_expires_at,omitempty"`
+	PreviousGrantRevokedAt *int64   `json:"previous_grant_revoked_at,omitempty"`
+	GrantExpiresAt         *int64   `json:"grant_expires_at,omitempty"`
 }
 
 func workspaceAuditPayloadValid(event *AgentOutbox, payload WorkspaceAuditPayload) bool {
@@ -96,8 +101,8 @@ func workspaceAuditPayloadValid(event *AgentOutbox, payload WorkspaceAuditPayloa
 	if event.Kind == AgentOutboxKindWorkspaceMemberAudit {
 		return workspaceMemberAuditPayloadValid(payload)
 	}
-	if event.Kind == AgentOutboxKindTokenGrantAudit {
-		if payload.SchemaVersion != 3 || !ValidAgentTokenGrantScope(payload.GrantScope) {
+	if event.Kind == AgentOutboxKindTokenGrantAudit || event.Kind == AgentOutboxKindTokenGrantRenewalAudit {
+		if !ValidAgentTokenGrantScope(payload.GrantScope) {
 			return false
 		}
 		for _, id := range []string{payload.TokenID, payload.GrantID} {
@@ -105,6 +110,12 @@ func workspaceAuditPayloadValid(event *AgentOutbox, payload WorkspaceAuditPayloa
 			if err != nil || value <= 0 || strconv.FormatInt(value, 10) != id {
 				return false
 			}
+		}
+		if event.Kind == AgentOutboxKindTokenGrantRenewalAudit {
+			return tokenGrantRenewalAuditPayloadValid(payload)
+		}
+		if payload.SchemaVersion != 3 {
+			return false
 		}
 		switch payload.Operation {
 		case "token_grant.create":
@@ -129,6 +140,23 @@ func workspaceAuditPayloadValid(event *AgentOutbox, payload WorkspaceAuditPayloa
 		seen[field] = true
 	}
 	return true
+}
+
+func tokenGrantRenewalAuditPayloadValid(payload WorkspaceAuditPayload) bool {
+	if payload.SchemaVersion != 4 || payload.Operation != "token_grant.renew" || payload.PreviousRevision < 1 ||
+		payload.ReasonHash != "" || payload.GrantExpiresAt == nil || *payload.GrantExpiresAt < 1 || *payload.GrantExpiresAt > 9007199254740991 ||
+		(payload.PreviousGrantExpiresAt != nil && (*payload.PreviousGrantExpiresAt < 1 || *payload.PreviousGrantExpiresAt > 9007199254740991)) ||
+		!slices.Equal(payload.ChangedFields, []string{"expires_at", "status"}) {
+		return false
+	}
+	switch payload.PreviousGrantStatus {
+	case AgentTokenGrantStatusActive:
+		return payload.PreviousGrantRevokedAt == nil && payload.PreviousGrantExpiresAt != nil && *payload.PreviousGrantExpiresAt <= payload.Timestamp
+	case AgentTokenGrantStatusRevoked:
+		return payload.PreviousRevision >= 2 && payload.PreviousGrantRevokedAt != nil && *payload.PreviousGrantRevokedAt > 0 && *payload.PreviousGrantRevokedAt <= 9007199254740991
+	default:
+		return false
+	}
 }
 
 func workspaceMemberAuditPayloadValid(payload WorkspaceAuditPayload) bool {
@@ -166,16 +194,19 @@ func decodeWorkspaceAuditPayload(kind, raw string) (WorkspaceAuditPayload, error
 		return payload, ErrAgentWorkspaceInvalid
 	}
 	required := []string{"schema_version", "event_id", "actor_id", "actor_role", "team_id", "workspace_id", "operation", "previous_revision", "revision", "request_id", "timestamp", "changed_fields"}
-	var optional string
+	var optional []string
 	switch kind {
 	case agentOutboxKindWorkspaceAudit:
-		optional = "reason_hash"
+		optional = []string{"reason_hash"}
 	case AgentOutboxKindWorkspaceMemberAudit:
 		required = append(required, "target_user_id", "role")
-		optional = "previous_role"
+		optional = []string{"previous_role"}
 	case AgentOutboxKindTokenGrantAudit:
 		required = append(required, "token_id", "grant_id", "grant_scope")
-		optional = "reason_hash"
+		optional = []string{"reason_hash"}
+	case AgentOutboxKindTokenGrantRenewalAudit:
+		required = append(required, "token_id", "grant_id", "grant_scope", "previous_grant_status", "grant_expires_at")
+		optional = []string{"previous_grant_expires_at", "previous_grant_revoked_at"}
 	default:
 		return payload, ErrAgentWorkspaceInvalid
 	}
@@ -185,8 +216,8 @@ func decodeWorkspaceAuditPayload(kind, raw string) (WorkspaceAuditPayload, error
 		}
 	}
 	for key, value := range fields {
-		if (key != optional && !slices.Contains(required, key)) || string(value) == "null" ||
-			(kind == AgentOutboxKindWorkspaceMemberAudit && key == optional && string(value) == `""`) {
+		if (!slices.Contains(optional, key) && !slices.Contains(required, key)) || string(value) == "null" ||
+			(kind == AgentOutboxKindWorkspaceMemberAudit && key == "previous_role" && string(value) == `""`) {
 			return payload, ErrAgentWorkspaceInvalid
 		}
 	}
@@ -225,7 +256,7 @@ func ProjectWorkspaceAudit(ctx context.Context, mainDB, logDB *gorm.DB, limit in
 	}
 	var events []AgentOutbox
 	err := mainDB.WithContext(ctx).Where(agentWorkspaceExactColumn(mainDB, "kind")+" IN ? AND "+agentWorkspaceExactColumn(mainDB, "status")+" = ? AND available_at <= ?",
-		[]string{agentOutboxKindWorkspaceAudit, AgentOutboxKindWorkspaceMemberAudit, AgentOutboxKindTokenGrantAudit}, "pending", time.Now().UnixMilli()).Order("id ASC").Limit(limit).Find(&events).Error
+		[]string{agentOutboxKindWorkspaceAudit, AgentOutboxKindWorkspaceMemberAudit, AgentOutboxKindTokenGrantAudit, AgentOutboxKindTokenGrantRenewalAudit}, "pending", time.Now().UnixMilli()).Order("id ASC").Limit(limit).Find(&events).Error
 	if err != nil {
 		return 0, err
 	}
@@ -272,8 +303,17 @@ func projectWorkspaceAuditEvent(ctx context.Context, logDB *gorm.DB, payload Wor
 			params["previous_role"] = payload.PreviousRole
 		}
 	}
-	if payload.SchemaVersion == 3 {
+	if payload.SchemaVersion == 3 || payload.SchemaVersion == 4 {
 		params["token_id"], params["grant_id"], params["grant_scope"] = payload.TokenID, payload.GrantID, payload.GrantScope
+	}
+	if payload.SchemaVersion == 4 {
+		params["previous_grant_status"], params["grant_expires_at"] = payload.PreviousGrantStatus, *payload.GrantExpiresAt
+		if payload.PreviousGrantExpiresAt != nil {
+			params["previous_grant_expires_at"] = *payload.PreviousGrantExpiresAt
+		}
+		if payload.PreviousGrantRevokedAt != nil {
+			params["previous_grant_revoked_at"] = *payload.PreviousGrantRevokedAt
+		}
 	}
 	status := 200
 	if payload.Operation == "workspace.create" || payload.Operation == "token_grant.create" {
