@@ -28,6 +28,12 @@ import { useAuthStore } from '@/stores/auth-store'
 import { getAgentPlatformCapabilities } from './api'
 import type { WorkspaceListSearch } from './lib/workspace-list-search'
 import type { AgentPlatformCapabilities } from './types'
+import {
+  AgentWorkspaceDetailError,
+  getAgentWorkspace,
+  isAgentWorkspaceId,
+  type AgentWorkspaceDetail,
+} from './workspace-detail-api'
 import { listAgentWorkspaces } from './workspace-list-api'
 
 export const agentPlatformCapabilitiesQueryKey = [
@@ -53,44 +59,106 @@ export function useAgentPlatformCapabilities(): UseQueryResult<AgentPlatformCapa
   return useQuery(agentPlatformCapabilitiesQueryOptions)
 }
 
-export function useAgentWorkspaces(search: WorkspaceListSearch) {
+function useWorkspaceSession() {
   const userId = useAuthStore((state) => state.auth.user?.id)
   const sessionId = useAuthStore((state) => state.auth.session?.sid)
   const hasAccessToken = useAuthStore((state) =>
     Boolean(state.auth.accessToken)
   )
   const signedIn = userId != null && Boolean(sessionId) && hasAccessToken
+  return { userId, sessionId, signedIn }
+}
+
+function assertCurrentWorkspaceSession(
+  scope: ReturnType<typeof useWorkspaceSession>,
+  signal: AbortSignal
+) {
+  const { auth } = useAuthStore.getState()
+  if (
+    !scope.signedIn ||
+    signal.aborted ||
+    !auth.accessToken ||
+    auth.user?.id !== scope.userId ||
+    auth.session?.sid !== scope.sessionId
+  ) {
+    throw new CancelledError({ silent: true })
+  }
+}
+
+const privateWorkspaceQueryOptions = {
+  staleTime: 0,
+  gcTime: 0,
+  retry: false,
+  refetchOnMount: 'always',
+  refetchOnWindowFocus: 'always',
+  refetchOnReconnect: 'always',
+  meta: { errorToast: false, errorRedirect: false },
+} as const
+
+export function useAgentWorkspaces(search: WorkspaceListSearch) {
+  const scope = useWorkspaceSession()
 
   const query = useQuery({
-    queryKey: ['agent-platform', 'workspaces', userId, sessionId, search],
-    enabled: signedIn,
+    ...privateWorkspaceQueryOptions,
+    queryKey: [
+      'agent-platform',
+      'workspaces',
+      scope.userId,
+      scope.sessionId,
+      search,
+    ],
+    enabled: scope.signedIn,
     queryFn: async ({ signal }) => {
-      const assertCurrentSession = () => {
-        const { auth } = useAuthStore.getState()
-        if (
-          signal.aborted ||
-          !auth.accessToken ||
-          auth.user?.id !== userId ||
-          auth.session?.sid !== sessionId
-        ) {
-          throw new CancelledError({ silent: true })
-        }
-      }
-      assertCurrentSession()
+      assertCurrentWorkspaceSession(scope, signal)
       const page = await listAgentWorkspaces(search, signal)
-      assertCurrentSession()
+      assertCurrentWorkspaceSession(scope, signal)
       return page
     },
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: 'always',
-    refetchOnReconnect: 'always',
-    meta: { errorToast: false, errorRedirect: false },
   })
 
-  return { signedIn, query }
+  return { signedIn: scope.signedIn, query }
+}
+
+type WorkspaceDetailResult =
+  | { kind: 'ready'; workspace: AgentWorkspaceDetail }
+  | { kind: 'unavailable' | 'auth-required' | 'error' }
+
+export function useAgentWorkspace(workspaceId: string) {
+  const scope = useWorkspaceSession()
+  const validId = isAgentWorkspaceId(workspaceId)
+  const query = useQuery({
+    ...privateWorkspaceQueryOptions,
+    queryKey: [
+      'agent-platform',
+      'workspace',
+      scope.userId,
+      scope.sessionId,
+      validId ? workspaceId : null,
+    ],
+    enabled: scope.signedIn && validId,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    queryFn: async ({ signal }): Promise<WorkspaceDetailResult> => {
+      assertCurrentWorkspaceSession(scope, signal)
+      try {
+        const workspace = await getAgentWorkspace(workspaceId, signal)
+        assertCurrentWorkspaceSession(scope, signal)
+        return { kind: 'ready', workspace }
+      } catch (error) {
+        assertCurrentWorkspaceSession(scope, signal)
+        // Replace the former result with a data-free verdict even on refetch failure.
+        if (error instanceof AgentWorkspaceDetailError) {
+          if (error.status === 401) return { kind: 'auth-required' }
+          if (error.status === 403 || error.status === 404) {
+            return { kind: 'unavailable' }
+          }
+        }
+        return { kind: 'error' }
+      }
+    },
+  })
+
+  return { signedIn: scope.signedIn, validId, query }
 }
 
 /**
