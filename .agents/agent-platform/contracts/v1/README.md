@@ -28,6 +28,9 @@ P01-T05以独立1.0.0版本的`workspace-members.*`发布API-006/007/008：显�
 | `workspace-members.schema.json` | P01-T05严格PUT输入、成员分页、授权与撤销白名单响应；复用公共固定错误 |
 | `workspace-members.openapi.json` | API-006/007/008的会话、参数、最后管理员保护及no-store约定 |
 | `workspace-members.examples.json` | 合成的成员列表、授权、重新授权、撤销和固定错误开发示例，不是执行报告 |
+| `workspace-token-grants.schema.json` | P01-T06 运行 Key 显式工作区授权的列表、创建、撤销以及固定错误白名单 |
+| `workspace-token-grants.openapi.json` | API-012/013/014 的会话、工作区资源范围、持久化幂等与撤销约定 |
+| `workspace-token-grants.examples.json` | 合成的授权分页、新建、幂等重放、撤销和固定错误开发示例，不是执行报告 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -135,6 +138,16 @@ P00-T06的共享工具复用本契约；测试源码、负向案例和详细结�
 `PUT .../members/:user_id`只接受精确的JSON字段`role/expected_revision`。revision的0只在该授权行不存在时创建；正值必须匹配当前行，已撤销后也不能使用0重新创建。与当前active角色完全相同且revision匹配时成功而不重复写入；修改或重新授权则推进revision。错误响应不包含当前revision，请用已授权列表刷新。角色只能是`admin/developer/operator/viewer`。Team owner目标不可修改或撤销；只有当前有效的隐式owner可授予admin或变更其他admin，显式admin可主动降级或撤销自身，但不得移除最后一个有效管理员。
 
 `DELETE .../members/:user_id`不接受query或body。活动授权改为blocked并递增revision；仍满足当前授权和目标资格时，重复删除或无授权行返回相同的`user_id/revoked:true`，不重复写审计。删除面向执行时的授权状态，无客户端revision；重新授权后发起的删除会作用于该当前授权。所有业务写入及成功审计事实同事务，降权或撤销提交后下一次受控请求读取实时事实。还未接入的在途Run和调度不在此契约内。
+
+## P01-T06 工作区运行 Key 授权管理
+
+`/api/agent-platform/workspaces/:workspace_id/token-grants` 及其 `/:grant_id` 子路径受平台总开关与显式 Bearer 管理会话保护。只操作当前 Team 的模型 Key；有效的隐式 Team owner 可管理团队成员的 Key，显式工作区 admin/developer 只能管理本人持有的同 Team Key。当前支持 `agent:run`、`run:read`、`run:cancel`、`artifact:read` 四种精确 scope；仅接收 `resource_type=workspace` 且 `resource_id` 等于路径工作区。API 不返回原始 Key、Key 摘要、用户资料、幂等原值或审计内容。
+
+GET 必填单值 `token_id`，可带单值 `page/page_size`，禁止其他查询字段；按 `created_at desc,id desc` 固定排序。当前仍有管理权时可以查看或撤销停用、过期 Key 的历史授权；归属变化或软删不再有访问权。分页返回 `items/total/page/page_size`。单项返回 `id/token_id/scope/resource_type/resource_id/status/expires_at/revision/created_at/updated_at/revoked_at`，ID 均为正整数的十进制字符串，毫秒时间和 revision 为安全整数。`active` 是存储状态，已到期的行仍可能是 `active`，不能据此推断可运行。
+
+POST 只接收上述四个绑定字段及可省略的 `expires_at`；显式 null、未知字段、非规范 ID 或时间整数拒绝。创建要求工作区 active、Key 可用及 Key 当前拥有者满足对应权限范围。首次创建 201，同到期配置的有效重复授权 200；已撤销、已过期或不同到期配置的唯一元组不自动恢复或覆盖。必须带 `Idempotency-Key`，成功返回 `Idempotency-Key-Expires-At`。同键同请求只在当前权限、授权及收据仍有效时返回原收据和原状态码；异请求 409，已过期的幂等键不可复用。DELETE 只接收 JSON `reason`，修剪后 1–1024 个合法 UTF-8 字节且无 NUL，原文不存储。首次撤销保留记录并递增 revision；当前仍有管理权的重复撤销返回相同的 `id/status/revision/revoked_at`。写操作不接收 query。全部响应使用共享固定 envelope 和 no-store。
+
+本阶段不开放 `/v1/agents` 或 `/v1/agent-runs` 业务处理器。工作区授权只提供运行身份解析的一层条件，不决定具体 Run 的所有权、附件权限、模型范围、配额、工具或计费。旧 Key 的模型网关协议、授权及账务行为不变。
 
 ## P00-T05 全局只读能力探测
 

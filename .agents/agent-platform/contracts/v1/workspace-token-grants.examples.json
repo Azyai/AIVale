@@ -1,0 +1,381 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P01-T06",
+  "description": "Synthetic developer examples for management APIs; not test receipts or execution evidence.",
+  "examples": [
+    {
+      "name": "token-grant-list",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-list",
+        "data": {
+          "items": [
+            {
+              "id": "1001",
+              "token_id": "72",
+              "scope": "agent:run",
+              "resource_type": "workspace",
+              "resource_id": "101",
+              "status": "active",
+              "expires_at": null,
+              "revision": 1,
+              "created_at": 1793664004000,
+              "updated_at": 1793664004000,
+              "revoked_at": null
+            },
+            {
+              "id": "1000",
+              "token_id": "72",
+              "scope": "run:cancel",
+              "resource_type": "workspace",
+              "resource_id": "101",
+              "status": "revoked",
+              "expires_at": null,
+              "revision": 2,
+              "created_at": 1793664001000,
+              "updated_at": 1793664005000,
+              "revoked_at": 1793664005000
+            }
+          ],
+          "total": 2,
+          "page": 1,
+          "page_size": 20
+        }
+      }
+    },
+    {
+      "name": "token-grant-empty",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-empty",
+        "data": {
+          "items": [],
+          "total": 0,
+          "page": 1,
+          "page_size": 20
+        }
+      }
+    },
+    {
+      "name": "token-grant-create",
+      "schema": "createResponse",
+      "http_status": 201,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-create",
+        "data": {
+          "id": "1001",
+          "token_id": "72",
+          "scope": "agent:run",
+          "resource_type": "workspace",
+          "resource_id": "101",
+          "status": "active",
+          "expires_at": null,
+          "revision": 1,
+          "created_at": 1793664004000,
+          "updated_at": 1793664004000,
+          "revoked_at": null
+        }
+      },
+      "request": {
+        "token_id": "72",
+        "scope": "agent:run",
+        "resource_type": "workspace",
+        "resource_id": "101"
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750404000"
+      }
+    },
+    {
+      "name": "token-grant-replay",
+      "schema": "createResponse",
+      "http_status": 201,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-replay",
+        "data": {
+          "id": "1001",
+          "token_id": "72",
+          "scope": "agent:run",
+          "resource_type": "workspace",
+          "resource_id": "101",
+          "status": "active",
+          "expires_at": null,
+          "revision": 1,
+          "created_at": 1793664004000,
+          "updated_at": 1793664004000,
+          "revoked_at": null
+        }
+      },
+      "request": {
+        "token_id": "72",
+        "scope": "agent:run",
+        "resource_type": "workspace",
+        "resource_id": "101"
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750404000"
+      }
+    },
+    {
+      "name": "token-grant-existing",
+      "schema": "createResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-existing",
+        "data": {
+          "id": "1001",
+          "token_id": "72",
+          "scope": "agent:run",
+          "resource_type": "workspace",
+          "resource_id": "101",
+          "status": "active",
+          "expires_at": null,
+          "revision": 1,
+          "created_at": 1793664004000,
+          "updated_at": 1793664004000,
+          "revoked_at": null
+        }
+      },
+      "request": {
+        "token_id": "72",
+        "scope": "agent:run",
+        "resource_type": "workspace",
+        "resource_id": "101"
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750504000"
+      }
+    },
+    {
+      "name": "token-grant-finite-expiry",
+      "schema": "createResponse",
+      "http_status": 201,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-finite-expiry",
+        "data": {
+          "id": "1002",
+          "token_id": "72",
+          "scope": "artifact:read",
+          "resource_type": "workspace",
+          "resource_id": "101",
+          "status": "active",
+          "expires_at": 1793667600000,
+          "revision": 1,
+          "created_at": 1793664004000,
+          "updated_at": 1793664004000,
+          "revoked_at": null
+        }
+      },
+      "request": {
+        "token_id": "72",
+        "scope": "artifact:read",
+        "resource_type": "workspace",
+        "resource_id": "101",
+        "expires_at": 1793667600000
+      },
+      "headers": {
+        "Idempotency-Key-Expires-At": "1793750404000"
+      }
+    },
+    {
+      "name": "token-grant-revoke",
+      "schema": "revokeResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-revoke",
+        "data": {
+          "id": "1000",
+          "status": "revoked",
+          "revision": 2,
+          "revoked_at": 1793664005000
+        }
+      },
+      "request": {
+        "reason": "Retire the example grant"
+      }
+    },
+    {
+      "name": "token-grant-revoke-again",
+      "schema": "revokeResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "token-grant-revoke-again",
+        "data": {
+          "id": "1000",
+          "status": "revoked",
+          "revision": 2,
+          "revoked_at": 1793664005000
+        }
+      },
+      "request": {
+        "reason": "Retire the example grant"
+      }
+    },
+    {
+      "name": "token-grant-invalid",
+      "schema": "errorResponse",
+      "http_status": 400,
+      "response": {
+        "success": false,
+        "code": "AG_INVALID_ARGUMENT",
+        "message": "Request parameters are invalid",
+        "request_id": "token-grant-invalid",
+        "data": {
+          "field_errors": [
+            {
+              "path": "token_id",
+              "message": "One token ID is required"
+            }
+          ],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-session-required",
+      "schema": "errorResponse",
+      "http_status": 401,
+      "response": {
+        "success": false,
+        "code": "AG_AUTH_REQUIRED",
+        "message": "Authentication is required",
+        "request_id": "token-grant-session-required",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-role-forbidden",
+      "schema": "errorResponse",
+      "http_status": 403,
+      "response": {
+        "success": false,
+        "code": "AG_PERMISSION_DENIED",
+        "message": "This operation is not permitted",
+        "request_id": "token-grant-role-forbidden",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-hidden",
+      "schema": "errorResponse",
+      "http_status": 404,
+      "response": {
+        "success": false,
+        "code": "AG_RESOURCE_NOT_FOUND",
+        "message": "The resource is not available",
+        "request_id": "token-grant-hidden",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-idempotency-conflict",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "response": {
+        "success": false,
+        "code": "AG_IDEMPOTENCY_CONFLICT",
+        "message": "The idempotency key conflicts with another request",
+        "request_id": "token-grant-idempotency-conflict",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-invalid-state",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "response": {
+        "success": false,
+        "code": "AG_INVALID_STATE",
+        "message": "The operation is not valid in the current state",
+        "request_id": "token-grant-invalid-state",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-oversize",
+      "schema": "errorResponse",
+      "http_status": 413,
+      "response": {
+        "success": false,
+        "code": "AG_PAYLOAD_TOO_LARGE",
+        "message": "The request exceeds the allowed size",
+        "request_id": "token-grant-oversize",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-internal",
+      "schema": "errorResponse",
+      "http_status": 500,
+      "response": {
+        "success": false,
+        "code": "AG_INTERNAL_ERROR",
+        "message": "The request could not be completed",
+        "request_id": "token-grant-internal",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "token-grant-disabled",
+      "schema": "errorResponse",
+      "http_status": 503,
+      "response": {
+        "success": false,
+        "code": "AG_RUNTIME_UNAVAILABLE",
+        "message": "Agent platform capability is unavailable",
+        "request_id": "token-grant-disabled",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:workspace-token-grants:1.0.0",
+  "title": "AIVale workspace token grants contract 1.0.0",
+  "description": "P01-T06 dashboard management contract for explicit workspace grants on current Team model Keys. Does not create public Run endpoints.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P01-T06",
+    "core_version": "1.1.0",
+    "api_ids": [
+      "API-012",
+      "API-013",
+      "API-014"
+    ],
+    "authentication": "Existing dashboard Bearer session only; cookies, PATs and model Keys do not authorize management.",
+    "query": {
+      "required": [
+        "token_id"
+      ],
+      "optional": [
+        "page",
+        "page_size"
+      ],
+      "single_value": true,
+      "sort": [
+        "created_at desc",
+        "id desc"
+      ],
+      "write_query": "none"
+    },
+    "request_body_limit_bytes": 1048576,
+    "resource_binding": "workspace scope only; resource_id must equal the workspace_id path parameter",
+    "expiry": "UTC Unix milliseconds; absent grant expiry does not bypass the parent Key expiry.",
+    "idempotency": "POST requires Idempotency-Key. Same effective request replays a still-valid original receipt; a different request using the same key conflicts."
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "maxLength": 19,
+      "not": {
+        "pattern": "[^0-9]"
+      },
+      "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+    },
+    "millis": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "UTC Unix milliseconds; positive JSON safe integer."
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "agent:run",
+        "run:read",
+        "run:cancel",
+        "artifact:read"
+      ]
+    },
+    "createRequest": {
+      "type": "object",
+      "properties": {
+        "token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "resource_type": {
+          "const": "workspace"
+        },
+        "resource_id": {
+          "$ref": "#/$defs/id",
+          "description": "Must equal the workspace_id path parameter."
+        },
+        "expires_at": {
+          "$ref": "#/$defs/millis",
+          "x-json-lexical-integer": true,
+          "description": "Optional future UTC Unix milliseconds, written as a positive decimal JSON integer. Omit for no grant-specific expiry. Explicit null is rejected."
+        }
+      },
+      "required": [
+        "token_id",
+        "scope",
+        "resource_type",
+        "resource_id"
+      ],
+      "additionalProperties": false
+    },
+    "revokeRequest": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "pattern": "\u0000"
+          },
+          "x-max-trimmed-utf8-bytes": 1024,
+          "description": "Trimmed value must contain 1–1024 UTF-8 bytes. The original reason is not returned or persisted."
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "grant": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "resource_type": {
+          "const": "workspace"
+        },
+        "resource_id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "revoked"
+          ]
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/millis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "created_at": {
+          "$ref": "#/$defs/millis"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/millis"
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/millis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "token_id",
+        "scope",
+        "resource_type",
+        "resource_id",
+        "status",
+        "expires_at",
+        "revision",
+        "created_at",
+        "updated_at",
+        "revoked_at"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "active"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "revoked_at": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "revoked"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "revoked_at": {
+                "$ref": "#/$defs/millis"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Persisted grant facts only. An expired row may still have status active and will not authorize execution. Expiry does not extend the Key lifetime."
+    },
+    "grantList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/grant"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size"
+      ],
+      "additionalProperties": false
+    },
+    "revocation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "const": "revoked"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "revoked_at": {
+          "$ref": "#/$defs/millis"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "revision",
+        "revoked_at"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    },
+    "listResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/grantList"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "createResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/grant"
+            },
+            {
+              "properties": {
+                "status": {
+                  "const": "active"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "revokeResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/revocation"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/listResponse"
+    },
+    {
+      "$ref": "#/$defs/createResponse"
+    },
+    {
+      "$ref": "#/$defs/revokeResponse"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    }
+  ]
+}

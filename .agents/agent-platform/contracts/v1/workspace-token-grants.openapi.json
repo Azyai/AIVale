@@ -1,0 +1,485 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale workspace token grants API",
+    "version": "1.0.0",
+    "description": "P01-T06 allows a dashboard session to list, create and revoke explicit workspace grants on eligible Team model Keys. Existing model authorization stays independent. No public Run endpoint is registered."
+  },
+  "security": [
+    {
+      "DashboardSession": []
+    }
+  ],
+  "paths": {
+    "/api/agent-platform/workspaces/{workspace_id}/token-grants": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/WorkspaceId"
+        }
+      ],
+      "get": {
+        "operationId": "listWorkspaceTokenGrants",
+        "x-api-id": "API-012",
+        "summary": "List explicit grants for one controlled Team Key",
+        "description": "Requires current authority on an active or suspended workspace and control of the specified same-Team Key. Returns authorized active and revoked facts without disclosing credentials. Stored active rows can be expired; list data is not permission evidence.",
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/id"
+            },
+            "description": "One canonical model Key ID. The credential itself is never accepted in this parameter."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1
+            },
+            "description": "Single canonical positive decimal integer."
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Single canonical positive decimal integer. Ordering is fixed at created_at desc, id desc."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized page of explicit grant facts.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/listResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SessionRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/PlatformUnavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWorkspaceTokenGrant",
+        "x-api-id": "API-013",
+        "summary": "Grant one exact scope for the current workspace",
+        "description": "Requires an active workspace, a controlled enabled/unexpired same-Team model Key and a live eligible Key owner. A natural duplicate with the same expiry reuses the active grant. A revoked, expired or different-expiry tuple is not reactivated or replaced. No query parameters.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-token-grants.schema.json#/$defs/createRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The existing active grant or an authorized replay of this receipt.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "Idempotency-Key-Expires-At": {
+                "$ref": "#/components/headers/IdempotencyExpiresAt"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/createResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "A newly created grant or authorized replay of its original receipt.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "Idempotency-Key-Expires-At": {
+                "$ref": "#/components/headers/IdempotencyExpiresAt"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/createResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SessionRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Invalid current state or a changed request under the same idempotency key.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/PlatformUnavailable"
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}/token-grants/{grant_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/WorkspaceId"
+        },
+        {
+          "name": "grant_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "./workspace-token-grants.schema.json#/$defs/id"
+          },
+          "description": "Canonical workspace grant ID."
+        }
+      ],
+      "delete": {
+        "operationId": "revokeWorkspaceTokenGrant",
+        "x-api-id": "API-014",
+        "summary": "Revoke a controlled Team Key grant",
+        "description": "Requires current workspace authority and control of the grant's same-Team model Key. The first revocation retains the row; later authorized revocations return the original revocation facts. No query parameters.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./workspace-token-grants.schema.json#/$defs/revokeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Retained revocation facts.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/revokeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SessionRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The grant is not in a valid state for this transition.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "X-Oneapi-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/PlatformUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DashboardSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Existing dashboard access JWT backed by a live session. PATs, Cookie-only requests and model Keys are not valid."
+      }
+    },
+    "parameters": {
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "./workspace-token-grants.schema.json#/$defs/id"
+        },
+        "description": "Canonical workspace ID."
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128,
+          "pattern": "^[!-~]+$",
+          "not": {
+            "pattern": "[^!-~]"
+          }
+        },
+        "description": "One case-sensitive value of visible ASCII, scoped to the current Team, workspace, actor and operation. Raw value is never persisted or audited."
+      }
+    },
+    "headers": {
+      "CacheControl": {
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
+      },
+      "RequestId": {
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": "Server-owned request ID, equal to response request_id."
+      },
+      "IdempotencyExpiresAt": {
+        "schema": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|900[0-6][0-9]{12}|90070[0-9]{11}|90071[0-8][0-9]{10}|900719[0-8][0-9]{9}|9007199[0-1][0-9]{8}|90071992[0-4][0-9]{7}|900719925[0-3][0-9]{6}|9007199254[0-6][0-9]{5}|90071992547[0-3][0-9]{4}|9007199254740[0-8][0-9]{2}|90071992547409[0-8][0-9]|9007199254740990|9007199254740991)$",
+          "maxLength": 16,
+          "not": {
+            "pattern": "[^0-9]"
+          }
+        },
+        "description": "Original persisted receipt retention time, canonical UTC Unix milliseconds (at least 24 hours from creation). Rows are not reused after this time in this phase."
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Malformed IDs, unknown/duplicate/invalid query or body fields, malformed JSON, or missing required header.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      },
+      "SessionRequired": {
+        "description": "Valid current dashboard Bearer session required.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Visible workspace, but the current role or scope does not permit the operation.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Workspace, grant or model Key is absent or unavailable to the current tenant and actor.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "JSON body exceeds the endpoint's request limit.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Unexpected failure with fixed safe details.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      },
+      "PlatformUnavailable": {
+        "description": "The Agent platform is disabled.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControl"
+          },
+          "X-Oneapi-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./workspace-token-grants.schema.json#/$defs/errorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}

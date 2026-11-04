@@ -8,7 +8,7 @@ import (
 )
 
 // SetAgentRouter registers the public probe and gated, session-only workspace
-// lifecycle operations inside the existing API middleware chain.
+// management operations inside the existing API middleware chain.
 func SetAgentRouter(apiRouter *gin.RouterGroup) {
 	agentRouter := apiRouter.Group("/agent-platform")
 	agentRouter.GET("/capabilities", controller.GetAgentPlatformCapabilities)
@@ -24,4 +24,7 @@ func SetAgentRouter(apiRouter *gin.RouterGroup) {
 	workspaces.GET("/:workspace_id/members", controller.ListAgentWorkspaceMembers)
 	workspaces.PUT("/:workspace_id/members/:user_id", controller.PutAgentWorkspaceMember)
 	workspaces.DELETE("/:workspace_id/members/:user_id", controller.DeleteAgentWorkspaceMember)
+	workspaces.GET("/:workspace_id/token-grants", controller.ListAgentWorkspaceTokenGrants)
+	workspaces.POST("/:workspace_id/token-grants", controller.CreateAgentWorkspaceTokenGrant)
+	workspaces.DELETE("/:workspace_id/token-grants/:grant_id", controller.RevokeAgentWorkspaceTokenGrant)
 }
