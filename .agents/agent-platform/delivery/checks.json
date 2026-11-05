@@ -2043,8 +2043,10 @@
   },
   "workspace_members_scope": {
     "tasks": [
-      "P01-T05"
+      "P01-T05",
+      "P01-T08"
     ],
+    "task_impact_paths": { "P01-T08": [] },
     "allowed_impact_paths": [
       "model/agent_workspace_members.go",
       "model/agent_outbox.go",
