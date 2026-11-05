@@ -32,6 +32,7 @@ P01-T08c 以独立 1.0.0 的 `workspace-create-eligibility.*` 发布创建资格
 | `workspace-create-eligibility.schema.json` | 创建资格和条件 Team ID 的固定响应白名单 |
 | `workspace-create-eligibility.openapi.json` | 管理会话、无查询参数、默认关闭及 no-store 约定 |
 | `workspace-create-eligibility.examples.json` | 合成的创建资格及安全错误开发示例，不是执行报告 |
+| `personal-workspace.md` | 独立个人工作区的读取、显式创建、版本更新及账号隔离 |
 | `workspace-members.schema.json` | P01-T05严格PUT输入、成员分页、授权与撤销白名单响应；复用公共固定错误 |
 | `workspace-members.openapi.json` | API-006/007/008的会话、参数、最后管理员保护及no-store约定 |
 | `workspace-members.examples.json` | 合成的成员列表、授权、重新授权、撤销和固定错误开发示例，不是执行报告 |

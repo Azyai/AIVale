@@ -26,7 +26,20 @@ type AgentWorkspaceWriteFacts struct {
 // WithAgentWorkspaceWriteFacts 按User、Session、TeamMember、Team、Workspace、成员
 // 的固定顺序锁定当前事实。只对已确认回滚的忙/死锁冲突重试整个事务，提交错误不重试。
 func WithAgentWorkspaceWriteFacts(db *gorm.DB, identity AuthSessionIdentity, workspaceID int64, apply func(*gorm.DB, *AgentWorkspaceWriteFacts) error) error {
-	if db == nil || db.Config == nil || db.Statement == nil || db.Statement.ConnPool == nil || apply == nil || workspaceID < 0 {
+	if apply == nil || workspaceID < 0 {
+		return ErrAgentWorkspaceInvalid
+	}
+	return withAgentWorkspaceWriteTransaction(db, identity, func(tx *gorm.DB) error {
+		facts, err := lockAgentWorkspaceWriteFacts(tx, identity, workspaceID)
+		if err != nil {
+			return err
+		}
+		return apply(tx, facts)
+	})
+}
+
+func withAgentWorkspaceWriteTransaction(db *gorm.DB, identity AuthSessionIdentity, apply func(*gorm.DB) error) error {
+	if db == nil || db.Config == nil || db.Statement == nil || db.Statement.ConnPool == nil {
 		return ErrAgentWorkspaceInvalid
 	}
 	if _, transactional := db.Statement.ConnPool.(gorm.TxCommitter); transactional {
@@ -37,7 +50,7 @@ func WithAgentWorkspaceWriteFacts(db *gorm.DB, identity AuthSessionIdentity, wor
 	}
 	ctx := db.Statement.Context
 	for attempt := range 3 {
-		rolledBack, err := agentWorkspaceWriteAttempt(db, identity, workspaceID, apply)
+		rolledBack, err := agentWorkspaceWriteAttempt(db, apply)
 		if err == nil || !rolledBack || !agentWorkspaceWriteRetryable(err) || attempt == 2 {
 			return err
 		}
@@ -52,7 +65,7 @@ func WithAgentWorkspaceWriteFacts(db *gorm.DB, identity AuthSessionIdentity, wor
 	return ErrAgentWorkspaceInvalid
 }
 
-func agentWorkspaceWriteAttempt(db *gorm.DB, identity AuthSessionIdentity, workspaceID int64, apply func(*gorm.DB, *AgentWorkspaceWriteFacts) error) (bool, error) {
+func agentWorkspaceWriteAttempt(db *gorm.DB, apply func(*gorm.DB) error) (bool, error) {
 	tx := db.Begin()
 	if tx.Error != nil {
 		return false, tx.Error
@@ -63,11 +76,7 @@ func agentWorkspaceWriteAttempt(db *gorm.DB, identity AuthSessionIdentity, works
 			_ = tx.Rollback().Error // panic/cancellation cleanup never authorizes retry.
 		}
 	}()
-	facts, err := lockAgentWorkspaceWriteFacts(tx, identity, workspaceID)
-	if err == nil {
-		err = apply(tx, facts)
-	}
-	if err != nil {
+	if err := apply(tx); err != nil {
 		rollbackErr := tx.Rollback().Error
 		finished = true
 		if rollbackErr != nil {
@@ -77,12 +86,12 @@ func agentWorkspaceWriteAttempt(db *gorm.DB, identity AuthSessionIdentity, works
 	}
 	// A transport/driver error from COMMIT may conceal a committed transaction.
 	// The caller may retry with its persisted key, but this loop must not replay it.
-	err = tx.Commit().Error
+	err := tx.Commit().Error
 	finished = true
 	return false, err
 }
 
-func lockAgentWorkspaceWriteFacts(tx *gorm.DB, identity AuthSessionIdentity, workspaceID int64) (*AgentWorkspaceWriteFacts, error) {
+func lockAgentWorkspaceWriteActor(tx *gorm.DB, identity AuthSessionIdentity) (*User, error) {
 	var user User
 	err := lockForUpdate(tx).Select("id", "role", "status", "auth_version").First(&user, identity.UserID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -105,6 +114,14 @@ func lockAgentWorkspaceWriteFacts(tx *gorm.DB, identity AuthSessionIdentity, wor
 	}
 	if session.SID != identity.SessionID || session.Status != UserSessionStatusActive || session.RevokedAt != 0 || session.ExpiresAt <= time.Now().Unix() || session.Version != identity.SessionVersion || session.UserAuthVersion != identity.UserAuthVersion {
 		return nil, ErrUserSessionInactive
+	}
+	return &user, nil
+}
+
+func lockAgentWorkspaceWriteFacts(tx *gorm.DB, identity AuthSessionIdentity, workspaceID int64) (*AgentWorkspaceWriteFacts, error) {
+	user, err := lockAgentWorkspaceWriteActor(tx, identity)
+	if err != nil {
+		return nil, err
 	}
 	facts := &AgentWorkspaceWriteFacts{UserID: int64(user.Id), ActorRole: user.Role}
 	var membership TeamMember

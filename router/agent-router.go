@@ -12,6 +12,12 @@ import (
 func SetAgentRouter(apiRouter *gin.RouterGroup) {
 	agentRouter := apiRouter.Group("/agent-platform")
 	agentRouter.GET("/capabilities", controller.GetAgentPlatformCapabilities)
+	personal := agentRouter.Group("/personal-workspace")
+	personal.Use(middleware.RequireAgentFeature(agent_setting.FeaturePlatform))
+	personal.Use(middleware.AgentWorkspaceManagementAuth()...)
+	personal.GET("", controller.GetAgentPersonalWorkspace)
+	personal.PUT("", controller.PutAgentPersonalWorkspace)
+
 	workspaces := agentRouter.Group("/workspaces")
 	workspaces.Use(middleware.RequireAgentFeature(agent_setting.FeaturePlatform))
 	workspaces.Use(middleware.AgentWorkspaceRejectedAudit())

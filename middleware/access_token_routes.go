@@ -42,6 +42,8 @@ func accessTokenScopeRule(scope string) accessTokenRouteRule {
 // DeclareAccessTokenPermissionRoute when they are registered.
 var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	// router/agent-router.go: browser-session-only workspace management.
+	"GET /api/agent-platform/personal-workspace":                                     accessTokenSessionRule,
+	"PUT /api/agent-platform/personal-workspace":                                     accessTokenSessionRule,
 	"GET /api/agent-platform/workspaces":                                             accessTokenSessionRule,
 	"GET /api/agent-platform/workspaces/create-eligibility":                          accessTokenSessionRule,
 	"GET /api/agent-platform/workspaces/:workspace_id":                               accessTokenSessionRule,
