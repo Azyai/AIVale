@@ -75,12 +75,22 @@ api.get = ((url: string, config: ApiRequestConfig = {}) => {
 }) as typeof api.get
 
 function redirectToSignIn(): void {
+  if (typeof window === 'undefined') return
+  const { pathname, search, hash } = window.location
+  if (pathname === '/sign-in') return
   if (
-    typeof window !== 'undefined' &&
-    window.location.pathname !== '/sign-in'
+    pathname === '/agent-platform' ||
+    pathname.startsWith('/agent-platform/')
   ) {
-    window.location.replace('/sign-in')
+    // Preserve the workbench deep link; sign-in and the protected route still
+    // validate the destination and its permissions for the new session.
+    const params = new URLSearchParams({
+      redirect: `${pathname}${search}${hash}`,
+    })
+    window.location.replace(`/sign-in?${params}`)
+    return
   }
+  window.location.replace('/sign-in')
 }
 
 api.interceptors.response.use(
