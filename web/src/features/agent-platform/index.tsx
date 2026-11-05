@@ -16,10 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Bot, LibraryBig, Plug, type LucideIcon } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Bot, LibraryBig, Play, Plug, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 
 import { WorkspaceCreateAction } from './components/workspace-create-action'
 import { WorkspaceList } from './components/workspace-list'
@@ -54,9 +56,18 @@ export function AgentPlatformWorkspaces(
 
   return (
     <>
-      <p className='text-muted-foreground mt-4 max-w-xl text-base/relaxed sm:text-lg/relaxed'>
-        {t('Build and manage agents with your team in a shared workspace.')}
-      </p>
+      <div className='mt-4 flex flex-wrap items-center justify-between gap-4'>
+        <p className='text-muted-foreground max-w-xl text-base/relaxed sm:text-lg/relaxed'>
+          {t('Build and manage agents with your team in a shared workspace.')}
+        </p>
+        <Link
+          to='/agent-demo'
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          <Play aria-hidden='true' />
+          {t('Try the agent demo')}
+        </Link>
+      </div>
 
       <WorkspaceList
         {...props}

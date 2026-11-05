@@ -86,6 +86,12 @@ export function useTopNavLinks(): TopNavLink[] {
     })
   }
 
+  links.push(
+    { title: t('Knowledge Base'), href: '/knowledge-base' },
+    { title: t('Compute Center'), href: '/compute-center' },
+    { title: t('Dataset Center'), href: '/dataset-center' }
+  )
+
   // Rankings
   const rankings = modules?.rankings
   if (rankings && typeof rankings === 'object' && rankings.enabled) {

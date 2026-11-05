@@ -43,7 +43,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
-import { BrandLockup, HeaderLogo } from './header-logo'
+import { BrandLockup, BrandOrb, HeaderLogo } from './header-logo'
 
 const AUTH_PROMPT_SECONDS = 5
 
@@ -134,7 +134,7 @@ export function PublicHeader(props: PublicHeaderProps) {
   let authContent = (
     <Button
       size='sm'
-      className='bg-foreground text-background hover:bg-foreground/90 h-11 rounded-full px-6 text-base font-medium'
+      className='bg-foreground text-background hover:bg-foreground/90 h-11 shrink-0 rounded-full px-4 text-sm font-medium 2xl:px-6 2xl:text-base'
       render={<Link to='/sign-in' />}
     >
       {t('Sign in')}
@@ -152,7 +152,7 @@ export function PublicHeader(props: PublicHeaderProps) {
 
   useEffect(() => {
     if (!mobileOpen) return
-    const desktop = window.matchMedia('(min-width: 64rem)')
+    const desktop = window.matchMedia('(min-width: 80rem)')
     if (desktop.matches) {
       setMobileOpen(false)
       return
@@ -255,29 +255,26 @@ export function PublicHeader(props: PublicHeaderProps) {
               'bg-background/90 border-b shadow-[0_1px_16px_-8px_rgba(0,0,0,0.15)] dark:bg-white/10'
           )}
         >
-          <nav className='flex h-16 w-full items-center justify-between gap-4 px-5 md:h-24 md:px-8'>
-            {/* Brand — pinned to the far left of the page. The wrapper keeps
-                flex-1 (NOT shrink-0): @container/system-brand applies
-                inline-size containment, so a shrink-0 wrapper collapses to
-                zero width and the brand text gets flex-crushed away. */}
-            <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1'>
+          <nav className='flex h-16 w-full items-center justify-between gap-3 px-5 md:h-24 2xl:px-8'>
+            <div className='flex min-w-0 items-center xl:shrink-0'>
               <Link
                 to={homeUrl}
                 aria-label={displaySiteName}
                 className='group flex min-w-0 items-center gap-3 md:gap-4'
               >
-                {SHOW_SYSTEM_LOGO && (
-                  <div
-                    className={cn(
-                      'flex shrink-0 items-center transition-all duration-300 group-hover:scale-105',
-                      usesBrandLockup
-                        ? 'h-11 md:h-16'
-                        : 'size-9 justify-center md:size-14'
-                    )}
-                  >
-                    {logoContent}
-                  </div>
-                )}
+                {SHOW_SYSTEM_LOGO &&
+                  (usesBrandLockup ? (
+                    <>
+                      <div className='flex h-11 shrink-0 items-center transition-transform duration-300 group-hover:scale-105 md:h-16 xl:hidden 2xl:flex'>
+                        {logoContent}
+                      </div>
+                      <BrandOrb className='hidden size-9 transition-transform duration-300 group-hover:scale-105 xl:block 2xl:hidden' />
+                    </>
+                  ) : (
+                    <div className='flex size-9 shrink-0 items-center justify-center transition-transform duration-300 group-hover:scale-105 md:size-14 xl:size-9 2xl:size-14'>
+                      {logoContent}
+                    </div>
+                  ))}
                 {/* The brand lockup already carries the wordmark, so the
                     configured platform name is assistive-tech only there; an
                     admin-configured logo keeps its visible name. */}
@@ -285,7 +282,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                   <span className='sr-only'>{displaySiteName}</span>
                 ) : (
                   <span
-                    className='max-w-56 truncate text-base font-bold tracking-tight md:max-w-xs md:text-[1.375rem]'
+                    className='max-w-56 truncate text-base font-bold tracking-tight md:max-w-xs md:text-[1.375rem] xl:hidden 2xl:block 2xl:max-w-40'
                     title={displaySiteName}
                   >
                     {loading ? (
@@ -299,50 +296,52 @@ export function PublicHeader(props: PublicHeaderProps) {
             </div>
 
             {/* Desktop nav + controls — hugging the right edge */}
-            <div className='hidden shrink-0 items-center gap-1 lg:flex'>
-              {links.map((link) => {
-                if (link.external) {
+            <div className='hidden min-w-0 items-center gap-1 xl:flex'>
+              <div className='flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain'>
+                {links.map((link) => {
+                  if (link.external) {
+                    return (
+                      <a
+                        key={`${link.title}:${link.href}`}
+                        href={link.href}
+                        title={t(link.title)}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        aria-disabled={link.disabled}
+                        tabIndex={link.disabled ? -1 : undefined}
+                        onClick={(event) => handleNavLinkClick(event, link)}
+                        className={cn(
+                          'text-muted-foreground hover:text-foreground shrink-0 rounded-lg px-1.5 py-3 text-sm whitespace-nowrap transition-colors duration-200 2xl:px-2.5 2xl:text-base',
+                          link.disabled && 'pointer-events-none opacity-50'
+                        )}
+                      >
+                        {t(link.title)}
+                      </a>
+                    )
+                  }
                   return (
-                    <a
+                    <Link
                       key={`${link.title}:${link.href}`}
-                      href={link.href}
+                      to={link.href}
+                      activeOptions={{
+                        exact: !link.matchDescendants,
+                        includeSearch: false,
+                      }}
                       title={t(link.title)}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      aria-disabled={link.disabled}
-                      tabIndex={link.disabled ? -1 : undefined}
+                      disabled={link.disabled}
                       onClick={(event) => handleNavLinkClick(event, link)}
                       className={cn(
-                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 xl:px-3.5 xl:text-lg',
+                        'text-muted-foreground hover:text-foreground data-[status=active]:text-primary shrink-0 rounded-lg px-1.5 py-3 text-sm whitespace-nowrap transition-colors duration-200 data-[status=active]:font-medium 2xl:px-2.5 2xl:text-base',
                         link.disabled && 'pointer-events-none opacity-50'
                       )}
                     >
                       {t(link.title)}
-                    </a>
+                    </Link>
                   )
-                }
-                return (
-                  <Link
-                    key={`${link.title}:${link.href}`}
-                    to={link.href}
-                    activeOptions={{
-                      exact: !link.matchDescendants,
-                      includeSearch: false,
-                    }}
-                    title={t(link.title)}
-                    disabled={link.disabled}
-                    onClick={(event) => handleNavLinkClick(event, link)}
-                    className={cn(
-                      'text-muted-foreground hover:text-foreground data-[status=active]:text-primary min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 data-[status=active]:font-medium xl:px-3.5 xl:text-lg',
-                      link.disabled && 'pointer-events-none opacity-50'
-                    )}
-                  >
-                    {t(link.title)}
-                  </Link>
-                )
-              })}
+                })}
+              </div>
 
-              <div className='bg-border/40 mx-2.5 h-6 w-px' />
+              <div className='bg-border/40 mx-1.5 h-6 w-px shrink-0 2xl:mx-2.5' />
 
               {showLanguageSwitcher && <LanguageSwitcher />}
               {showThemeSwitch && <ThemeSwitch />}
@@ -368,7 +367,7 @@ export function PublicHeader(props: PublicHeaderProps) {
             </div>
 
             {/* Mobile: compact actions + hamburger */}
-            <div className='flex shrink-0 items-center gap-2 lg:hidden'>
+            <div className='flex shrink-0 items-center gap-2 xl:hidden'>
               {showThemeSwitch && <ThemeSwitch />}
               {showAuthButtons && !loading && isAuthenticated && (
                 <ProfileDropdown />
@@ -418,7 +417,7 @@ export function PublicHeader(props: PublicHeaderProps) {
         aria-hidden={!mobileOpen}
         onKeyDown={handleMobileNavEscape}
         className={cn(
-          'bg-background/98 fixed inset-0 z-40 overflow-y-auto backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:pointer-events-none lg:hidden',
+          'bg-background/98 fixed inset-0 z-40 overflow-y-auto backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] xl:pointer-events-none xl:hidden',
           mobileOpen
             ? 'pointer-events-auto opacity-100'
             : 'pointer-events-none opacity-0'

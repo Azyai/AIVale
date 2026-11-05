@@ -57,7 +57,7 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
   return (
     <>
       {/* 移动端下拉菜单 */}
-      <div className='lg:hidden'>
+      <div className='xl:hidden'>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             aria-label={t('Toggle navigation menu')}
@@ -114,7 +114,10 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
 
       {/* 桌面端水平导航 */}
       <nav
-        className={cn('hidden items-center gap-1 lg:flex', className)}
+        className={cn(
+          'hidden min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain xl:flex',
+          className
+        )}
         {...props}
       >
         {normalizedLinks.map(
@@ -125,7 +128,7 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
                 href={href}
                 target='_blank'
                 rel='noopener noreferrer'
-                className={`min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 xl:px-3.5 xl:text-lg ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`shrink-0 rounded-lg px-1 py-3 text-sm whitespace-nowrap transition-colors duration-200 2xl:px-2.5 2xl:text-base ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 {title}
               </a>
@@ -139,7 +142,7 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
                   includeSearch: false,
                 }}
                 className={cn(
-                  'min-w-0 truncate rounded-lg px-2 py-3 text-base transition-colors duration-200 xl:px-3.5 xl:text-lg',
+                  'shrink-0 rounded-lg px-1 py-3 text-sm whitespace-nowrap transition-colors duration-200 2xl:px-2.5 2xl:text-base',
                   isActive
                     ? 'text-primary font-medium'
                     : 'text-muted-foreground hover:text-foreground data-[status=active]:text-primary data-[status=active]:font-medium'

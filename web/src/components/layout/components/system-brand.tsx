@@ -33,7 +33,7 @@ import {
 } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-import { BrandLockup } from './header-logo'
+import { BrandLockup, BrandOrb } from './header-logo'
 
 type SystemBrandProps = {
   defaultName?: string
@@ -58,8 +58,7 @@ export function SystemBrand(props: SystemBrandProps) {
   const { logo } = useSystemConfig()
 
   const variant = props.variant ?? 'sidebar'
-  const name =
-    status?.system_name || props.defaultName || DEFAULT_SYSTEM_NAME
+  const name = status?.system_name || props.defaultName || DEFAULT_SYSTEM_NAME
   const version =
     status?.version || props.defaultVersion || t('Unknown version')
 
@@ -80,9 +79,14 @@ export function SystemBrand(props: SystemBrandProps) {
       >
         {SHOW_SYSTEM_LOGO &&
           (usesBrandLockup ? (
-            <BrandLockup />
+            <>
+              <span className='xl:hidden 2xl:block'>
+                <BrandLockup />
+              </span>
+              <BrandOrb className='hidden size-9 xl:block 2xl:hidden' />
+            </>
           ) : (
-            <div className='flex size-9 shrink-0 items-center justify-center md:size-14'>
+            <div className='flex size-9 shrink-0 items-center justify-center md:size-14 xl:size-9 2xl:size-14'>
               <img
                 src={logo}
                 alt={t('Logo')}
@@ -95,7 +99,7 @@ export function SystemBrand(props: SystemBrandProps) {
         {usesBrandLockup ? (
           <span className='sr-only'>{name}</span>
         ) : (
-          <span className='max-w-56 truncate text-base font-semibold tracking-tight md:max-w-xs md:text-[1.375rem]'>
+          <span className='max-w-56 truncate text-base font-semibold tracking-tight md:max-w-xs md:text-[1.375rem] xl:hidden 2xl:block 2xl:max-w-40'>
             {name}
           </span>
         )}

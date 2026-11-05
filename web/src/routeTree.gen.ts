@@ -30,8 +30,12 @@ import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as AuthenticatedChat2linkRouteImport } from './routes/_authenticated/chat2link'
 import { Route as AuthenticatedSystemSettingsRouteRouteImport } from './routes/_authenticated/system-settings/route'
 import { Route as AboutIndexRouteImport } from './routes/about/index'
+import { Route as AgentDemoIndexRouteImport } from './routes/agent-demo/index'
 import { Route as AgentPlatformIndexRouteImport } from './routes/agent-platform/index'
 import { Route as AgentPlatformWorkspacesRouteImport } from './routes/agent-platform/workspaces'
+import { Route as ComputeCenterIndexRouteImport } from './routes/compute-center/index'
+import { Route as DatasetCenterIndexRouteImport } from './routes/dataset-center/index'
+import { Route as KnowledgeBaseIndexRouteImport } from './routes/knowledge-base/index'
 import { Route as OauthProviderRouteImport } from './routes/oauth/$provider'
 import { Route as PricingIndexRouteImport } from './routes/pricing/index'
 import { Route as RankingsIndexRouteImport } from './routes/rankings/index'
@@ -183,6 +187,11 @@ const AboutIndexRoute = AboutIndexRouteImport.update({
   path: '/about/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentDemoIndexRoute = AgentDemoIndexRouteImport.update({
+  id: '/agent-demo/',
+  path: '/agent-demo/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentPlatformIndexRoute = AgentPlatformIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -192,6 +201,21 @@ const AgentPlatformWorkspacesRoute = AgentPlatformWorkspacesRouteImport.update({
   id: '/workspaces',
   path: '/workspaces',
   getParentRoute: () => AgentPlatformRouteRoute,
+} as any)
+const ComputeCenterIndexRoute = ComputeCenterIndexRouteImport.update({
+  id: '/compute-center/',
+  path: '/compute-center/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatasetCenterIndexRoute = DatasetCenterIndexRouteImport.update({
+  id: '/dataset-center/',
+  path: '/dataset-center/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KnowledgeBaseIndexRoute = KnowledgeBaseIndexRouteImport.update({
+  id: '/knowledge-base/',
+  path: '/knowledge-base/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OauthProviderRoute = OauthProviderRouteImport.update({
   id: '/oauth/$provider',
@@ -481,7 +505,11 @@ export interface FileRoutesByFullPath {
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about/': typeof AboutIndexRoute
+  '/agent-demo/': typeof AgentDemoIndexRoute
   '/agent-platform/': typeof AgentPlatformIndexRoute
+  '/compute-center/': typeof ComputeCenterIndexRoute
+  '/dataset-center/': typeof DatasetCenterIndexRoute
+  '/knowledge-base/': typeof KnowledgeBaseIndexRoute
   '/pricing/': typeof PricingIndexRoute
   '/rankings/': typeof RankingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -548,7 +576,11 @@ export interface FileRoutesByTo {
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about': typeof AboutIndexRoute
+  '/agent-demo': typeof AgentDemoIndexRoute
   '/agent-platform': typeof AgentPlatformIndexRoute
+  '/compute-center': typeof ComputeCenterIndexRoute
+  '/dataset-center': typeof DatasetCenterIndexRoute
+  '/knowledge-base': typeof KnowledgeBaseIndexRoute
   '/pricing': typeof PricingIndexRoute
   '/rankings': typeof RankingsIndexRoute
   '/setup': typeof SetupIndexRoute
@@ -620,7 +652,11 @@ export interface FileRoutesById {
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about/': typeof AboutIndexRoute
+  '/agent-demo/': typeof AgentDemoIndexRoute
   '/agent-platform/': typeof AgentPlatformIndexRoute
+  '/compute-center/': typeof ComputeCenterIndexRoute
+  '/dataset-center/': typeof DatasetCenterIndexRoute
+  '/knowledge-base/': typeof KnowledgeBaseIndexRoute
   '/pricing/': typeof PricingIndexRoute
   '/rankings/': typeof RankingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -691,7 +727,11 @@ export interface FileRouteTypes {
     | '/agent-platform/workspaces'
     | '/oauth/$provider'
     | '/about/'
+    | '/agent-demo/'
     | '/agent-platform/'
+    | '/compute-center/'
+    | '/dataset-center/'
+    | '/knowledge-base/'
     | '/pricing/'
     | '/rankings/'
     | '/setup/'
@@ -758,7 +798,11 @@ export interface FileRouteTypes {
     | '/agent-platform/workspaces'
     | '/oauth/$provider'
     | '/about'
+    | '/agent-demo'
     | '/agent-platform'
+    | '/compute-center'
+    | '/dataset-center'
+    | '/knowledge-base'
     | '/pricing'
     | '/rankings'
     | '/setup'
@@ -829,7 +873,11 @@ export interface FileRouteTypes {
     | '/agent-platform/workspaces'
     | '/oauth/$provider'
     | '/about/'
+    | '/agent-demo/'
     | '/agent-platform/'
+    | '/compute-center/'
+    | '/dataset-center/'
+    | '/knowledge-base/'
     | '/pricing/'
     | '/rankings/'
     | '/setup/'
@@ -891,6 +939,10 @@ export interface RootRouteChildren {
   errors503Route: typeof errors503Route
   OauthProviderRoute: typeof OauthProviderRoute
   AboutIndexRoute: typeof AboutIndexRoute
+  AgentDemoIndexRoute: typeof AgentDemoIndexRoute
+  ComputeCenterIndexRoute: typeof ComputeCenterIndexRoute
+  DatasetCenterIndexRoute: typeof DatasetCenterIndexRoute
+  KnowledgeBaseIndexRoute: typeof KnowledgeBaseIndexRoute
   PricingIndexRoute: typeof PricingIndexRoute
   RankingsIndexRoute: typeof RankingsIndexRoute
   SetupIndexRoute: typeof SetupIndexRoute
@@ -1046,6 +1098,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent-demo/': {
+      id: '/agent-demo/'
+      path: '/agent-demo'
+      fullPath: '/agent-demo/'
+      preLoaderRoute: typeof AgentDemoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agent-platform/': {
       id: '/agent-platform/'
       path: '/'
@@ -1059,6 +1118,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/agent-platform/workspaces'
       preLoaderRoute: typeof AgentPlatformWorkspacesRouteImport
       parentRoute: typeof AgentPlatformRouteRoute
+    }
+    '/compute-center/': {
+      id: '/compute-center/'
+      path: '/compute-center'
+      fullPath: '/compute-center/'
+      preLoaderRoute: typeof ComputeCenterIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dataset-center/': {
+      id: '/dataset-center/'
+      path: '/dataset-center'
+      fullPath: '/dataset-center/'
+      preLoaderRoute: typeof DatasetCenterIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/knowledge-base/': {
+      id: '/knowledge-base/'
+      path: '/knowledge-base'
+      fullPath: '/knowledge-base/'
+      preLoaderRoute: typeof KnowledgeBaseIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/oauth/$provider': {
       id: '/oauth/$provider'
@@ -1562,6 +1642,10 @@ const rootRouteChildren: RootRouteChildren = {
   errors503Route: errors503Route,
   OauthProviderRoute: OauthProviderRoute,
   AboutIndexRoute: AboutIndexRoute,
+  AgentDemoIndexRoute: AgentDemoIndexRoute,
+  ComputeCenterIndexRoute: ComputeCenterIndexRoute,
+  DatasetCenterIndexRoute: DatasetCenterIndexRoute,
+  KnowledgeBaseIndexRoute: KnowledgeBaseIndexRoute,
   PricingIndexRoute: PricingIndexRoute,
   RankingsIndexRoute: RankingsIndexRoute,
   SetupIndexRoute: SetupIndexRoute,

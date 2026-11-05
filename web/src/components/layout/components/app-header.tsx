@@ -99,7 +99,7 @@ export function AppHeader({
 
   return (
     <Header showSidebarTrigger={false}>
-      <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1'>
+      <div className='flex min-w-0 flex-1 items-center gap-1 xl:flex-none'>
         <SystemBrand variant='inline' />
       </div>
 
@@ -108,7 +108,7 @@ export function AppHeader({
       ) : null}
 
       {rightContent ?? (
-        <div className='ms-auto flex shrink-0 items-center gap-1'>
+        <div className='ms-auto flex min-w-0 items-center gap-1'>
           {showTopNav && links.length > 0 && <TopNav links={links} />}
 
           <div className='bg-border/40 mx-2.5 h-6 w-px' />
