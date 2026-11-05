@@ -7531,6 +7531,16 @@
     "Workspace": "Рабочее пространство",
     "Workspace details are not available yet": "Сведения о рабочем пространстве пока недоступны",
     "Return to the workspace list to continue.": "Вернитесь к списку рабочих пространств, чтобы продолжить.",
-    "Back to workspaces": "К рабочим пространствам"
+    "Back to workspaces": "К рабочим пространствам",
+    "Toggle workbench navigation": "Показать или скрыть навигацию",
+    "Workbench navigation": "Навигация рабочей среды",
+    "Team workspaces": "Пространства команды",
+    "Personal workspace": "Личное пространство",
+    "Only you": "Только вы",
+    "Your personal workspace stays with your account when you join or leave a team.": "Личное пространство привязано к вашему аккаунту и сохраняется при смене команды.",
+    "Workspace saved.": "Пространство сохранено.",
+    "Create personal workspace": "Создать личное пространство",
+    "This workspace changed in another tab. Cancel editing to review the latest version.": "Пространство изменилось в другой вкладке. Отмените редактирование, чтобы увидеть последнюю версию.",
+    "Create a private workspace to get started on your own.": "Создайте личное пространство для работы."
   }
 }

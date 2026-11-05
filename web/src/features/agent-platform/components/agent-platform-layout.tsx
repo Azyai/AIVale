@@ -23,19 +23,27 @@ import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/empty-state'
 import { ErrorState } from '@/components/error-state'
-import { PublicLayout } from '@/components/layout'
+import { AppHeader } from '@/components/layout/components/app-header'
 import { LoadingState } from '@/components/loading-state'
 import { SkipToMain } from '@/components/skip-to-main'
 import { Button } from '@/components/ui/button'
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { getCookie } from '@/lib/cookies'
 
 import {
   isAgentPlatformAvailable,
   useAgentPlatformCapabilities,
 } from '../queries'
+import { AgentPlatformSidebar } from './agent-platform-sidebar'
 
 export function AgentPlatformLayout() {
   const { t } = useTranslation()
   const capabilities = useAgentPlatformCapabilities()
+  const available = isAgentPlatformAvailable(capabilities)
   let content: ReactNode
   if (capabilities.isError || capabilities.fetchStatus === 'paused') {
     content = (
@@ -53,7 +61,7 @@ export function AgentPlatformLayout() {
         <LoadingState message={t('Checking agent workbench availability...')} />
       </div>
     )
-  } else if (isAgentPlatformAvailable(capabilities)) {
+  } else if (available) {
     content = <Outlet />
   } else {
     content = (
@@ -77,20 +85,38 @@ export function AgentPlatformLayout() {
   }
 
   return (
-    <>
+    <SidebarProvider
+      defaultOpen={getCookie('sidebar_state') !== 'false'}
+      className='console-root flex-col'
+    >
       <SkipToMain />
-      <PublicLayout showMainContainer={false}>
-        <main
+      <AppHeader />
+      <div className='flex min-h-0 w-full flex-1'>
+        {available && <AgentPlatformSidebar />}
+        <SidebarInset
           id='content'
           tabIndex={-1}
-          className='mx-auto w-full max-w-6xl scroll-mt-24 px-5 pt-28 pb-16 sm:px-8 md:pt-40 md:pb-24'
+          className='@container/content min-w-0 scroll-mt-24'
         >
-          <h1 className='text-4xl font-semibold tracking-tight sm:text-5xl'>
-            {t('Agent workbench')}
-          </h1>
-          {content}
-        </main>
-      </PublicLayout>
-    </>
+          {available && (
+            <div className='border-border/60 flex items-center border-b px-3 py-1.5 md:hidden'>
+              <SidebarTrigger
+                className='size-10'
+                aria-label={t('Toggle workbench navigation')}
+              />
+              <span className='text-muted-foreground ml-2 text-sm font-medium'>
+                {t('Agent workbench')}
+              </span>
+            </div>
+          )}
+          <div className='mx-auto w-full max-w-6xl px-5 pt-7 pb-14 sm:px-8 md:pt-10'>
+            <h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>
+              {t('Agent workbench')}
+            </h1>
+            {content}
+          </div>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   )
 }

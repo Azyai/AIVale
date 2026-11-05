@@ -7531,6 +7531,16 @@
     "Workspace": "工作区",
     "Workspace details are not available yet": "工作区详情暂不可用",
     "Return to the workspace list to continue.": "请返回工作区列表继续。",
-    "Back to workspaces": "返回工作区列表"
+    "Back to workspaces": "返回工作区列表",
+    "Toggle workbench navigation": "展开或收起工作台导航",
+    "Workbench navigation": "工作台导航",
+    "Team workspaces": "团队工作区",
+    "Personal workspace": "个人工作区",
+    "Only you": "仅自己可见",
+    "Your personal workspace stays with your account when you join or leave a team.": "个人工作区随账号保留，加入或退出团队都不会影响它。",
+    "Workspace saved.": "工作区已保存。",
+    "Create personal workspace": "创建个人工作区",
+    "This workspace changed in another tab. Cancel editing to review the latest version.": "工作区已在另一标签页更新。请取消编辑并查看最新版本。",
+    "Create a private workspace to get started on your own.": "创建一个仅自己可见的工作区。"
   }
 }

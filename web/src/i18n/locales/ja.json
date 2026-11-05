@@ -7531,6 +7531,16 @@
     "Workspace": "ワークスペース",
     "Workspace details are not available yet": "ワークスペースの詳細はまだ利用できません",
     "Return to the workspace list to continue.": "ワークスペース一覧に戻って続行してください。",
-    "Back to workspaces": "ワークスペース一覧に戻る"
+    "Back to workspaces": "ワークスペース一覧に戻る",
+    "Toggle workbench navigation": "ワークベンチのナビゲーションを切り替え",
+    "Workbench navigation": "ワークベンチのナビゲーション",
+    "Team workspaces": "チームワークスペース",
+    "Personal workspace": "個人ワークスペース",
+    "Only you": "自分のみ",
+    "Your personal workspace stays with your account when you join or leave a team.": "チームに参加したり離れたりしても、個人ワークスペースはアカウントに残ります。",
+    "Workspace saved.": "ワークスペースを保存しました。",
+    "Create personal workspace": "個人ワークスペースを作成",
+    "This workspace changed in another tab. Cancel editing to review the latest version.": "別のタブでワークスペースが更新されました。編集をキャンセルして最新版を確認してください。",
+    "Create a private workspace to get started on your own.": "自分だけが使えるワークスペースを作成します。"
   }
 }

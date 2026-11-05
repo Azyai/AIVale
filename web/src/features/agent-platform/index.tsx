@@ -17,35 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Link } from '@tanstack/react-router'
-import { Bot, LibraryBig, Play, Plug, type LucideIcon } from 'lucide-react'
+import { Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 
 import { WorkspaceCreateAction } from './components/workspace-create-action'
 import { WorkspaceList } from './components/workspace-list'
 import type { WorkspaceListControls } from './components/workspace-list-filters'
-
-function WorkbenchTool(props: {
-  icon: LucideIcon
-  name: string
-  description: string
-}) {
-  return (
-    <li className='flex items-start gap-4 py-4'>
-      <span className='bg-muted text-foreground grid size-9 shrink-0 place-items-center rounded-lg'>
-        <props.icon aria-hidden='true' className='size-4' />
-      </span>
-      <div className='min-w-0'>
-        <h3 className='text-sm font-semibold'>{props.name}</h3>
-        <p className='text-muted-foreground mt-1 text-sm/relaxed'>
-          {props.description}
-        </p>
-      </div>
-    </li>
-  )
-}
 
 export function AgentPlatformWorkspaces(
   props: WorkspaceListControls & {
@@ -73,36 +52,6 @@ export function AgentPlatformWorkspaces(
         {...props}
         action={<WorkspaceCreateAction onCreated={props.onWorkspaceCreated} />}
       />
-      <section
-        aria-labelledby='agent-tools-heading'
-        className='mt-10 min-w-0 border-t pt-6'
-      >
-        <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
-          <h2 id='agent-tools-heading' className='text-lg font-semibold'>
-            {t('Workbench tools')}
-          </h2>
-          <Badge variant='secondary'>{t('In development')}</Badge>
-        </div>
-        <ul className='divide-border mt-3 divide-y md:grid md:grid-cols-3 md:gap-8 md:divide-y-0'>
-          <WorkbenchTool
-            icon={Bot}
-            name={t('Agent builder')}
-            description={t(
-              'Configure models, instructions, and tools for an agent.'
-            )}
-          />
-          <WorkbenchTool
-            icon={LibraryBig}
-            name={t('Skill library')}
-            description={t('Reuse and version skills across agents.')}
-          />
-          <WorkbenchTool
-            icon={Plug}
-            name={t('MCP connections')}
-            description={t('Connect agents to tools and data sources.')}
-          />
-        </ul>
-      </section>
     </>
   )
 }

@@ -7531,6 +7531,16 @@
     "Workspace": "Không gian làm việc",
     "Workspace details are not available yet": "Chi tiết không gian làm việc chưa khả dụng",
     "Return to the workspace list to continue.": "Quay lại danh sách không gian làm việc để tiếp tục.",
-    "Back to workspaces": "Về danh sách không gian làm việc"
+    "Back to workspaces": "Về danh sách không gian làm việc",
+    "Toggle workbench navigation": "Bật hoặc tắt điều hướng",
+    "Workbench navigation": "Điều hướng bàn làm việc",
+    "Team workspaces": "Không gian làm việc nhóm",
+    "Personal workspace": "Không gian làm việc cá nhân",
+    "Only you": "Chỉ bạn",
+    "Your personal workspace stays with your account when you join or leave a team.": "Không gian cá nhân gắn với tài khoản của bạn khi tham gia hoặc rời nhóm.",
+    "Workspace saved.": "Đã lưu không gian làm việc.",
+    "Create personal workspace": "Tạo không gian cá nhân",
+    "This workspace changed in another tab. Cancel editing to review the latest version.": "Không gian đã thay đổi ở thẻ khác. Hủy chỉnh sửa để xem phiên bản mới nhất.",
+    "Create a private workspace to get started on your own.": "Tạo một không gian riêng tư để bắt đầu."
   }
 }

@@ -32,6 +32,7 @@ import { Route as AuthenticatedSystemSettingsRouteRouteImport } from './routes/_
 import { Route as AboutIndexRouteImport } from './routes/about/index'
 import { Route as AgentDemoIndexRouteImport } from './routes/agent-demo/index'
 import { Route as AgentPlatformIndexRouteImport } from './routes/agent-platform/index'
+import { Route as AgentPlatformPersonalRouteImport } from './routes/agent-platform/personal'
 import { Route as AgentPlatformWorkspacesRouteImport } from './routes/agent-platform/workspaces'
 import { Route as ComputeCenterIndexRouteImport } from './routes/compute-center/index'
 import { Route as DatasetCenterIndexRouteImport } from './routes/dataset-center/index'
@@ -64,6 +65,7 @@ import { Route as AuthenticatedUsageLogsSectionRouteImport } from './routes/_aut
 import { Route as AuthenticatedUsageLogsAuditRouteImport } from './routes/_authenticated/usage-logs/audit'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenticated/wallet/index'
+import { Route as AgentPlatformToolsToolRouteImport } from './routes/agent-platform/tools/$tool'
 import { Route as AgentPlatformWWorkspace_idRouteImport } from './routes/agent-platform/w/$workspace_id'
 import { Route as PricingModelIdIndexRouteImport } from './routes/pricing/$modelId/index'
 import { Route as AuthenticatedSystemSettingsAuthIndexRouteImport } from './routes/_authenticated/system-settings/auth/index'
@@ -195,6 +197,11 @@ const AgentDemoIndexRoute = AgentDemoIndexRouteImport.update({
 const AgentPlatformIndexRoute = AgentPlatformIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AgentPlatformRouteRoute,
+} as any)
+const AgentPlatformPersonalRoute = AgentPlatformPersonalRouteImport.update({
+  id: '/personal',
+  path: '/personal',
   getParentRoute: () => AgentPlatformRouteRoute,
 } as any)
 const AgentPlatformWorkspacesRoute = AgentPlatformWorkspacesRouteImport.update({
@@ -375,6 +382,11 @@ const AuthenticatedWalletIndexRoute =
     path: '/wallet/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AgentPlatformToolsToolRoute = AgentPlatformToolsToolRouteImport.update({
+  id: '/tools/$tool',
+  path: '/tools/$tool',
+  getParentRoute: () => AgentPlatformRouteRoute,
+} as any)
 const AgentPlatformWWorkspace_idRoute =
   AgentPlatformWWorkspace_idRouteImport.update({
     id: '/w/$workspace_id',
@@ -502,6 +514,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat2link': typeof AuthenticatedChat2linkRoute
+  '/agent-platform/personal': typeof AgentPlatformPersonalRoute
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about/': typeof AboutIndexRoute
@@ -520,6 +533,7 @@ export interface FileRoutesByFullPath {
   '/models/$section': typeof AuthenticatedModelsSectionRoute
   '/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/usage-logs/audit': typeof AuthenticatedUsageLogsAuditRoute
+  '/agent-platform/tools/$tool': typeof AgentPlatformToolsToolRoute
   '/agent-platform/w/$workspace_id': typeof AgentPlatformWWorkspace_idRoute
   '/channels/': typeof AuthenticatedChannelsIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -573,6 +587,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat2link': typeof AuthenticatedChat2linkRoute
+  '/agent-platform/personal': typeof AgentPlatformPersonalRoute
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about': typeof AboutIndexRoute
@@ -591,6 +606,7 @@ export interface FileRoutesByTo {
   '/models/$section': typeof AuthenticatedModelsSectionRoute
   '/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/usage-logs/audit': typeof AuthenticatedUsageLogsAuditRoute
+  '/agent-platform/tools/$tool': typeof AgentPlatformToolsToolRoute
   '/agent-platform/w/$workspace_id': typeof AgentPlatformWWorkspace_idRoute
   '/channels': typeof AuthenticatedChannelsIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -649,6 +665,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/chat2link': typeof AuthenticatedChat2linkRoute
+  '/agent-platform/personal': typeof AgentPlatformPersonalRoute
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about/': typeof AboutIndexRoute
@@ -667,6 +684,7 @@ export interface FileRoutesById {
   '/_authenticated/models/$section': typeof AuthenticatedModelsSectionRoute
   '/_authenticated/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/_authenticated/usage-logs/audit': typeof AuthenticatedUsageLogsAuditRoute
+  '/agent-platform/tools/$tool': typeof AgentPlatformToolsToolRoute
   '/agent-platform/w/$workspace_id': typeof AgentPlatformWWorkspace_idRoute
   '/_authenticated/channels/': typeof AuthenticatedChannelsIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -724,6 +742,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/chat2link'
+    | '/agent-platform/personal'
     | '/agent-platform/workspaces'
     | '/oauth/$provider'
     | '/about/'
@@ -742,6 +761,7 @@ export interface FileRouteTypes {
     | '/models/$section'
     | '/usage-logs/$section'
     | '/usage-logs/audit'
+    | '/agent-platform/tools/$tool'
     | '/agent-platform/w/$workspace_id'
     | '/channels/'
     | '/dashboard/'
@@ -795,6 +815,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/chat2link'
+    | '/agent-platform/personal'
     | '/agent-platform/workspaces'
     | '/oauth/$provider'
     | '/about'
@@ -813,6 +834,7 @@ export interface FileRouteTypes {
     | '/models/$section'
     | '/usage-logs/$section'
     | '/usage-logs/audit'
+    | '/agent-platform/tools/$tool'
     | '/agent-platform/w/$workspace_id'
     | '/channels'
     | '/dashboard'
@@ -870,6 +892,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/chat2link'
+    | '/agent-platform/personal'
     | '/agent-platform/workspaces'
     | '/oauth/$provider'
     | '/about/'
@@ -888,6 +911,7 @@ export interface FileRouteTypes {
     | '/_authenticated/models/$section'
     | '/_authenticated/usage-logs/$section'
     | '/_authenticated/usage-logs/audit'
+    | '/agent-platform/tools/$tool'
     | '/agent-platform/w/$workspace_id'
     | '/_authenticated/channels/'
     | '/_authenticated/dashboard/'
@@ -1110,6 +1134,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/agent-platform/'
       preLoaderRoute: typeof AgentPlatformIndexRouteImport
+      parentRoute: typeof AgentPlatformRouteRoute
+    }
+    '/agent-platform/personal': {
+      id: '/agent-platform/personal'
+      path: '/personal'
+      fullPath: '/agent-platform/personal'
+      preLoaderRoute: typeof AgentPlatformPersonalRouteImport
       parentRoute: typeof AgentPlatformRouteRoute
     }
     '/agent-platform/workspaces': {
@@ -1335,6 +1366,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/wallet/'
       preLoaderRoute: typeof AuthenticatedWalletIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/agent-platform/tools/$tool': {
+      id: '/agent-platform/tools/$tool'
+      path: '/tools/$tool'
+      fullPath: '/agent-platform/tools/$tool'
+      preLoaderRoute: typeof AgentPlatformToolsToolRouteImport
+      parentRoute: typeof AgentPlatformRouteRoute
     }
     '/agent-platform/w/$workspace_id': {
       id: '/agent-platform/w/$workspace_id'
@@ -1614,14 +1652,18 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface AgentPlatformRouteRouteChildren {
+  AgentPlatformPersonalRoute: typeof AgentPlatformPersonalRoute
   AgentPlatformWorkspacesRoute: typeof AgentPlatformWorkspacesRoute
   AgentPlatformIndexRoute: typeof AgentPlatformIndexRoute
+  AgentPlatformToolsToolRoute: typeof AgentPlatformToolsToolRoute
   AgentPlatformWWorkspace_idRoute: typeof AgentPlatformWWorkspace_idRoute
 }
 
 const AgentPlatformRouteRouteChildren: AgentPlatformRouteRouteChildren = {
+  AgentPlatformPersonalRoute: AgentPlatformPersonalRoute,
   AgentPlatformWorkspacesRoute: AgentPlatformWorkspacesRoute,
   AgentPlatformIndexRoute: AgentPlatformIndexRoute,
+  AgentPlatformToolsToolRoute: AgentPlatformToolsToolRoute,
   AgentPlatformWWorkspace_idRoute: AgentPlatformWWorkspace_idRoute,
 }
 

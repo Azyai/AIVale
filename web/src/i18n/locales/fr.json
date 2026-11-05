@@ -7531,6 +7531,16 @@
     "Workspace": "Espace de travail",
     "Workspace details are not available yet": "Les détails de l’espace de travail ne sont pas encore disponibles",
     "Return to the workspace list to continue.": "Revenez à la liste des espaces de travail pour continuer.",
-    "Back to workspaces": "Retour aux espaces de travail"
+    "Back to workspaces": "Retour aux espaces de travail",
+    "Toggle workbench navigation": "Afficher ou masquer la navigation",
+    "Workbench navigation": "Navigation de l’atelier",
+    "Team workspaces": "Espaces d’équipe",
+    "Personal workspace": "Espace personnel",
+    "Only you": "Vous uniquement",
+    "Your personal workspace stays with your account when you join or leave a team.": "Votre espace personnel reste lié à votre compte lorsque vous rejoignez ou quittez une équipe.",
+    "Workspace saved.": "Espace de travail enregistré.",
+    "Create personal workspace": "Créer un espace personnel",
+    "This workspace changed in another tab. Cancel editing to review the latest version.": "Cet espace a changé dans un autre onglet. Annulez la modification pour voir la dernière version.",
+    "Create a private workspace to get started on your own.": "Créez un espace privé pour commencer."
   }
 }

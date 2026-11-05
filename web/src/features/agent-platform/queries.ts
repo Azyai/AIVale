@@ -27,6 +27,10 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { getAgentPlatformCapabilities } from './api'
 import type { WorkspaceListSearch } from './lib/workspace-list-search'
+import {
+  getPersonalWorkspace,
+  PersonalWorkspaceReadError,
+} from './personal-workspace-api'
 import type { AgentPlatformCapabilities } from './types'
 import { getWorkspaceCreateEligibility } from './workspace-create-api'
 import {
@@ -95,6 +99,40 @@ const privateWorkspaceQueryOptions = {
   refetchOnReconnect: 'always',
   meta: { errorToast: false, errorRedirect: false },
 } as const
+
+export function usePersonalWorkspace() {
+  const scope = useWorkspaceSession()
+  const queryKey = [
+    'agent-platform',
+    'personal-workspace',
+    scope.userId,
+    scope.sessionId,
+  ] as const
+  const query = useQuery({
+    ...privateWorkspaceQueryOptions,
+    queryKey,
+    enabled: scope.signedIn,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    queryFn: async ({ signal }) => {
+      assertCurrentWorkspaceSession(scope, signal)
+      try {
+        const workspace = await getPersonalWorkspace(signal)
+        assertCurrentWorkspaceSession(scope, signal)
+        return { kind: 'ready', workspace } as const
+      } catch (error) {
+        assertCurrentWorkspaceSession(scope, signal)
+        return {
+          kind:
+            error instanceof PersonalWorkspaceReadError && error.status === 401
+              ? 'auth-required'
+              : 'error',
+        } as const
+      }
+    },
+  })
+  return { scope, query, queryKey }
+}
 
 export const agentWorkspaceListQueryKey = [
   'agent-platform',

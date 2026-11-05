@@ -130,6 +130,15 @@ function WorkspaceListEmpty(
     case 'no_team':
       title = t('No team yet')
       description = t('Join a team before viewing its workspaces.')
+      action = (
+        <Button
+          variant='outline'
+          size='sm'
+          render={<Link to='/agent-platform/personal' />}
+        >
+          {t('Personal workspace')}
+        </Button>
+      )
       break
     case 'no_results':
       if (props.search.q !== '') {

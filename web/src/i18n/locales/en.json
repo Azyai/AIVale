@@ -7531,6 +7531,16 @@
     "Workspace": "Workspace",
     "Workspace details are not available yet": "Workspace details are not available yet",
     "Return to the workspace list to continue.": "Return to the workspace list to continue.",
-    "Back to workspaces": "Back to workspaces"
+    "Back to workspaces": "Back to workspaces",
+    "Toggle workbench navigation": "Toggle workbench navigation",
+    "Workbench navigation": "Workbench navigation",
+    "Team workspaces": "Team workspaces",
+    "Personal workspace": "Personal workspace",
+    "Only you": "Only you",
+    "Your personal workspace stays with your account when you join or leave a team.": "Your personal workspace stays with your account when you join or leave a team.",
+    "Workspace saved.": "Workspace saved.",
+    "Create personal workspace": "Create personal workspace",
+    "This workspace changed in another tab. Cancel editing to review the latest version.": "This workspace changed in another tab. Cancel editing to review the latest version.",
+    "Create a private workspace to get started on your own.": "Create a private workspace to get started on your own."
   }
 }
