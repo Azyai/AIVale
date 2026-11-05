@@ -71,7 +71,7 @@ def snapshot(repo: Path, base: str, checks: list[dict], config: dict) -> dict:
     }
 
 
-WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'workspace-write', 'workspace-members', 'workspace-grants', 'workspace-grant-governance')
+WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'workspace-write', 'workspace-members', 'workspace-grants', 'workspace-grant-governance', 'agent-definition')
 PROFILES = ('build', 'foundation', *WORKSPACE_PROFILES)
 
 
@@ -129,8 +129,10 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
             raise ValueError('Workspace members requires the live member management stage on every database engine.')
         if profile in WORKSPACE_PROFILES[5:] and any(check.get('grants') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace grants requires the live token grant stage on every database engine.')
-        if profile == 'workspace-grant-governance' and any(check.get('governance') is not True for check in selected if check['kind'] == 'database'):
+        if profile in WORKSPACE_PROFILES[6:] and any(check.get('governance') is not True for check in selected if check['kind'] == 'database'):
             raise ValueError('Workspace grant governance requires the live renewal stage on every database engine.')
+        if profile == 'agent-definition' and any(check.get('definitions') is not True for check in selected if check['kind'] == 'database'):
+            raise ValueError('Agent definition acceptance requires its live repository stage on every database engine.')
     return selected
 
 
@@ -352,7 +354,45 @@ def validate_workspace_create_evidence(evidence: dict) -> None:
             raise ValueError('Workspace create eligibility and Team precondition need executed HTTP evidence in both scenarios.')
 
 
-def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False, personal_workspace: bool = False) -> dict:
+def validate_workspace_regression_evidence(evidence: dict) -> None:
+    fields = ('four_roles_per_tenant', 'tenant_isolation', 'key_control', 'grant_revocation',
+              'renewed_generation_fence', 'stale_session_rejected', 'url_substitution_rejected')
+    legacy_fields = ('verified', 'local_fake_upstream', 'legacy_token_crud', 'legacy_token_cross_tenant',
+                     'team_wallet_visibility', 'team_wallet_funding', 'personal_wallet_funding',
+                     'insufficient_team_no_personal_fallback', 'legacy_models_without_grant',
+                     'agent_revocation_keeps_model_access', 'model_key_disable_delete')
+    for scenario in evidence['scenarios']:
+        requests = scenario.get('p01_t09_http_requests')
+        if scenario.get('p01_t09_verified') is not True or type(requests) is not int or requests < 1:
+            raise ValueError('P01-T09 requires executed dual-tenant and legacy compatibility HTTP evidence in both scenarios.')
+        detail = scenario.get('p01_t09', {})
+        legacy = detail.get('legacy', {})
+        legacy_requests, upstream_requests = legacy.get('http_requests'), legacy.get('upstream_requests')
+        if (detail.get('http_requests') != requests or any(detail.get(field) is not True for field in fields)
+                or any(legacy.get(field) is not True for field in legacy_fields)
+                or type(legacy_requests) is not int or not 0 < legacy_requests <= requests
+                or type(upstream_requests) is not int or upstream_requests < 1):
+            raise ValueError('P01-T09 lacks complete tenant, old-session, model relay or wallet settlement evidence.')
+
+
+def agent_definition_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentDefinitionDatabaseMatrix', 'AGENT_DEFINITION_DATABASE_RESULT ')
+    evidence = result['evidence']
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Agent definition evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Agent definition verification must execute on fresh and upgraded databases.')
+    fields = ('isolated_schema', 'indexes_verified', 'prior_rows_preserved', 'scope_isolation', 'parent_consistency',
+              'version_unique', 'published_immutable', 'revision_cas', 'transaction_rollback', 'restart_preservation')
+    for scenario in scenarios:
+        operations, starts = scenario.get('repository_operations'), scenario.get('startup_passes')
+        if type(operations) is not int or operations < 1 or type(starts) is not int or starts != 3 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('Agent definitions lack executed repository operations or required persistence evidence.')
+    return result
+
+
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False, personal_workspace: bool = False, workspace_regression: bool = False, definitions: bool = False) -> dict:
     if create_eligibility and not write:
         raise ValueError('Workspace create eligibility requires the lifecycle stage.')
     if personal_workspace and not members:
@@ -426,6 +466,19 @@ def database_result(path: Path, engine: str, access: bool = False, read: bool = 
             raise ValueError('Workspace governance receipt differs from the actual Go events and summary.')
         if actual_governance['tests']['top_level_passed'] != 1 or actual_governance['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Workspace governance must use the same real database version and exact top-level test.')
+        if workspace_regression:
+            validate_workspace_regression_evidence(actual_governance['evidence'])
+    if workspace_regression and not governance:
+        raise ValueError('Workspace regression evidence requires the governance stage.')
+    if definitions:
+        exit_code = report.get('definitions_go_exit_code')
+        if not governance or report.get('definitions_requested') is not True or type(exit_code) is not int or exit_code != 0:
+            raise ValueError('The Agent definition stage and its prerequisites were not executed successfully.')
+        actual_definitions = agent_definition_log_result(path.parent / 'definitions-go-test.stdout.log', engine, report['run_id'])
+        if report.get('definitions_tests') != actual_definitions['tests'] or report.get('definitions_evidence') != actual_definitions['evidence']:
+            raise ValueError('Agent definition receipt differs from the actual Go events and summary.')
+        if actual_definitions['tests']['top_level_passed'] != 1 or actual_definitions['evidence']['version'] != actual['evidence']['version']:
+            raise ValueError('Agent definitions must use the same real database version and exact top-level test.')
     return report
 
 
@@ -535,10 +588,11 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
         elif check['kind'] == 'vitest':
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
-            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance')}
+            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance', 'definitions')}
             create_eligibility = check.get('create_eligibility') is True
             personal_workspace = check.get('personal_workspace') is True
-            database = database_result(database_output / 'result.json', check['engine'], **stages, create_eligibility=create_eligibility, personal_workspace=personal_workspace)
+            workspace_regression = check.get('workspace_regression') is True
+            database = database_result(database_output / 'result.json', check['engine'], **stages, create_eligibility=create_eligibility, personal_workspace=personal_workspace, workspace_regression=workspace_regression)
             result['tests'] = dict(database['tests'])
             result['database'] = {
                 'engine': check['engine'], 'version': database['evidence']['version'],
@@ -552,6 +606,8 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
                 result['database']['create_eligibility_verified'] = True
             if personal_workspace:
                 result['database']['personal_workspace_verified'] = True
+            if workspace_regression:
+                result['database']['workspace_regression_verified'] = True
         result['status'] = 'passed'
         return result
     except KeyboardInterrupt:
@@ -633,6 +689,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
             selected = [dict(check, create_eligibility=True) if check['kind'] == 'database' else check for check in selected]
         if profile == 'workspace-members' and task == 'P01-T08':
             selected = [dict(check, personal_workspace=True) if check['kind'] == 'database' else check for check in selected]
+        if profile == 'workspace-grant-governance' and task == 'P01-T09':
+            selected = [dict(check, workspace_regression=True, personal_workspace=True) if check['kind'] == 'database' else check for check in selected]
         report['checks'] = [{'id': check['id'], 'status': 'not_run', 'reason': 'Awaiting preceding checks.'} for check in selected]
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
