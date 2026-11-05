@@ -41,6 +41,7 @@ import {
   WorkspaceStatus,
 } from './workspace-display'
 import { WorkspaceManagementActions } from './workspace-management-actions'
+import { WorkspaceMembersSection } from './workspace-members-section'
 import { WorkspaceSwitcher } from './workspace-switcher'
 
 export function WorkspaceDetail(props: {
@@ -215,6 +216,28 @@ export function WorkspaceDetail(props: {
         </div>
       </div>
       {content}
+      {session &&
+        validId &&
+        !held &&
+        latest?.effective_permissions.includes('member:manage') && (
+          <WorkspaceMembersSection
+            key={JSON.stringify([
+              session.userId,
+              session.sessionId,
+              props.workspaceId,
+            ])}
+            workspaceId={props.workspaceId}
+            session={session}
+            verified={result?.kind === 'ready'}
+            onSelfChange={() => {
+              client.setQueryData(queryKey, { kind: 'unavailable' })
+              void client.invalidateQueries({
+                queryKey: agentWorkspaceListQueryKey,
+              })
+              void query.refetch()
+            }}
+          />
+        )}
     </section>
   )
 }

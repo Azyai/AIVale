@@ -20,6 +20,7 @@ import {
   CanceledError,
   isAxiosError,
   isCancel,
+  type AxiosRequestConfig,
   type AxiosResponse,
 } from 'axios'
 import { z } from 'zod'
@@ -171,14 +172,15 @@ export function workspaceWriteReceiptExpiry(
 }
 
 type WorkspaceWriteRequest = {
-  method: 'patch' | 'post'
   path: string
-  body: Record<string, unknown>
   session: WorkspaceWriteSession
   headers?: Record<string, string>
   signal?: AbortSignal
   makeError: WorkspaceWriteErrorFactory
-}
+} & (
+  | { method: 'patch' | 'post' | 'put'; body: Record<string, unknown> }
+  | { method: 'delete'; body?: never }
+)
 
 /** Fence each attempt to its original principal; refresh before dispatch and never replay a write. */
 export async function sendWorkspaceWrite(
@@ -196,8 +198,11 @@ export async function sendWorkspaceWrite(
 
   let response: AxiosResponse<unknown>
   try {
-    response = await api[method]<unknown>(path, body, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
+    const config: AxiosRequestConfig = {
+      headers: {
+        ...(method !== 'delete' ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers,
+      },
       signal,
       skipAuthRefresh: true,
       skipErrorHandler: true,
@@ -205,10 +210,14 @@ export async function sendWorkspaceWrite(
         (data, headers) => {
           const bearer = requireCurrentBearer(session, signal, makeError)
           headers.set('Authorization', `Bearer ${bearer}`)
-          return JSON.stringify(data)
+          return method === 'delete' ? undefined : JSON.stringify(data)
         },
       ],
-    })
+    }
+    response =
+      method === 'delete'
+        ? await api.delete<unknown>(path, config)
+        : await api[method]<unknown>(path, body, config)
   } catch (error) {
     requireCurrentBearer(session, signal, makeError)
     if (isCancel(error)) throw new CanceledError()
