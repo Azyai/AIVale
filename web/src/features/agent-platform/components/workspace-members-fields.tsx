@@ -34,7 +34,13 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import { workspaceIdSchema } from '../lib/workspace-read-transport'
 import {
@@ -52,34 +58,39 @@ function WorkspaceMemberRoleField(props: {
 }) {
   const { t } = useTranslation()
   const id = useId()
+  const roles = workspaceMemberRoleSchema.options
+    .filter(
+      (role) => role !== 'admin' || props.owner || props.value === 'admin'
+    )
+    .map((value) => ({ value, label: <WorkspaceRole role={value} /> }))
   return (
     <Field>
       <FieldLabel htmlFor={id}>{t('Role')}</FieldLabel>
-      <NativeSelect
-        id={id}
+      <Select
+        items={roles}
         value={props.value}
         disabled={props.disabled}
-        onChange={(event) => {
-          const parsed = workspaceMemberRoleSchema.safeParse(
-            event.currentTarget.value
-          )
-          if (
-            parsed.success &&
-            (parsed.data !== 'admin' || props.owner || props.value === 'admin')
-          ) {
-            props.onChange(parsed.data)
+        onValueChange={(value) => {
+          if (value !== null && roles.some((role) => role.value === value)) {
+            props.onChange(value)
           }
         }}
       >
-        {workspaceMemberRoleSchema.options.map(
-          (role) =>
-            (role !== 'admin' || props.owner || props.value === 'admin') && (
-              <NativeSelectOption value={role} key={role}>
-                <WorkspaceRole role={role} />
-              </NativeSelectOption>
-            )
-        )}
-      </NativeSelect>
+        <SelectTrigger id={id} className='max-w-full min-w-44'>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align='start' alignItemWithTrigger={false}>
+          {roles.map(({ value, label }) => (
+            <SelectItem
+              key={value}
+              value={value}
+              className='[&_[data-slot=select-item-text]]:whitespace-normal'
+            >
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </Field>
   )
 }

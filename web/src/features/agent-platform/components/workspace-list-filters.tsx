@@ -22,7 +22,13 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import {
   workspaceListSearchSchema,
@@ -42,16 +48,22 @@ export function WorkspaceListFilters(props: WorkspaceListControls) {
   const sortId = useId()
   const sizeId = useId()
   const sortOptions = [
-    ['created_at:desc,id:desc', t('Newest first')],
-    ['created_at:asc,id:desc', t('Oldest first')],
-    ['created_at:desc,id:asc', t('Newest first, then lowest ID')],
-    ['created_at:asc,id:asc', t('Oldest first, then lowest ID')],
-    ['id:asc', t('Workspace ID ascending')],
-    ['id:desc', t('Workspace ID descending')],
-  ] as const
-  const pageSizes = [...new Set([...PAGE_SIZES, props.search.page_size])].sort(
-    (a, b) => a - b
-  )
+    { value: 'created_at:desc,id:desc', label: t('Newest first') },
+    { value: 'created_at:asc,id:desc', label: t('Oldest first') },
+    {
+      value: 'created_at:desc,id:asc',
+      label: t('Newest first, then lowest ID'),
+    },
+    {
+      value: 'created_at:asc,id:asc',
+      label: t('Oldest first, then lowest ID'),
+    },
+    { value: 'id:asc', label: t('Workspace ID ascending') },
+    { value: 'id:desc', label: t('Workspace ID descending') },
+  ]
+  const pageSizes = [...new Set([...PAGE_SIZES, props.search.page_size])]
+    .sort((a, b) => a - b)
+    .map((size) => ({ value: size, label: String(size) }))
 
   return (
     <div className='mb-4 flex flex-wrap items-start gap-3'>
@@ -59,46 +71,65 @@ export function WorkspaceListFilters(props: WorkspaceListControls) {
       <div className='flex flex-wrap items-end gap-3'>
         <div className='max-w-full min-w-0 space-y-1.5'>
           <Label htmlFor={sortId}>{t('Sort by')}</Label>
-          <NativeSelect
-            id={sortId}
-            className='max-w-full'
+          <Select
+            items={sortOptions}
             value={props.search.sort}
-            onChange={(event) =>
+            onValueChange={(sort) => {
+              if (!sort) return
               props.onSearchChange(
                 workspaceListSearchSchema.parse({
                   ...props.search,
-                  sort: event.target.value,
+                  sort,
                   page: 1,
                 })
               )
-            }
+            }}
           >
-            {sortOptions.map(([value, label]) => (
-              <NativeSelectOption key={value} value={value}>
-                {label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id={sortId} className='max-w-full min-w-36'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent
+              align='start'
+              alignItemWithTrigger={false}
+              className='min-w-52'
+            >
+              {sortOptions.map(({ value, label }) => (
+                <SelectItem
+                  key={value}
+                  value={value}
+                  className='[&_[data-slot=select-item-text]]:whitespace-normal'
+                >
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className='space-y-1.5'>
           <Label htmlFor={sizeId}>{t('Rows per page')}</Label>
-          <NativeSelect
-            id={sizeId}
+          <Select
+            items={pageSizes}
             value={props.search.page_size}
-            onChange={(event) =>
+            onValueChange={(size) => {
+              if (size === null) return
               props.onSearchChange({
                 ...props.search,
                 page: 1,
-                page_size: Number(event.target.value),
+                page_size: size,
               })
-            }
+            }}
           >
-            {pageSizes.map((size) => (
-              <NativeSelectOption key={size} value={size}>
-                {size}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id={sizeId} className='min-w-20'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align='start' alignItemWithTrigger={false}>
+              {pageSizes.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

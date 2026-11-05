@@ -27,7 +27,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import { DemoRun, runCompleteStep } from './demo-run'
 
@@ -40,6 +46,10 @@ export function AgentDemo() {
   const [scenario, setScenario] = useState<Scenario>('recovery')
   const [includeKnowledge, setIncludeKnowledge] = useState(true)
   const [step, setStep] = useState<number | null>(null)
+  const scenarios = [
+    { value: 'recovery', label: t('Account recovery') },
+    { value: 'refund', label: t('Subscription refund') },
+  ] as const
 
   const running = step !== null && step < runCompleteStep
   const example =
@@ -127,25 +137,27 @@ export function AgentDemo() {
               </h2>
               <div className='space-y-2'>
                 <Label htmlFor={selectId}>{t('Scenario')}</Label>
-                <NativeSelect
-                  className='w-full'
-                  id={selectId}
+                <Select
                   disabled={running}
+                  items={scenarios}
                   value={scenario}
-                  onChange={(event) => {
-                    setScenario(
-                      event.target.value === 'refund' ? 'refund' : 'recovery'
-                    )
+                  onValueChange={(value) => {
+                    if (value === null) return
+                    setScenario(value)
                     setStep(null)
                   }}
                 >
-                  <NativeSelectOption value='recovery'>
-                    {t('Account recovery')}
-                  </NativeSelectOption>
-                  <NativeSelectOption value='refund'>
-                    {t('Subscription refund')}
-                  </NativeSelectOption>
-                </NativeSelect>
+                  <SelectTrigger id={selectId} className='w-full'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent alignItemWithTrigger={false}>
+                    {scenarios.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className='border-border bg-muted/30 space-y-1.5 rounded-md border p-4'>
