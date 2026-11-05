@@ -18,25 +18,19 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { z } from 'zod'
 
-import { workspaceNameFilterSchema } from './workspace-list-search'
-
-const descriptionEncoder = new TextEncoder()
+import {
+  generateWorkspaceWriteKey,
+  workspaceWriteDescriptionSchema,
+  workspaceWriteNameSchema,
+} from './workspace-write-fields'
 
 export const workspaceCreateSlugSchema = z
   .string()
   .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/)
 
 const fields = {
-  name: workspaceNameFilterSchema.pipe(z.string().min(1)),
-  description: z
-    .string()
-    .refine(
-      (value) =>
-        value.length <= 4096 &&
-        !value.includes('\0') &&
-        !/[\uD800-\uDFFF]/u.test(value) &&
-        descriptionEncoder.encode(value).byteLength <= 4096
-    ),
+  name: workspaceWriteNameSchema,
+  description: workspaceWriteDescriptionSchema,
 }
 
 export const workspaceCreateInputSchema = z.strictObject({
@@ -83,9 +77,5 @@ export function newWorkspaceCreateIntent(
   ) {
     return previous
   }
-  const random = globalThis.crypto.getRandomValues(new Uint8Array(16))
-  const key = [...random]
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-  return { key: `ws-create-${key}`, scope, input: normalized }
+  return { key: generateWorkspaceWriteKey('create'), scope, input: normalized }
 }

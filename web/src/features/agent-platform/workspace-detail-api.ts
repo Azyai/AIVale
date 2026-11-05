@@ -27,7 +27,7 @@ import {
 } from './lib/workspace-read-transport'
 
 const descriptionEncoder = new TextEncoder()
-const workspaceDetailSchema = workspaceSummarySchema.extend({
+export const workspaceDetailSchema = workspaceSummarySchema.extend({
   description: z
     .string()
     .refine(
