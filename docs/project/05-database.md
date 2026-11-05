@@ -31,7 +31,7 @@
 | --- | --- |
 | 资源与授权 | `ag_workspaces`、`ag_workspace_members`、`ag_token_grants`；仅拥有新域的授权关系 |
 | 个人工作区元数据 | `ag_personal_workspaces`；每账号至多一条记录，以现有用户 ID 作为非自增主键，不包含 Team、授权或账务引用 |
-| 定义与发布 | `ag_agents`、`ag_agent_versions`、Skill/Workflow 定义、版本及绑定表；发布内容固定 |
+| 定义与发布 | P02-T01 已建 `ag_agents`、`ag_agent_versions` 和带 Team/Workspace 归属的仓储；Skill/Workflow 定义、版本及绑定表仍规划 |
 | 执行与可靠性 | `ag_runs`、`ag_run_steps`、`ag_run_events`、`ag_idempotency_keys`、`ag_outbox`、审批与检查点表 |
 | 费用关联 | `ag_gateway_calls`、`ag_usage_items`、`ag_budget_reservations`；关联网关结算，不另扣钱包 |
 | 外部能力与文件 | 凭据、MCP、Artifact、会话消息及调度表；字节与秘密按受控存储规则处理 |

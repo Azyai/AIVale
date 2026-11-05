@@ -359,7 +359,7 @@ def validate_workspace_regression_evidence(evidence: dict) -> None:
               'renewed_generation_fence', 'stale_session_rejected', 'url_substitution_rejected')
     legacy_fields = ('verified', 'local_fake_upstream', 'legacy_token_crud', 'legacy_token_cross_tenant',
                      'team_wallet_visibility', 'team_wallet_funding', 'personal_wallet_funding',
-                     'insufficient_team_no_personal_fallback', 'legacy_models_without_grant',
+                     'insufficient_team_no_personal_fallback', 'insufficient_personal_no_team_fallback', 'legacy_models_without_grant',
                      'agent_revocation_keeps_model_access', 'model_key_disable_delete')
     for scenario in evidence['scenarios']:
         requests = scenario.get('p01_t09_http_requests')

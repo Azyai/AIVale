@@ -47,7 +47,7 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 | `router/`、`middleware/` | 注册路径、接入鉴权与功能 gate；不实现领域事务 | Agent gate及工作区guard已接入；P01-T03两个只读GET及P01-T04三个写入口复用UserAuth并限定管理会话，默认总开关关闭 |
 | `controller/agent*.go` | 请求解析、调用 service、HTTP 状态和响应封装 | 当前有能力探测及工作区读写生命周期的严格解析和白名单DTO转换，其他按任务扩展 |
 | `dto/`、`types/agent/` | 边界 DTO、Agent 错误 wire 类型 | 已有；Agent 类型保持根模块叶子依赖 |
-| `model/agent*.go` | 持久化实体及带归属条件的数据库操作 | `AgentScope`仍仅值对象；P01-T01新增Workspace/成员ORM和带Team范围的基础仓储，不代表动作授权 |
+| `model/agent*.go` | 持久化实体及带归属条件的数据库操作 | 已有工作区、成员、Key 授权及个人工作区存储；P02-T01 增加 Agent 定义和不可变版本仓储。仓储归属约束与 `AgentScope` 均不替代服务端身份和动作授权 |
 | `service/agent/` | 草稿、验证、发布与授权编排 | 当前有RequestContext/Probe、工作区层AuthorizeWorkspace、读服务及事务内授权的创建/编辑/归档；草稿和发布仍规划 |
 | `service/agentexecution/` | 单步骤适配及未来Run、状态机、租约与恢复 | 当前仅P00-T08的单步接口/Eino适配；持久化执行及恢复仍规划 |
 | `service/skill/`、`service/mcp/` | 技能包与工具连接适配 | 规划，不把供应商任务插件当客户 Skills |
