@@ -30,6 +30,7 @@
 | 职责 | 规划表及边界 |
 | --- | --- |
 | 资源与授权 | `ag_workspaces`、`ag_workspace_members`、`ag_token_grants`；仅拥有新域的授权关系 |
+| 个人工作区元数据 | `ag_personal_workspaces`；每账号至多一条记录，以现有用户 ID 作为非自增主键，不包含 Team、授权或账务引用 |
 | 定义与发布 | `ag_agents`、`ag_agent_versions`、Skill/Workflow 定义、版本及绑定表；发布内容固定 |
 | 执行与可靠性 | `ag_runs`、`ag_run_steps`、`ag_run_events`、`ag_idempotency_keys`、`ag_outbox`、审批与检查点表 |
 | 费用关联 | `ag_gateway_calls`、`ag_usage_items`、`ag_budget_reservations`；关联网关结算，不另扣钱包 |
@@ -40,7 +41,7 @@
 | 项目 | 必须遵守的规则 |
 | --- | --- |
 | 表与索引 | Agent 表显式指定 `ag_*` 表名；索引名最长 55 字符，不依赖 GORM 默认复数猜测名称 |
-| 主键与引用 | 新表使用有符号 int64，主键由 GORM 机制生成；引用旧表按其实际类型校验边界，不能直接窄化转换 |
+| 主键与引用 | 新表使用有符号 int64，主键通常由 GORM 机制生成；每账号唯一的个人工作区复用所有者 ID。引用旧表按其实际类型校验边界，不能直接窄化转换 |
 | 对外 ID | 规范正十进制字符串，范围 `1..9223372036854775807`；拒绝 0、符号、前导零、空白、指数、数字 JSON 和溢出 |
 | 额度 | 存储为有符号 int64，沿用平台 quota 单位；对外为非负十进制字符串，禁止用浮点表示额度或做无边界转换 |
 | 时间 | 新域统一 UTC Unix 毫秒 int64；旧表 Unix 秒保持语义，通过适配层显式转换 |

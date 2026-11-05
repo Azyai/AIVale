@@ -2046,7 +2046,17 @@
       "P01-T05",
       "P01-T08"
     ],
-    "task_impact_paths": { "P01-T08": [] },
+    "task_impact_paths": {
+      "P01-T08": [
+        "controller/agent_personal_workspace.go",
+        "middleware/access_token_routes.go",
+        "model/agent_personal_workspace.go",
+        "model/agent_workspace_write.go",
+        "model/main.go",
+        "router/agent-router.go",
+        "service/agent/personal_workspace.go"
+      ]
+    },
     "allowed_impact_paths": [
       "model/agent_workspace_members.go",
       "model/agent_outbox.go",

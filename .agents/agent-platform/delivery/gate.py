@@ -352,9 +352,11 @@ def validate_workspace_create_evidence(evidence: dict) -> None:
             raise ValueError('Workspace create eligibility and Team precondition need executed HTTP evidence in both scenarios.')
 
 
-def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False) -> dict:
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False, personal_workspace: bool = False) -> dict:
     if create_eligibility and not write:
         raise ValueError('Workspace create eligibility requires the lifecycle stage.')
+    if personal_workspace and not members:
+        raise ValueError('Personal workspace verification requires the members stage.')
     report = json.loads(path.read_text(encoding='utf-8-sig'))
     if report.get('schema_version') != 1 or report.get('status') != 'passed' or report.get('engine') != engine:
         raise ValueError('The live database runner did not complete successfully.')
@@ -401,6 +403,11 @@ def database_result(path: Path, engine: str, access: bool = False, read: bool = 
             raise ValueError('Workspace members receipt differs from the actual Go events and summary.')
         if actual_members['tests']['top_level_passed'] != 1 or actual_members['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Workspace members must use the same real database version and exact top-level test.')
+        if personal_workspace:
+            for scenario in actual_members['evidence']['scenarios']:
+                requests = scenario.get('personal_workspace_http_requests')
+                if scenario.get('personal_workspace_verified') is not True or type(requests) is not int or requests < 1:
+                    raise ValueError('Personal workspace needs executed HTTP evidence in both database scenarios.')
     if grants:
         exit_code = report.get('grants_go_exit_code')
         if not access or not read or not write or not members or report.get('grants_requested') is not True or type(exit_code) is not int or exit_code != 0:
@@ -530,7 +537,8 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
         elif check['kind'] == 'database':
             stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance')}
             create_eligibility = check.get('create_eligibility') is True
-            database = database_result(database_output / 'result.json', check['engine'], **stages, create_eligibility=create_eligibility)
+            personal_workspace = check.get('personal_workspace') is True
+            database = database_result(database_output / 'result.json', check['engine'], **stages, create_eligibility=create_eligibility, personal_workspace=personal_workspace)
             result['tests'] = dict(database['tests'])
             result['database'] = {
                 'engine': check['engine'], 'version': database['evidence']['version'],
@@ -542,6 +550,8 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
                     result['database'][stage + '_verified'] = True
             if create_eligibility:
                 result['database']['create_eligibility_verified'] = True
+            if personal_workspace:
+                result['database']['personal_workspace_verified'] = True
         result['status'] = 'passed'
         return result
     except KeyboardInterrupt:
@@ -621,6 +631,8 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
         selected = validate_checks(repo, config, profile)
         if profile == 'workspace-write' and task == 'P01-T08':
             selected = [dict(check, create_eligibility=True) if check['kind'] == 'database' else check for check in selected]
+        if profile == 'workspace-members' and task == 'P01-T08':
+            selected = [dict(check, personal_workspace=True) if check['kind'] == 'database' else check for check in selected]
         report['checks'] = [{'id': check['id'], 'status': 'not_run', 'reason': 'Awaiting preceding checks.'} for check in selected]
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
