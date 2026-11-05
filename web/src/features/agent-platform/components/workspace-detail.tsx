@@ -16,9 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link, useLocation } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, FolderLock } from 'lucide-react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/empty-state'
@@ -28,13 +29,18 @@ import { buttonVariants } from '@/components/ui/button'
 
 import { useWorkspaceDateFormat } from '../hooks/use-workspace-date-format'
 import type { WorkspaceListSearch } from '../lib/workspace-list-search'
-import { useAgentWorkspace } from '../queries'
+import {
+  agentWorkspaceListQueryKey,
+  useAgentWorkspace,
+  type WorkspaceReadHold,
+} from '../queries'
 import type { AgentWorkspaceDetail } from '../workspace-detail-api'
 import {
   WorkspaceDate,
   WorkspaceRole,
   WorkspaceStatus,
 } from './workspace-display'
+import { WorkspaceManagementActions } from './workspace-management-actions'
 import { WorkspaceSwitcher } from './workspace-switcher'
 
 export function WorkspaceDetail(props: {
@@ -43,7 +49,15 @@ export function WorkspaceDetail(props: {
 }) {
   const { t } = useTranslation()
   const href = useLocation({ select: (location) => location.href })
-  const { signedIn, validId, query } = useAgentWorkspace(props.workspaceId)
+  const navigate = useNavigate()
+  const client = useQueryClient()
+  const [archiveHold, setArchiveHold] = useState<WorkspaceReadHold | null>(null)
+  const { signedIn, validId, scope, query, queryKey, held } = useAgentWorkspace(
+    props.workspaceId,
+    archiveHold
+  )
+  // A new route or session must not inherit a suspended read without its form.
+  if (archiveHold && !held) setArchiveHold(null)
   const region = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -58,6 +72,7 @@ export function WorkspaceDetail(props: {
   const showSwitcher =
     signedIn &&
     validId &&
+    !held &&
     query.data?.kind === 'ready' &&
     (query.fetchStatus === 'fetching' || result?.kind === 'ready')
   let content: ReactNode
@@ -103,6 +118,8 @@ export function WorkspaceDetail(props: {
         />
       </div>
     )
+  } else if (held) {
+    content = null
   } else if (result?.kind === 'ready') {
     content = <WorkspaceOverview workspace={result.workspace} />
   } else {
@@ -112,6 +129,16 @@ export function WorkspaceDetail(props: {
       </div>
     )
   }
+
+  const latest = query.data?.kind === 'ready' ? query.data.workspace : undefined
+  const mayManage =
+    latest?.effective_permissions.includes('workspace:manage') === true
+  const session =
+    signedIn && scope.userId != null && scope.sessionId
+      ? { userId: scope.userId, sessionId: scope.sessionId }
+      : null
+  const showManagement =
+    session && validId && (mayManage || query.data?.kind === 'error')
 
   return (
     <section
@@ -129,13 +156,63 @@ export function WorkspaceDetail(props: {
           <ArrowLeft aria-hidden='true' />
           {t('Back to workspaces')}
         </Link>
-        {showSwitcher && (
-          <WorkspaceSwitcher
-            key={props.workspaceId}
-            returnSearch={props.returnSearch}
-            verified={result?.kind === 'ready'}
-          />
-        )}
+        <div className='flex flex-wrap items-center gap-2'>
+          {showSwitcher && (
+            <WorkspaceSwitcher
+              key={props.workspaceId}
+              returnSearch={props.returnSearch}
+              verified={result?.kind === 'ready'}
+            />
+          )}
+          {showManagement && (
+            <WorkspaceManagementActions
+              key={JSON.stringify([
+                session.userId,
+                session.sessionId,
+                props.workspaceId,
+              ])}
+              session={session}
+              workspace={
+                result?.kind === 'ready' && mayManage
+                  ? result.workspace
+                  : undefined
+              }
+              archiveHeld={held}
+              onReload={async () => {
+                await query.refetch()
+              }}
+              onAccessLost={() => {
+                client.setQueryData(queryKey, { kind: 'unavailable' })
+                setArchiveHold(null)
+                void query.refetch()
+              }}
+              onArchiveHold={(active, recheck = false) => {
+                if (active) void client.cancelQueries({ queryKey, exact: true })
+                if (recheck) void query.refetch()
+                setArchiveHold(
+                  active ? { ...session, workspaceId: props.workspaceId } : null
+                )
+              }}
+              onSaved={() => {
+                void client.invalidateQueries({
+                  queryKey: agentWorkspaceListQueryKey,
+                })
+                void query.refetch()
+              }}
+              onArchived={() => {
+                client.setQueryData(queryKey, { kind: 'unavailable' })
+                void client.invalidateQueries({
+                  queryKey: agentWorkspaceListQueryKey,
+                })
+                void navigate({
+                  to: '/agent-platform/workspaces',
+                  search: props.returnSearch,
+                  replace: true,
+                })
+              }}
+            />
+          )}
+        </div>
       </div>
       {content}
     </section>

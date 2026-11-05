@@ -152,20 +152,37 @@ type WorkspaceDetailResult =
   | { kind: 'ready'; workspace: AgentWorkspaceDetail }
   | { kind: 'unavailable' | 'auth-required' | 'error' }
 
-export function useAgentWorkspace(workspaceId: string) {
+export type WorkspaceReadHold = {
+  userId: number
+  sessionId: string
+  workspaceId: string
+}
+
+export function useAgentWorkspace(
+  workspaceId: string,
+  hold?: WorkspaceReadHold | null
+) {
   const scope = useWorkspaceSession()
   const validId = isAgentWorkspaceId(workspaceId)
+  const held =
+    scope.signedIn &&
+    hold?.workspaceId === workspaceId &&
+    hold.userId === scope.userId &&
+    hold.sessionId === scope.sessionId
+  const queryKey = [
+    'agent-platform',
+    'workspace',
+    scope.userId,
+    scope.sessionId,
+    validId ? workspaceId : null,
+  ] as const
   const query = useQuery({
     ...privateWorkspaceQueryOptions,
-    queryKey: [
-      'agent-platform',
-      'workspace',
-      scope.userId,
-      scope.sessionId,
-      validId ? workspaceId : null,
-    ],
+    queryKey,
     enabled: scope.signedIn && validId,
-    refetchInterval: 30_000,
+    refetchInterval: held ? false : 30_000,
+    refetchOnWindowFocus: held ? false : 'always',
+    refetchOnReconnect: held ? false : 'always',
     refetchIntervalInBackground: false,
     queryFn: async ({ signal }): Promise<WorkspaceDetailResult> => {
       assertCurrentWorkspaceSession(scope, signal)
@@ -187,7 +204,7 @@ export function useAgentWorkspace(workspaceId: string) {
     },
   })
 
-  return { signedIn: scope.signedIn, validId, query }
+  return { signedIn: scope.signedIn, validId, scope, query, queryKey, held }
 }
 
 /**
