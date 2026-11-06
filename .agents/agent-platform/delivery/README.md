@@ -70,6 +70,8 @@ P01-T09 使用 `--profile workspace-grant-governance --task P01-T09`，除了七
 
 P02-T01 使用 `--profile agent-definition --task P02-T01 --schema-change`。三个引擎在七阶段之后实际运行第八阶段；定义与版本表、父子归属、版本号唯一、不可变快照、条件更新、回滚及三次启动保留均须由同次原始 Go 事件验证。该范围仅是存储基础，不开放 Agent API、发布服务或模型运行。
 
+P02-T02 使用 `--profile agent-definition --task P02-T02`。范围仅允许当前配置与模型查询路径。先执行并核对定向配置 Go 测试，再在每个引擎的八个前置阶段后，从原始 Go 事件验证第九阶段的新库与升级行为和正整数实际检查次数。配置 DTO、Schema、公开样例及必需本地测试均作为输入冻结；缺失或零项验证不得通过。另执行离线契约用例，不新增 HTTP 路由或迁移。
+
 P00-T03 的 MySQL-only 约定只覆盖它原有的隔离启动环境。把 `--task` 改成 `P00-T03` 不能豁免新的 schema 或其他数据库变更。`build` 可编译数据库相关代码，但仍明确未执行验收。
 
 P01-T04使用`--profile workspace-write --task P01-T04`及开发前基准，限定本批写链路、主库加法迁移与严格JSON codec影响路径。三个数据库检查必须同时声明access/read/write；执行器`--write`隐含前两阶段，在同一四隔离目标上增加实际生产写路由。两个新表只在主库、索引/唯一约束、三次连接启动稳定、owner及初始管理员原子性、幂等scope/重放撤权/过期保留、revision及并发、归档保护、事务审计与日志故障恢复均须真实验证。

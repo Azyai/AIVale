@@ -19,7 +19,7 @@ import uuid
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / '.agents/agent-platform/delivery'))
 from gate import (
-    agent_definition_log_result, database_log_result, stop_process, workspace_access_log_result,
+    agent_config_model_log_result, agent_definition_log_result, database_log_result, stop_process, workspace_access_log_result,
     workspace_governance_log_result, workspace_grants_log_result, workspace_members_log_result,
     workspace_read_log_result, workspace_write_log_result,
 )
@@ -39,7 +39,8 @@ def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int
             raise
 
 
-def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, definitions: bool = False) -> dict:
+def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, definitions: bool = False, config_validation: bool = False) -> dict:
+    definitions = definitions or config_validation
     governance = governance or definitions
     grants = grants or governance
     members = members or grants
@@ -58,6 +59,7 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
         'grants_requested': grants,
         'governance_requested': governance,
         'definitions_requested': definitions,
+        'config_validation_requested': config_validation,
     }
     owned_output = None
     state_path = None
@@ -94,6 +96,8 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
             raise ValueError('The required local workspace token grant renewal database test is missing.')
         if definitions and not (REPO / 'model/agent_definition_database_test.go').is_file():
             raise ValueError('The required local Agent definition database test is missing.')
+        if config_validation and not (REPO / 'service/agent/agent_config_model_database_test.go').is_file():
+            raise ValueError('The required local Agent config model database test is missing.')
         env = os.environ.copy()
         env['GOWORK'] = 'off'
         env['TEST_AGENT_WORKSPACE_ENGINE'] = engine
@@ -227,6 +231,18 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
                 raise ValueError('Agent definitions must match the migration database version and exact test.')
             report['definitions_tests'] = actual_definitions['tests']
             report['definitions_evidence'] = actual_definitions['evidence']
+        if config_validation:
+            config_argv = [shutil.which('go'), 'test', '-mod=readonly', '-count=1', '-json', '-timeout=5m', './service/agent', '-run', '^TestAgentConfigModelDatabaseMatrix$']
+            report['config_validation_go_argv'] = config_argv
+            report['config_validation_go_exit_code'] = run_logged(config_argv, env, output, 'config-validation-go-test', 330)
+            if report['config_validation_go_exit_code'] != 0:
+                report['status'] = 'failed'
+                raise ValueError('The real Agent configuration validation test failed; inspect ignored Go logs.')
+            actual_config = agent_config_model_log_result(output / 'config-validation-go-test.stdout.log', engine, run_id)
+            if actual_config['tests']['top_level_passed'] != 1 or actual_config['evidence']['version'] != report['evidence']['version']:
+                raise ValueError('Agent config validation must match the migration database version and exact test.')
+            report['config_validation_tests'] = actual_config['tests']
+            report['config_validation_evidence'] = actual_config['evidence']
         report['status'] = 'passed'
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         report['reason'] = str(error) or type(error).__name__
@@ -269,8 +285,9 @@ def main() -> int:
     parser.add_argument('--grants', action='store_true', help='Execute the five prerequisite stages and P01-T06 token grants in order.')
     parser.add_argument('--governance', action='store_true', help='Execute the six prerequisite stages and P01-T07 token grant governance in order.')
     parser.add_argument('--definitions', action='store_true', help='Execute the seven prerequisite stages and P02-T01 Agent definition persistence in order.')
+    parser.add_argument('--config-validation', action='store_true', help='Execute the eight prerequisite stages and P02-T02 model and workspace policy checks in order.')
     args = parser.parse_args()
-    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members, args.grants, args.governance, args.definitions)
+    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members, args.grants, args.governance, args.definitions, args.config_validation)
     print(json.dumps({key: report.get(key) for key in ('engine', 'status', 'run_id', 'reason', 'cleanup')}, ensure_ascii=False))
     return {'passed': 0, 'failed': 1, 'incomplete': 2}[report['status']]
 

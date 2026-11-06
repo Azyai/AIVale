@@ -515,6 +515,42 @@
       }
     },
     {
+      "id": "agent-config-tests",
+      "gate": "G-API",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-json",
+        "./service/agent",
+        "-run",
+        "^TestAgentConfig(Draft|Schema)"
+      ],
+      "timeout_seconds": 300,
+      "kind": "go_tests",
+      "required_files": [
+        "service/agent/config_test.go",
+        "service/agent/config_schema_test.go",
+        ".agents/agent-platform/contracts/v1/agent-config.schema.json",
+        ".agents/agent-platform/contracts/v1/agent-config.examples.json"
+      ],
+      "expected_tests": [
+        "TestAgentConfigDraftAcceptsFrozenAndPublicExamples",
+        "TestAgentConfigDraftHonorsCurrentBudgetAndTimeout",
+        "TestAgentConfigDraftWireRejectsInvalidAndUnsafeValues",
+        "TestAgentConfigSchemaCanonicalNestedContract",
+        "TestAgentConfigSchemaFrozenTextExample",
+        "TestAgentConfigSchemaRejectsUnsafeAndContradictoryShapes",
+        "TestAgentConfigSchemaResourceBoundaries"
+      ],
+      "env": {
+        "GOWORK": "off"
+      }
+    },
+    {
       "id": "agent-runtime-tests",
       "gate": "G-SEC",
       "cwd": ".",
@@ -2435,11 +2471,35 @@
   },
   "agent_definition_scope": {
     "tasks": [
-      "P02-T01"
+      "P02-T01",
+      "P02-T02"
     ],
     "allowed_impact_paths": [
       "model/agent_definition.go",
       "model/main.go"
+    ],
+    "task_impact_paths": {
+      "P02-T02": [
+        "model/agent_config_model.go",
+        "model/agent_workspace_access.go",
+        "service/agent/config.go",
+        "service/agent/config_model.go",
+        "service/agent/config_schema.go",
+        "service/agent/workspace_access.go",
+        "types/agent/config.go"
+      ]
+    },
+    "config_validation_required_files": [
+      ".agents/agent-platform/contracts/v1/agent-config.examples.json",
+      ".agents/agent-platform/contracts/v1/agent-config.schema.json",
+      "model/agent_config_model.go",
+      "service/agent/agent_config_model_database_test.go",
+      "service/agent/config.go",
+      "service/agent/config_model.go",
+      "service/agent/config_schema.go",
+      "service/agent/config_schema_test.go",
+      "service/agent/config_test.go",
+      "types/agent/config.go"
     ]
   }
 }

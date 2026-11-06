@@ -75,7 +75,7 @@ WORKSPACE_PROFILES = ('workspace', 'workspace-access', 'workspace-read', 'worksp
 PROFILES = ('build', 'foundation', *WORKSPACE_PROFILES)
 
 
-def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
+def validate_checks(repo: Path, config: dict, profile: str, task: str = '') -> list[dict]:
     if not isinstance(config, dict) or config.get('schema_version') != 1 or profile not in PROFILES:
         raise ValueError('Unsupported configuration or profile.')
     checks = config['checks']
@@ -84,6 +84,9 @@ def validate_checks(repo: Path, config: dict, profile: str) -> list[dict]:
         raise ValueError('Check IDs must be unique.')
     registry = dict(zip(ids, checks))
     selection = config['profiles'][profile]
+    if profile == 'agent-definition' and task == 'P02-T02':
+        first_database = next((index for index, name in enumerate(selection) if registry[name]['kind'] == 'database'), len(selection))
+        selection = [*selection[:first_database], 'agent-config-tests', *selection[first_database:]]
     if not selection or len(selection) != len(set(selection)):
         raise ValueError('A profile must contain unique checks.')
     selected = [registry[name] for name in selection]
@@ -392,7 +395,24 @@ def agent_definition_log_result(path: Path, engine: str, run_id: str) -> dict:
     return result
 
 
-def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False, personal_workspace: bool = False, workspace_regression: bool = False, definitions: bool = False) -> dict:
+def agent_config_model_log_result(path: Path, engine: str, run_id: str) -> dict:
+    result = go_test_summary(path, 'TestAgentConfigModelDatabaseMatrix', 'AGENT_CONFIG_MODEL_DATABASE_RESULT ')
+    evidence = result['evidence']
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Agent configuration evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Agent configuration validation requires fresh and upgraded databases.')
+    fields = ('authoritative_scope', 'role_and_session_denial', 'exact_model_and_group', 'live_catalog_and_channel',
+              'configured_price', 'text_only', 'workspace_limits', 'normalized_payload', 'read_only')
+    for scenario in scenarios:
+        operations = scenario.get('policy_checks')
+        if type(operations) is not int or operations < 1 or any(scenario.get(field) is not True for field in fields):
+            raise ValueError('Agent configuration evidence lacks executed policy and availability checks.')
+    return result
+
+
+def database_result(path: Path, engine: str, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, create_eligibility: bool = False, personal_workspace: bool = False, workspace_regression: bool = False, definitions: bool = False, config_validation: bool = False) -> dict:
     if create_eligibility and not write:
         raise ValueError('Workspace create eligibility requires the lifecycle stage.')
     if personal_workspace and not members:
@@ -479,6 +499,15 @@ def database_result(path: Path, engine: str, access: bool = False, read: bool = 
             raise ValueError('Agent definition receipt differs from the actual Go events and summary.')
         if actual_definitions['tests']['top_level_passed'] != 1 or actual_definitions['evidence']['version'] != actual['evidence']['version']:
             raise ValueError('Agent definitions must use the same real database version and exact top-level test.')
+    if config_validation:
+        exit_code = report.get('config_validation_go_exit_code')
+        if not definitions or report.get('config_validation_requested') is not True or type(exit_code) is not int or exit_code != 0:
+            raise ValueError('The Agent config stage and its prerequisites were not executed successfully.')
+        actual_config = agent_config_model_log_result(path.parent / 'config-validation-go-test.stdout.log', engine, report['run_id'])
+        if report.get('config_validation_tests') != actual_config['tests'] or report.get('config_validation_evidence') != actual_config['evidence']:
+            raise ValueError('Agent config receipt differs from the actual Go events and summary.')
+        if actual_config['tests']['top_level_passed'] != 1 or actual_config['evidence']['version'] != actual['evidence']['version']:
+            raise ValueError('Agent config must use the same real database version and exact top-level test.')
     return report
 
 
@@ -588,7 +617,7 @@ def run_check(repo: Path, output: Path, check: dict) -> dict:
         elif check['kind'] == 'vitest':
             result['tests'] = vitest_result(report_path, cwd, check['expected_files'])
         elif check['kind'] == 'database':
-            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance', 'definitions')}
+            stages = {stage: check.get(stage, False) for stage in ('access', 'read', 'write', 'members', 'grants', 'governance', 'definitions', 'config_validation')}
             create_eligibility = check.get('create_eligibility') is True
             personal_workspace = check.get('personal_workspace') is True
             workspace_regression = check.get('workspace_regression') is True
@@ -653,7 +682,7 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
     report = {
         'schema_version': 1, 'task': task, 'profile': profile,
         'status': 'incomplete', 'acceptance': 'not_run',
-        'scope': {'foundation': 'selected_p00_foundation', 'build': 'build_only'}.get(profile, 'selected_p01_' + profile.replace('-', '_')),
+        'scope': {'foundation': 'selected_p00_foundation', 'build': 'build_only', 'agent-definition': 'selected_p02_agent_definition'}.get(profile, 'selected_p01_' + profile.replace('-', '_')),
         'full_repository_acceptance': False,
         'historical_full_baseline': 'unresolved; selected checks do not close P00-T01 history',
         'database': {'status': 'not_applicable'}, 'checks': [],
@@ -684,13 +713,21 @@ def run_gate(repo: Path, config: dict, profile: str, base_ref: str, task: str, o
             raise ValueError('A single explicit plan task ID is required.')
         base = git(repo, 'rev-parse', '--verify', '--end-of-options', base_ref + '^{commit}').decode().strip()
         report['base_commit'] = base
-        selected = validate_checks(repo, config, profile)
+        selected = validate_checks(repo, config, profile, task)
         if profile == 'workspace-write' and task == 'P01-T08':
             selected = [dict(check, create_eligibility=True) if check['kind'] == 'database' else check for check in selected]
         if profile == 'workspace-members' and task == 'P01-T08':
             selected = [dict(check, personal_workspace=True) if check['kind'] == 'database' else check for check in selected]
         if profile == 'workspace-grant-governance' and task == 'P01-T09':
             selected = [dict(check, workspace_regression=True, personal_workspace=True) if check['kind'] == 'database' else check for check in selected]
+        if profile == 'agent-definition' and task == 'P02-T02':
+            required = config['agent_definition_scope']['config_validation_required_files']
+            missing = [path for path in required if not source_path(repo, path).is_file()]
+            if missing:
+                raise ValueError('Missing required Agent config inputs: ' + ', '.join(missing))
+            selected = [dict(check, config_validation=True, argv=[*check['argv'], '--config-validation'], timeout_seconds=3600,
+                             required_files=sorted(set(check['required_files'] + required)))
+                        if check['kind'] == 'database' else check for check in selected]
         report['checks'] = [{'id': check['id'], 'status': 'not_run', 'reason': 'Awaiting preceding checks.'} for check in selected]
         initial = snapshot(repo, base, selected, config)
         report['inputs'] = initial
