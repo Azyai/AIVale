@@ -20,6 +20,10 @@ type AgentWorkspaceAccessRecord struct {
 	WorkspaceMemberID     *int64 `json:"-"`
 	WorkspaceMemberRole   string `json:"-"`
 	WorkspaceMemberStatus string `json:"-"`
+	AgentModelGroup       string `json:"-"`
+	DefaultRunBudgetQuota int64  `json:"-"`
+	MaxRunBudgetQuota     int64  `json:"-"`
+	MaxRunSeconds         int32  `json:"-"`
 }
 
 // agentWorkspaceSessionQuery 不使用User/Session缓存；调用者传入本次WithContext连接。
@@ -56,7 +60,8 @@ func LoadAgentWorkspaceAccess(db *gorm.DB, identity AuthSessionIdentity, workspa
 	}
 	var record AgentWorkspaceAccessRecord
 	err := agentWorkspaceSessionQuery(db, identity).
-		Select("users.id AS user_id, teams.id AS team_id, ag_workspaces.id AS workspace_id, teams.owner_user_id AS team_owner_user_id, team_members.role AS team_member_role, ag_workspaces.status AS workspace_status, ag_workspaces.archived_at AS workspace_archived_at, ag_workspace_members.id AS workspace_member_id, COALESCE(ag_workspace_members.role, '') AS workspace_member_role, COALESCE(ag_workspace_members.status, '') AS workspace_member_status").
+		Select("users.id AS user_id, teams.id AS team_id, ag_workspaces.id AS workspace_id, teams.owner_user_id AS team_owner_user_id, team_members.role AS team_member_role, ag_workspaces.status AS workspace_status, ag_workspaces.archived_at AS workspace_archived_at, ag_workspace_members.id AS workspace_member_id, COALESCE(ag_workspace_members.role, '') AS workspace_member_role, COALESCE(ag_workspace_members.status, '') AS workspace_member_status, "+
+			db.Statement.Quote("users.group")+" AS agent_model_group, ag_workspaces.default_run_budget_quota, ag_workspaces.max_run_budget_quota, ag_workspaces.max_run_seconds").
 		Joins("JOIN team_members ON team_members.user_id = users.id").
 		Joins("JOIN teams ON teams.id = team_members.team_id").
 		Joins("JOIN ag_workspaces ON ag_workspaces.team_id = teams.id AND ag_workspaces.id = ?", workspaceID).

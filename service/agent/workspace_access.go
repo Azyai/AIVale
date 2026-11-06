@@ -157,12 +157,16 @@ func WorkspacePermissionForRole(role string, action WorkspaceAction) WorkspacePe
 // WorkspaceAccess 是本次已判定动作及数据库范围的内部快照，不可当长期能力令牌。
 // 每次请求或后续有副作用步骤必须重新Authorize，不能复用旧Role/Scope跳过撤销。
 type WorkspaceAccess struct {
-	UserID          int64                    `json:"-"`
-	Scope           model.AgentScope         `json:"-"`
-	Role            string                   `json:"-"`
-	WorkspaceStatus string                   `json:"-"`
-	Action          WorkspaceAction          `json:"-"`
-	PermissionScope WorkspacePermissionScope `json:"-"`
+	UserID           int64                    `json:"-"`
+	Scope            model.AgentScope         `json:"-"`
+	Role             string                   `json:"-"`
+	WorkspaceStatus  string                   `json:"-"`
+	Action           WorkspaceAction          `json:"-"`
+	PermissionScope  WorkspacePermissionScope `json:"-"`
+	modelGroup       string
+	defaultCostQuota int64
+	maxCostQuota     int64
+	maxRunSeconds    int32
 }
 
 // AuthorizeWorkspace 接受现有身份链已验证的管理会话，不接受客户端有效Team或角色。
@@ -219,6 +223,8 @@ func AuthorizeWorkspace(ctx context.Context, db *gorm.DB, identity model.AuthSes
 	return &WorkspaceAccess{
 		UserID: record.UserID, Scope: model.AgentScope{TeamID: record.TeamID, WorkspaceID: record.WorkspaceID},
 		Role: role, WorkspaceStatus: record.WorkspaceStatus, Action: action, PermissionScope: permission.Scope,
+		modelGroup: record.AgentModelGroup, defaultCostQuota: record.DefaultRunBudgetQuota,
+		maxCostQuota: record.MaxRunBudgetQuota, maxRunSeconds: record.MaxRunSeconds,
 	}, nil
 }
 

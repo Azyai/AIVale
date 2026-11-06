@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:agent-config:1.0.0",
+  "title": "AIVale text Agent configuration 1.0.0",
+  "description": "P02-T02 configuration data only. This does not define an HTTP route, publication, funding, or runtime authorization.",
+  "x-contract": {
+    "task_id": "P02-T02",
+    "max_config_utf8_bytes": 61440,
+    "max_schema_utf8_bytes": 16384,
+    "max_schema_depth": 12,
+    "max_schema_nodes": 256
+  },
+  "$ref": "#/$defs/inputConfig",
+  "$defs": {
+    "inputConfig": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "name": { "$ref": "#/$defs/name" },
+        "instructions": { "$ref": "#/$defs/instructions" },
+        "model_policy": { "$ref": "#/$defs/modelPolicy" },
+        "input_schema": { "$ref": "#/$defs/schemaRoot" },
+        "output_schema": {
+          "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/schemaRoot" }]
+        },
+        "skill_bindings": { "type": "array", "maxItems": 0 },
+        "tool_bindings": { "type": "array", "maxItems": 0 },
+        "limits": { "$ref": "#/$defs/limits" }
+      },
+      "required": ["schema_version", "name", "instructions", "model_policy", "input_schema", "output_schema", "skill_bindings", "tool_bindings", "limits"],
+      "additionalProperties": false
+    },
+    "normalizedConfig": {
+      "allOf": [
+        { "$ref": "#/$defs/inputConfig" },
+        {
+          "properties": {
+            "name": {
+              "maxLength": 128,
+              "not": { "$ref": "#/$defs/outerWhitespace" }
+            },
+            "output_schema": { "$ref": "#/$defs/schemaRoot" },
+            "limits": { "required": ["max_cost_quota"] }
+          }
+        }
+      ]
+    },
+    "outerWhitespace": {
+      "pattern": "^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]$"
+    },
+    "blank": {
+      "pattern": "^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$"
+    },
+    "controlCharacters": { "pattern": "[\u0000-\u001f\u007f-\u009f]" },
+    "name": {
+      "type": "string",
+      "description": "Name after trimming: 1–128 Unicode code points, at most 512 UTF-8 bytes.",
+      "pattern": "^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*(?:[^\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]|[^\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000][\\s\\S]{0,126}[^\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000])[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$",
+      "not": { "pattern": "\u0000" }
+    },
+    "instructions": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32768,
+      "description": "Nonblank text preserved as entered; the server also enforces a 32768-byte UTF-8 limit.",
+      "not": { "anyOf": [{ "$ref": "#/$defs/blank" }, { "pattern": "\u0000" }] }
+    },
+    "modelPolicy": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Exact model name, at most 256 UTF-8 bytes; catalog eligibility is verified separately.",
+          "not": { "anyOf": [{ "$ref": "#/$defs/outerWhitespace" }, { "$ref": "#/$defs/controlCharacters" }] }
+        },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2, "description": "Use plain decimal notation with at most six fractional digits; the service verifies the wire representation before conversion." },
+        "max_output_tokens": { "type": "integer", "minimum": 1, "maximum": 1073741823 }
+      },
+      "required": ["model", "max_output_tokens"],
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_steps": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "max_model_calls": { "type": "integer", "const": 1 },
+        "max_tool_calls": { "type": "integer", "const": 0 },
+        "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 300 },
+        "max_cost_quota": { "$ref": "#/$defs/costQuota" }
+      },
+      "required": ["max_steps", "max_model_calls", "max_tool_calls", "timeout_seconds"],
+      "additionalProperties": false
+    },
+    "costQuota": {
+      "type": "string",
+      "maxLength": 10,
+      "pattern": "^(?:0|[1-9][0-9]{0,8}|1[0-9]{9}|20[0-9]{8}|21[0-3][0-9]{7}|214[0-6][0-9]{6}|2147[0-3][0-9]{5}|21474[0-7][0-9]{4}|214748[0-2][0-9]{3}|2147483[0-5][0-9]{2}|21474836[0-3][0-9]|214748364[0-7])$",
+      "not": { "pattern": "[^0-9]" },
+      "description": "Canonical quota string 0..2147483647 before lower trusted workspace limits. Zero is not unlimited."
+    },
+    "schemaRoot": {
+      "type": "object",
+      "anyOf": [
+        { "maxProperties": 0 },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/schemaNode" },
+            { "properties": { "type": { "const": "object" } }, "required": ["type"] }
+          ]
+        }
+      ]
+    },
+    "schemaPropertyName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "not": {
+        "anyOf": [
+          { "$ref": "#/$defs/blank" },
+          { "$ref": "#/$defs/controlCharacters" },
+          { "pattern": "^\\$" },
+          { "enum": ["__proto__", "prototype", "constructor"] }
+        ]
+      }
+    },
+    "schemaNode": {
+      "type": "object",
+      "anyOf": [
+        { "maxProperties": 0 },
+        {
+          "properties": {
+            "type": { "enum": ["object", "array", "string", "integer", "number", "boolean", "null"] },
+            "title": {
+              "type": "string", "minLength": 1, "maxLength": 128,
+              "not": { "anyOf": [{ "$ref": "#/$defs/blank" }, { "$ref": "#/$defs/controlCharacters" }] }
+            },
+            "description": {
+              "type": "string", "minLength": 1, "maxLength": 512,
+              "not": { "anyOf": [{ "$ref": "#/$defs/blank" }, { "$ref": "#/$defs/controlCharacters" }] }
+            },
+            "properties": {
+              "type": "object",
+              "maxProperties": 64,
+              "propertyNames": { "$ref": "#/$defs/schemaPropertyName" },
+              "additionalProperties": { "$ref": "#/$defs/schemaNode" }
+            },
+            "required": {
+              "type": "array", "maxItems": 64, "uniqueItems": true,
+              "items": { "$ref": "#/$defs/schemaPropertyName" }
+            },
+            "additionalProperties": { "type": "boolean" },
+            "minProperties": { "type": "integer", "minimum": 0, "maximum": 64 },
+            "maxProperties": { "type": "integer", "minimum": 0, "maximum": 64 },
+            "items": { "$ref": "#/$defs/schemaNode" },
+            "minItems": { "type": "integer", "minimum": 0, "maximum": 256 },
+            "maxItems": { "type": "integer", "minimum": 0, "maximum": 256 },
+            "minLength": { "type": "integer", "minimum": 0, "maximum": 32768 },
+            "maxLength": { "type": "integer", "minimum": 0, "maximum": 32768 },
+            "minimum": { "type": "number", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+            "maximum": { "type": "number", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": { "properties": { "type": { "const": "object" } } },
+              "then": { "propertyNames": { "enum": ["type", "title", "description", "properties", "required", "additionalProperties", "minProperties", "maxProperties"] } }
+            },
+            {
+              "if": { "properties": { "type": { "const": "array" } } },
+              "then": { "propertyNames": { "enum": ["type", "title", "description", "items", "minItems", "maxItems"] } }
+            },
+            {
+              "if": { "properties": { "type": { "const": "string" } } },
+              "then": { "propertyNames": { "enum": ["type", "title", "description", "minLength", "maxLength"] } }
+            },
+            {
+              "if": { "properties": { "type": { "enum": ["integer", "number"] } } },
+              "then": { "propertyNames": { "enum": ["type", "title", "description", "minimum", "maximum"] } }
+            },
+            {
+              "if": { "properties": { "type": { "const": "integer" } } },
+              "then": { "properties": { "minimum": { "type": "integer" }, "maximum": { "type": "integer" } } }
+            },
+            {
+              "if": { "properties": { "type": { "enum": ["boolean", "null"] } } },
+              "then": { "propertyNames": { "enum": ["type", "title", "description"] } }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

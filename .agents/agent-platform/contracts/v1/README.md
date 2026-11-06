@@ -12,6 +12,8 @@ P01-T06发布工作区运行 Key 授权 API-012/013/014。P01-T07 以独立 1.0.
 
 P01-T08c 以独立 1.0.0 的 `workspace-create-eligibility.*` 发布创建资格读取；仅当前管理会话通过 Team 双重所有者事实时返回 Team ID，其余返回 `false/null`。API-002 OpenAPI 1.1.0 增加可选 `X-Agent-Expected-Team-Id`：仅比较当前已授权 Team，不选择 Team；不匹配在事务内、读取幂等收据或写入前返回 `409 AG_INVALID_STATE`。旧客户端可省略，现有请求体、响应体及幂等哈希保持不变。
 
+P02-T02 以独立 1.0.0 的 `agent-config.*` 冻结纯文本 Agent 的配置值和规范化结果。它是内部校验与后续 API 的输入契约，本批没有注册配置 HTTP 接口，也不开放发布、资金预留或运行。原 P00 文本执行样例和 `core.schema.json` 不变。
+
 ## 文件与验证入口
 
 | 文件 | 用途 |
@@ -41,6 +43,8 @@ P01-T08c 以独立 1.0.0 的 `workspace-create-eligibility.*` 发布创建资格
 | `workspace-token-grants.examples.json` | 合成的授权分页、新建、幂等重放、撤销和固定错误开发示例，不是执行报告 |
 | `workspace-token-grant-governance.schema.json` | P01-T07 续授、当前工作区权限摘要和带版本的撤销契约 |
 | `workspace-token-grant-governance.examples.json` | 合成的续授、重放、权限摘要、撤销及版本冲突开发示例，不是执行报告 |
+| `agent-config.schema.json` | P02-T02 可接收配置及 `$defs.normalizedConfig`，含限定的输入/输出结构定义，不是 OpenAPI |
+| `agent-config.examples.json` | 合成的结构化文本和自由文本配置；模型仅作示例，不声明实际可用 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -75,6 +79,18 @@ Schema 根结构是开发用的完整场景，不是生产请求 DTO。后续实
 非法字段或未知状态筛选值返回 `400 AG_INVALID_ARGUMENT`；格式合法但不存在或跨工作区的资源使用 `404 AG_RESOURCE_NOT_FOUND`。终态恢复等已知状态下的非法操作使用 `409 AG_INVALID_STATE`。错误响应保留 `success/message/data`，新接口提供稳定 `code/request_id`；完整目录以 Schema 和设计第 6.11 节为准。
 
 ID 和额度必须在词法检查之外校验整数上界。通用 Schema 工具若未启用本目录的格式检查，不能据此宣布溢出边界通过；未来 Go 适配器使用有边界的整数解析，并对 JSON 类型错误直接拒绝。
+
+## 文本 Agent 配置 1.0.0
+
+根对象只接受 Schema 列出的字段。`schema_version` 必须为规范整数 `1`。名称修剪首尾空白后须有 1–128 个 Unicode 码点、最多 512 UTF-8 字节；指令非空白、最多 32768 UTF-8 字节，并保留原始正文。两者均不得含 NUL。`model_policy.model` 是非空、无首尾空白或控制字符的精确目录名称，最多 256 UTF-8 字节；可选 `temperature` 为 0–2 的普通十进制数，最多六位小数，不接收指数写法；`max_output_tokens` 为正整数且不超过现有模型网关的 1073741823 上限。不能透传其他模型请求参数。
+
+`input_schema` 为对象；`output_schema` 为对象或 `null`，后者规范化为 `{}`，表示不要求结构化输出。每个 schema 根可为空对象，或使用 `type: "object"`。其他非空节点支持 `object/array/string/integer/number/boolean/null` 中的单一类型；对象属性和数组元素只能用内联节点。对象可用 `properties`、`required`、布尔 `additionalProperties` 及 0–64 的 `minProperties/maxProperties`；数组可用单个 `items` 和 0–256 的 `minItems/maxItems`；字符串可用 0–32768 的 `minLength/maxLength`；整数和数值可用安全范围内的 `minimum/maximum`。节点可加非空白、无控制字符的 `title`（128 码点）和 `description`（512 码点）。属性名最多 128 码点，不得为空白、含控制字符、以 `$` 起头，或等于 `__proto__`、`prototype`、`constructor`。
+
+每个 schema 原文和规范结果各最多 16 KiB，最多 12 层、256 节点；整份配置原文和规范结果各最多 60 KiB。`required` 必须为已声明属性的无重复子集，规范化后排序；最小值不得超过最大值，对象属性数量限制不得与必填属性或关闭额外属性的声明冲突。数值范围为 −9007199254740991 至 9007199254740991；数值边界仅接受不含指数的十进制，最多六位小数且能无损按浮点最短十进制往返，规范化去掉末尾零和负零。结构约束字段整数不得使用小数或指数拼写。不支持 `$ref`、`$schema`、正则、格式、组合类型、默认值或其他未列关键字；不会下载 schema。JSON Schema 只表达可移植的静态形状，UTF-8 字节数、严格解码（重复键、无效 Unicode 和整数拼写）、跨字段、深度、总节点和实时策略另由 Go 校验。
+
+`skill_bindings`、`tool_bindings` 必须是空数组。v1 仅允许 `max_steps` 1–64、`max_model_calls` 为 1、`max_tool_calls` 为 0、`timeout_seconds` 1–300；可信工作区或网关的正超时上限可收紧该范围。`max_cost_quota` 为规范十进制字符串 0–2147483647，可信工作区的正预算上限可以再收紧。配置省略额度且工作区已设置正预算上限时，取该工作区默认值（可以是 `0`）；P01 零值未配置工作区使用 1000 平台默认值。规范结果总含该字符串。`0` 不代表无限额，配置上限也不代表已预扣费用或保证资金可用。
+
+配置对象或字段非法使用 `AG_INVALID_ARGUMENT`；整份配置超过上限使用 `AG_PAYLOAD_TOO_LARGE`。模型必须在当前授权主体的可选分组中具备可用的文本入口和计费配置；文本入口检查 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages 或 Gemini 文本端点，不接受仅图片、向量、重排、音频、视频或任务插件入口。不存在、无权限、停用或不兼容的模型统一使用 `AG_DEPENDENCY_UNAVAILABLE`，不暴露渠道、价格详情或其他租户事实。读取模型事实失败使用 `AG_INTERNAL_ERROR`。这些校验不调用收费模型、不执行工具，后续运行仍须校验资金 Key、当前授权、价格和额度。
 
 ## 术语与归属
 

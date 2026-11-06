@@ -1,0 +1,60 @@
+{
+  "contract_version": "1.0.0",
+  "examples": [
+    {
+      "id": "structured-text",
+      "config": {
+        "schema_version": 1,
+        "name": "文本摘要助手",
+        "instructions": "只根据用户提供的文本生成一句摘要，并说明缺失的信息。",
+        "model_policy": {
+          "model": "baseline-text-model",
+          "temperature": 0.2,
+          "max_output_tokens": 1024
+        },
+        "input_schema": {
+          "type": "object",
+          "properties": { "question": { "type": "string", "minLength": 1, "maxLength": 20000 } },
+          "required": ["question"],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": { "text": { "type": "string" } },
+          "required": ["text"],
+          "additionalProperties": false
+        },
+        "skill_bindings": [],
+        "tool_bindings": [],
+        "limits": {
+          "max_steps": 4,
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "timeout_seconds": 60,
+          "max_cost_quota": "1000"
+        }
+      }
+    },
+    {
+      "id": "plain-text",
+      "config": {
+        "schema_version": 1,
+        "name": "  会议提纲助手  ",
+        "instructions": "整理已提供的议题。\n不要补写未经提供的事实。",
+        "model_policy": { "model": "baseline-text-model", "max_output_tokens": 768 },
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "agenda": { "type": "array", "items": { "type": "string", "maxLength": 1024 }, "minItems": 1, "maxItems": 32 }
+          },
+          "required": ["agenda"],
+          "additionalProperties": false
+        },
+        "output_schema": null,
+        "skill_bindings": [],
+        "tool_bindings": [],
+        "limits": { "max_steps": 4, "max_model_calls": 1, "max_tool_calls": 0, "timeout_seconds": 60 }
+      }
+    }
+  ]
+}
