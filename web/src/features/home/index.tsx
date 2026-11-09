@@ -18,37 +18,44 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { PublicLayout } from '@/components/layout'
 import { Footer } from '@/components/layout/components/footer'
+import { usePlatformCatalog } from '@/features/platform-catalog'
 
+import { HeroHeading } from './components/sections/hero-heading'
+import { PlatformGuide } from './components/sections/platform-guide'
 import {
-  Achievements,
-  FAQ,
-  HeroHeading,
-  PlatformArchitecture,
-  PricingSection,
-  Roadmap,
-  SellingPoints,
-  ToolsWall,
-  TokenFlowTheater,
-} from './components'
+  BusinessHallOverview,
+  PlatformPathways,
+} from './components/sections/platform-pathways'
+import { ProductOverview } from './components/sections/product-overview'
 
-/**
- * Marketing landing page, keynote (index3) bloodline: deep-space hero with
- * orbiting model chips → selling points → architecture → token-flow theater
- * → pricing → achievements → tools → roadmap → FAQ. Pricing cards stay
- * driven live by the public plans API.
- */
 export function Home() {
+  const catalog = usePlatformCatalog()
+  const workbench = catalog.products.find(
+    (product) => product.id === 'workbench'
+  )
+
   return (
     <PublicLayout showMainContainer={false}>
-      <HeroHeading />
-      <SellingPoints />
-      <PlatformArchitecture />
-      <TokenFlowTheater />
-      <PricingSection />
-      <Achievements />
-      <ToolsWall />
-      <Roadmap />
-      <FAQ />
+      <main id='main-content' className='bg-background'>
+        <HeroHeading
+          showProducts={catalog.showProducts}
+          showConsole={Boolean(catalog.consoleLink)}
+        />
+        {catalog.showProducts && (
+          <ProductOverview products={catalog.products} />
+        )}
+        <PlatformPathways
+          showProducts={catalog.showProducts}
+          showBusiness={catalog.showBusiness}
+          canOpenWorkbench={Boolean(workbench?.operation)}
+        />
+        {catalog.showBusiness && <BusinessHallOverview />}
+        <PlatformGuide
+          documentation={catalog.developerLinks.find(
+            (link) => link.id === 'docs'
+          )}
+        />
+      </main>
       <Footer />
     </PublicLayout>
   )
