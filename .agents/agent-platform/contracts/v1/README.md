@@ -14,6 +14,52 @@ P01-T08c 以独立 1.0.0 的 `workspace-create-eligibility.*` 发布创建资格
 
 P02-T02 以独立 1.0.0 的 `agent-config.*` 冻结纯文本 Agent 的配置值和规范化结果。它是内部校验与后续 API 的输入契约，本批没有注册配置 HTTP 接口，也不开放发布、资金预留或运行。原 P00 文本执行样例和 `core.schema.json` 不变。
 
+P02-T03 的只读切片以独立 1.0.0 的 `agent-definition-reads.*` 发布 API-015/017。只返回当前工作区内的 Agent 元数据；草稿读取、创建、更新、发布与执行未随这两条 GET 开放。
+
+P02-T03 的编辑切片以独立 1.0.0 的 `agent-definition-drafts.*` 发布 API-016/018/019。创建返回 `{id,revision:1,config:null}`；同键同意图在重新授权后返回原收据与原 `Idempotency-Key-Expires-At`，现阶段不复用已到期的键。三条路由均要求活跃 Team 工作区的实时 `agent:write`，不接受查询参数。保存提交完整 `config` 与规范正安全整数 `expected_revision`；发生 `AG_DRAFT_REVISION_CONFLICT` 后重新 GET 草稿再合并。定义的元数据修订号与草稿修订号独立。本切片不创建发布快照或运行。
+
+P02-T04 以独立 1.0.0 的 `agent-publication.*` 发布 API-021。POST 接收 `draft_revision`、可选 `release_note` 和必需 `Idempotency-Key`，返回七字段不可变版本收据。发布事务重新校验当前权限及已存配置政策，一起提交快照、序号、发布指针、幂等结果与脱敏审计。重放原收据不切回旧版本，也不创建新版本；未接入验证报告、版本历史或执行接口。
+
+发布请求示例（在已启用平台的本地开发服务执行；用实际工作区、Agent和已保存的草稿修订号替换示例值，环境变量须为当前管理会话）：
+
+```powershell
+$publishWorkspaceId = '101'
+$publishAgentId = '201'
+$publishIntentKey = [guid]::NewGuid().ToString()
+$publishBody = '{"draft_revision":2,"release_note":"首个文本版本"}'
+$publishHeaders = @{ Authorization = "Bearer $env:AIVALE_MANAGEMENT_SESSION"; 'Idempotency-Key' = $publishIntentKey }
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:3000/api/agent-platform/workspaces/$publishWorkspaceId/agents/$publishAgentId/publish" -Headers $publishHeaders -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($publishBody))
+```
+
+每个新发布意图只生成一次键。结果未知时保留原请求体和键重试；草稿冲突时先重新读取并合并，确认新意图后再生成键。这是开发调用示例，不是部署或本次执行证据。
+
+P02-T05以独立1.0.0的agent-lifecycle.*发布API-022至026及026A。release历史列表与正文分开授权，正文只向当前编辑者开放。恢复使用草稿revision，切换/停用/启用/归档使用元数据revision；CAS结果未知时先读取当前状态。切换和重新启用已发布版本重新校验政策，不改草稿或旧快照，不创建Run。
+
+版本读取与恢复示例（替换实际工作区、Agent、版本ID及当前草稿revision；使用已启用的本地开发服务和当前管理会话）：
+
+```powershell
+$agentHistoryBase = 'http://127.0.0.1:3000/api/agent-platform/workspaces/101/agents/201'
+$agentHistoryHeaders = @{ Authorization = "Bearer $env:AIVALE_MANAGEMENT_SESSION" }
+Invoke-RestMethod -Method Get -Uri "$agentHistoryBase/versions?page=1&page_size=20" -Headers $agentHistoryHeaders
+$restoreDraftBody = '{"version_id":"301","expected_revision":3}'
+Invoke-RestMethod -Method Post -Uri "$agentHistoryBase/restore-draft" -Headers $agentHistoryHeaders -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($restoreDraftBody))
+```
+
+恢复结果未知时，先读取Agent草稿；切换、启停或归档结果未知时，先读取Agent元数据。不要把旧表单作为成功收据，也不要自动换用新revision重发。上述示例只说明开发调用，不是部署或执行证据。
+
+P02-T06以独立1.0.0的agent-editor.*发布API-020和029。配置检查只读取指定修订号的已保存草稿，业务校验失败返回valid=false报告；不保存、发布或运行。模型选项只用于当前编辑权限和服务端可用分组下的配置选择，支持page/page_size/q，不接受资金Key参数。可用性会在保存、发布和后续运行准入时重新判断。
+
+开发调用示例（替换实际ID和已保存的草稿修订号；环境变量为当前管理会话）：
+
+```powershell
+$editorHeaders = @{ Authorization = "Bearer $env:AIVALE_MANAGEMENT_SESSION" }
+$editorWorkspaceBase = 'http://127.0.0.1:3000/api/agent-platform/workspaces/101'
+Invoke-RestMethod -Method Get -Uri "$editorWorkspaceBase/model-options?page=1&page_size=20" -Headers $editorHeaders
+Invoke-RestMethod -Method Post -Uri "$editorWorkspaceBase/agents/201/validate" -Headers $editorHeaders -ContentType 'application/json' -Body '{"draft_revision":2}'
+```
+
+以上为只读配置辅助调用，不会创建发布版本、Run或资金预留，不表示部署或本次执行证据。
+
 ## 文件与验证入口
 
 | 文件 | 用途 |
@@ -45,6 +91,21 @@ P02-T02 以独立 1.0.0 的 `agent-config.*` 冻结纯文本 Agent 的配置值�
 | `workspace-token-grant-governance.examples.json` | 合成的续授、重放、权限摘要、撤销及版本冲突开发示例，不是执行报告 |
 | `agent-config.schema.json` | P02-T02 可接收配置及 `$defs.normalizedConfig`，含限定的输入/输出结构定义，不是 OpenAPI |
 | `agent-config.examples.json` | 合成的结构化文本和自由文本配置；模型仅作示例，不声明实际可用 |
+| `agent-definition-reads.schema.json` | 列表/详情的只读字段白名单、分页及固定错误 |
+| `agent-definition-reads.openapi.json` | API-015/017 的会话、工作区范围和筛选参数 |
+| `agent-definition-reads.examples.json` | 合成的列表、深页、详情和不可见示例 |
+| `agent-definition-drafts.schema.json` | 严格编辑请求、待配置与已配置草稿、安全错误 |
+| `agent-definition-drafts.openapi.json` | API-016/018/019 的管理会话、幂等和版本约定 |
+| `agent-definition-drafts.examples.json` | 合成的创建、待配置、保存与版本冲突示例 |
+| `agent-publication.schema.json` | 发布请求、不可变版本收据及安全错误 |
+| `agent-publication.openapi.json` | API-021 的会话、工作区、草稿版本与发布重放规则 |
+| `agent-publication.examples.json` | 合成的发布、重放与旧草稿冲突示例 |
+| agent-lifecycle.schema.json | 版本历史、草稿恢复和生命周期CAS响应 |
+| agent-lifecycle.openapi.json | API-022至026及026A权限、作用域与状态规则 |
+| agent-lifecycle.examples.json | 合成的版本列表、正文、恢复、切换、停用及归档 |
+| agent-editor.schema.json | 已存草稿校验报告与当前编辑模型目录白名单 |
+| agent-editor.openapi.json | API-020/029会话、revision、分页与只读边界 |
+| agent-editor.examples.json | 合成的有效/待配置/不可用报告及模型列表 |
 | `../validate.py`（仅本地） | 离线校验 Schema、样例及正反案例的测试入口，不随 Git 分发 |
 | `../requirements.txt` | 校验工具依赖，与业务运行时依赖分开 |
 
@@ -233,3 +294,17 @@ created_at:desc,id:desc
 默认`created_at:desc,id:desc`；省略ID时补`id:desc`稳定次序，ID必须是最后一项。解析器返回受控字段和方向枚举，模型层只能映射这些枚举，不能将原始sort字符串拼到SQL。
 
 `PageQuery`以私有字段保存验证结果，排序切片防御复制；零值不是有效查询。offset使用checked int64运算，它是内部数据库偏移，不作为JSON数字公开，可能大于JavaScript安全整数。`NewPage`将nil items规范成空数组，检查total安全整数、页大小及结果数量；无效服务端查询或仓储数据作为内部500处理，不伪装成客户400，也不静默截断结果。P00-T06时共享工具通过本地HTTP harness验证；P01-T03工作区列表进一步接入真实数据库与生产路由，验证范围及执行结果仍单独保存在本地。
+
+
+## P02-T08 内部Run元数据基础
+
+[`run-metadata-foundation.schema.json`](run-metadata-foundation.schema.json)、[固定样例](run-metadata-foundation.examples.json)与[边界说明](run-metadata-foundation.md)描述内部Go命令的离线JSON投影，不新增HTTP/OpenAPI或修改core公开Token样例。管理会话caller_token_id为NULL，只生成metadata_only的固定release记录；六字段queued创建收据不是实时状态或正式P03的202受理。当前归档保护及runtime_ready=false保持，执行准入、调试、资金与Worker由后续阶段实现。
+
+
+## P02-T09 Run预算与模型调用关联
+
+[`run-budget-model-call.schema.json`](run-budget-model-call.schema.json)、[固定样例](run-budget-model-call.examples.json)及[边界说明](run-budget-model-call.md)冻结纯预算准备、可信报价绑定及最小gateway/usage关联投影。内部事实不接受客户JSON；缺生产事实/资金/严格报价适配时关闭，preparation_only不代表原子预留、完整授权、扣费或派发。unknown最终金额为NULL，消费log引用可空，真实来源/事件去重及跨库结算由P03/P06闭合，不改变现有公开core样例或网关公式。
+
+## P03-T01 Run步骤、事件与可靠通知基础
+
+[`run-journal-foundation.md`](run-journal-foundation.md)、[Schema](run-journal-foundation.schema.json)及[正反样例](run-journal-foundation.examples.json)冻结内部事务原语与离线值投影，不是HTTP/OpenAPI。步骤只创建pending/attempt=1，事件type开放、seq/key分别唯一；运行通知只保存引用，SQL持久化及revision/owner/expiry回执fence支持至少一次投递和死信重投。metadata_only不能升级；execution准入、Run claim、后台Worker、真实传输及模型/账务仍未装配。

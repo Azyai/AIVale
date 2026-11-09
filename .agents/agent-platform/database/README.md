@@ -71,3 +71,14 @@ MySQL/PostgreSQL 必须以状态中的同一运行编号正常停止，关闭命
 `--definitions` 隐含全部七个前置阶段，并在同一四个已标记目标上运行 `TestAgentDefinitionDatabaseMatrix`。定义阶段先核对两表尚无业务数据，再在隔离目标重建开发前的无定义表状态，用真实启动验证增量迁移；原有 P01 数据和主/日志结构必须保留。版本号和 slug 的数据库唯一约束、草稿 CAS、不可变配置、父子归属、事务回滚及三次实际连接启动均需验证，`repository_operations` 必须是正整数。详细退出码、原始 Go 事件及场景摘要分别保存；单引擎开发结果仍不等于完整交付。
 
 `--config-validation` 隐含八个前置阶段，追加 `TestAgentConfigModelDatabaseMatrix`。在同次新库与升级库上执行真实模型、会话和工作区政策查询，要求每个场景有实际正整数 `policy_checks` 和全部行为证据；对比草稿、钱包及日志证明校验无写入。不引入新的数据库迁移。
+
+
+P02-T08直接运行`matrix.py --engine <sqlite|mysql|postgresql> --runs --output <全新忽略目录>`，隐含全部九个前置阶段并强制五类Agent定义/编辑器HTTP回归标记，再顺序运行Run迁移与内部元数据两个阶段。新建/升级主库及日志库、三次启动、实际操作数、同运行身份/版本及正常关闭必须全匹配。Run业务直接调用真实application/repository，不称为公开HTTP运行验收。现有agent-definition delivery profile尚不包含这两个新增阶段，不能代替本命令。
+
+新增ag_runs后，归档按既有保护关闭；历史pre-runtime归档用例仅在验证Run表为空的标记测试库中临时移表，并在重启schema对比前恢复，新的Run阶段必须对真实schema验证503。不得把测试夹具用于生产迁移或以零计数绕过保护。
+
+## P03-T01 步骤事件及运行通知
+
+在仓库根运行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --run-journal --output .local-tests/agent-platform/delivery/<全新目录>`。该参数隐含--runs的十一前置阶段及五类Agent HTTP回归，再执行model/router两个`TestAgentRunJournalDatabaseMatrix`，共十三阶段。需要本地ignored测试源，缺少即失败；不接受旧报告或跳过。两新阶段严格检查同engine/run_id/版本、fresh/upgrade、实际操作数和必需布尔断言；存储必须三次真实启动、保留旧ag_runs/其他数据及独立日志；应用必须实际子进程提交后退出再补投、步骤去重、原子回滚、过期/旧回执拒绝、dead及同记录重投、审计分流。三库完整通过并确认隔离服务正常停止才算本批验收，旧agent-definition交付profile不包含这两阶段。
+
+测试仅在标记隔离库中显式构造synthetic execution Run。正式metadata创建不能获得execution准入，当前无公开Run HTTP、Worker认领/进程或真实模型传输。新表/索引和投递事务已实现不等于执行闭环或费用核账完成；详细长期边界见docs/project/02、04–07及内部run-journal-foundation合同。
