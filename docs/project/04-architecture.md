@@ -219,3 +219,9 @@ P01-T04另注册创建、编辑和归档三个管理写接口，复用同一type
 `types/agent/run_journal.go`只定义内部scope、fence、pending意图、结果和唤醒引用；全部内部值不作为公共JSON。`service/agentrun/application/journal.go`定义journal/通知仓储与发布端口及显式投递用例，不依赖GORM、Gin或relay。`repository/agentrun/journal.go`负责主库事务和固定错误映射；`model/agent_run_journal.go`提供加入调用方事务的原子操作，拒绝基础连接，事务包装拒绝嵌套并仅重试确定已回滚的并发冲突。
 
 `model/agent_run_step.go/agent_run_event.go`拥有结构与引用校验，`model/agent_run_delivery.go`拥有通知持久化、领取和回执fence。步骤逻辑键、事件双唯一、Run CAS及投递revision分别约束各自重复窗口，不用进程锁或缓存替代数据库事实。旧审计投影保留v1–v8 kind白名单，不消费运行通知；投递不持业务事务锁调用网络。当前未把内部port注册为Worker、HTTP或执行准入，后续接线仍需可信服务身份及实时资源授权。
+
+## P03-T02 预算账本的分层与接线
+
+`types/agent/run_ledger.go`定义内部预留意图、转换命令和结果，内部身份及金额不作为客户端JSON。`service/agentrun/application/ledger.go`定义账本仓储和`ModelCallLedgerAdmission`端口，先通过可信准入再调用仓储，重放同样需要准入；它不依赖GORM、Gin或relay。`repository/agentrun/ledger.go`适配主库事务及固定错误，`model/agent_run_ledger.go`在调用方事务内锁Run/Step，完成预留、调用状态及事件/outbox的原子CAS；三模型负责字段、初值与同域引用检查。
+
+只读BudgetPreparation不是可复用准入或报价凭证。host将来须提供认证、实时资源/资金政策和可证明完整费用上界的适配器；本阶段不提供生产实现，nil保持关闭，不注册客户Run接口、Worker认领或模型传输。`MarkDispatched`记录意图而不调用外部服务；Run事件和通知继续复用Journal，未知提交只按原意图/稳定键核查，不盲重放。账本不反向调用网关Settle/Refund，usage的存储存在性也不证明可信生产来源或支付完成。

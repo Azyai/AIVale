@@ -161,3 +161,13 @@ MCP、Skills、调度和产物适配见 [适配器与作业规范](03-adapters-a
 内部journal只处理已持久化且完整快照标记execution的Run，不能把metadata_only升级；正式metadata创建保持原状。queued初始化可加入未来准入调用方事务；步骤/事件追加要求running、当前owner/epoch、有效租约、未取消且deadline未过。当前没有正式execution准入、Run认领、运行HTTP或Worker进程；隔离验收的synthetic fixture不构成生产准入。
 
 复用ag_outbox的run_ready/run_event，payload只有Run/Event/可选Step引用。显式投递入口从SQL领取通知，Redis等发布器只唤醒；revision为投递代次，确认/失败匹配owner、revision、attempts及未过期租约。领取累加attempts，最多5次，退避有界；过期可接管，失败达上限保留dead，显式重投保留原event_key。发送成功但确认丢失可能重复发布，消费者仍须用持久化逻辑键去重，不宣称外部模型或网络恰好执行一次。未注册后台消费者，也未装配真实Redis传输。
+
+## P03-T02 预算预留与模型调用账本
+
+`ag_budget_reservations`保存完整单次调用的保守费用上界，`ag_gateway_calls`保存逻辑调用及观察到的网关状态，`ag_usage_items`保存只追加的已确认费用展示事实。它们沿用既有quota单位，不建立另一套钱包或模型价格。预留事务锁定同域Run/模型Step及固定release，校验完整execution快照、当前owner/epoch/lease、Run revision、配置摘要、有效限额和报价时窗，把调用登记、预留、Step逻辑调用引用、Run预留额/调用次数、事件和outbox一起提交。先校验consumed/reserved，再以limit-consumed-reserved比较上界，禁止溢出或负费用；可证明的零费用上界仍不能绕过已耗尽的Run预算与次数限制。
+
+重复逻辑调用必须核对身份、请求/配置/价格摘要、模型、上下界和时窗的完整原始意图，只返回原记录及当前状态，不重新预留、计数或派发。`MarkDispatched`只持久化发送意图；首次推进和最终Run CAS都必须重查报价/准备用途有效期、请求执行窗、有效累计执行余量及当前lease/deadline/取消条件。网络发送在事务外由后续broker接入。明确prepared且没有任何发送、响应、用量或结算观察时才可释放预留，已接受调用次数不回减，不能以释放额度规避调用上限。
+
+已登记发送而结果不明时，Step转outcome_unknown，调用及预留保留未知事实，Run转failed并记录CALL_OUTCOME_UNKNOWN、reconciliation_required和待核账标记；不释放预留、不自动退款或换ID重发。资金/Token已确认的applied/refunded等观察保留，仅未确认部分标unknown。当前有效owner/epoch/lease可在deadline已过或取消已请求时登记该未知结果，避免丢失事实；这不允许旧租约提交或继续发送。期限到达、终态和失去租约都不是费用已知或可以自动释放的证明。
+
+application的`ModelCallLedgerAdmission`负责可信身份、实时资源/资金控制权、有效政策及完整费用上界；生产适配器尚未装配，nil拒绝全部命令，metadata_only没有升级路径。当前既不请求真实模型，也不修改钱包/Token额度。usage当前只提供model/charge的存储引用检查；可信结算生产者、费用投影、更正/退款和核账由P06等后续阶段闭合，不能把内部账本或consume_log_id当作付款许可。

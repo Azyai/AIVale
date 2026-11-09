@@ -198,3 +198,11 @@ P02-T06再加`TEST_AGENT_EDITOR=1`，三库新建/升级各须出现`AGENT_EDITO
 存储验收包括两表全部列与六索引、唯一冲突、NULL/精确大整数/严格JSON、父引用与跨scope、初始值和普通修改拒绝、原子回滚、旧ag_runs及其他旧行/独立日志保留、三次真实启动。应用验收实际记录journal_operations，验证metadata_only关闭、Run插入+首事件+通知同事务回滚、重复/并发wake只有一逻辑步骤、冲突意图不改序号、引用事件递增、旧owner/epoch/过期租约拒绝、两个写故障点无孤儿事实。
 
 恢复必须真实子进程提交后退出，再由父进程重新打开仓储补投；仅close/reopen不得标为进程恢复。覆盖发布成功但未确认的重复投递、旧投递代次和过期回执拒绝、失败退避/最大次数dead/同记录显式重投、审计白名单不领取运行消息、引用载荷无正文/Key、无模型调用/计费改变。测试只在标记隔离库构造synthetic execution Run，不装配真实准入或Worker。Go vet、根构建、受影响回归、离线契约和文档镜像检查均需通过，报告仍只保留忽略目录。
+
+## P03-T02 预算预留与调用账本验收
+
+仓库根执行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --run-ledger --output .local-tests/agent-platform/delivery/<全新目录>`。`--run-ledger`隐含此前13阶段及全部既有工作区、Key、Agent五类HTTP和Run/Journal回归，再执行model/router两个`TestAgentRunLedgerDatabaseMatrix`，共15阶段。缺任一本地测试源、标记、fresh/upgrade场景或严格断言，出现skip/失败、engine/run_id/实际版本不符，或隔离服务未确认正常停止，均不得通过；既有较早交付profile不能代替本阶段。
+
+存储标记`AGENT_RUN_LEDGER_DATABASE_RESULT`须记录正整数repository_operations、每场景恰好3次真实InitDB/InitLogDB启动；覆盖三表完整本阶段列集与11索引、NULL/精确金额/JSON与小写ID边界、父引用和跨scope、唯一约束、初值、普通改删/upsert拒绝、回滚及旧行/独立日志保留。应用标记`AGENT_RUN_LEDGER_APPLICATION_RESULT`须记录正整数ledger_operations，覆盖生产准入nil关闭、metadata_only拒绝、reserve全事务、完整意图重放和全局键冲突、并发不超额、旧fence、未发送释放且次数不减、unknown保留预留/已确认资金事实、零值及溢出、无钱包修改/模型派发和引用脱敏。
+
+须另覆盖报价或请求时窗过期、有效累计执行余量与最终CAS过期竞态、deadline/取消后的live lease未知结果登记、未知状态重放不重发、不合法已观察调用不能释放、任一写失败无部分记录。真实数据库用例可在标记隔离库使用独立synthetic execution/准入guard；该替身只能证明存储与事务行为，不能宣称生产身份、资金控制权或费用上界适配已完成。usage的同域已确认charge存储检查不等于P06可信生产投影/退款已验收。Go格式、静态检查、根构建、适用回归、离线契约及外层文档镜像检查仍须通过，精确执行数量和实际结果只写本地证据与交付说明。

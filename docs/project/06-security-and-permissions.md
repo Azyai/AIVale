@@ -203,3 +203,11 @@ P02-T09内部身份和全部预算事实均标记json:"-"，不把用户提交�
 Journal scope/fence及通知receipt不是用户认证、可复用授权或Run执行租约。仓储入口仅接受完整持久化execution快照并核对Run引用，当前管理metadata创建不能获得该标记；代码不提供升级函数。将来Worker host必须另验可信服务身份、实时成员/资源/资金控制权，不能以收到run_ready或通过快照结构校验代替。当前没有新HTTP路由或正式execution准入。
 
 步骤及事件引用始终同Team/Workspace/Run；写操作还校验当前owner/epoch、lease、deadline和取消状态。通知回执与Run租约独立，旧owner、旧revision或过期回执不能确认。MySQL涉及owner/kind/status的条件采用精确比较；错误只有固定分类，SQL日志关闭。引用producer和通知不复制输入、metadata、Key、模型正文或隐藏推理；原始Step/Event JSON的结构校验不是自动脱敏保证，新增正文producer必须自行履行该责任。死信保留并以显式CAS重投，不自动重发外部调用或释放资金。
+
+## P03-T02 账本准入与可信资金事实
+
+内部reservation命令、Run快照、BudgetPreparation、ledger结果和outbox唤醒均不是身份凭证、付款收据或可复用执行许可。application必须经`ModelCallLedgerAdmission`检查可信调用方、实时资源/资金控制权、适用政策及匹配完整调用的费用上界，重放也不能绕过；生产适配器尚未提供，nil拒绝全部命令，metadata_only不升级。内部repository/model只负责持久化约束，后续host不得将其直接公开为跳过准入的HTTP或Worker入口。
+
+转换核对同域Run/Step/固定版本和当前owner/epoch/lease；新预留与发送要求deadline、取消、报价及执行窗有效。记录未知结果是收尾事实，当前live lease在deadline/取消后仍可登记，随后failed待核账并保留预留和已确认资金/Token观察，不能以过期或终态触发退款/重发。完整意图与全局唯一调用/请求键防止重复登记或跨租户复用，不宣称供应商调用恰好执行一次。
+
+事件/通知只保存账本和作用域引用及固定状态，不复制输入、凭据、价格正文或隐藏推理；存储JSON结构校验不能自动脱敏。consume_log_id可空且只有可信真实持久化ID有引用意义，普通请求ID不证明付款；usage目前的model/charge引用检查不证明来源鉴权，P06可信投影与退款尚待实现。所有错误保持固定分类、敏感SQL日志关闭；当前无真实模型调用、钱包/Token额度修改或收费路径装配。

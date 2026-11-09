@@ -226,3 +226,13 @@ P03-T01新增ag_run_steps与ag_run_events，复用ag_outbox而不建立第二发
 通知两kind的严格引用payload与原审计v1–v8分流。pending/delivering/delivered/dead及revision复用现有列，不添加第二租约代次；claim/reclaim使revision和attempts递增，ack/retry必须匹配完整未过期回执。最多5次后保留dead，显式重投同一记录重开有界周期，不创建Run/步骤/新event。SQL提交后才能发布；投递确认失败允许重复唤醒。无清理器、自动后台投递或真实Redis依赖。
 
 新建/升级矩阵保留旧ag_runs及其他旧表和独立日志行，新两表/索引与三次真实InitDB/InitLogDB启动后不变；实际子进程提交后退出，由父进程重新读取并补投。已持久化的metadata_only记录没有execution升级路径，合成准入只存在标记隔离测试。预算预留、gateway/usage账本及钱包仍留给P03-T02以后。
+
+### 8.11 预算预留、调用与用量事实
+
+P03-T02新增主库`ag_budget_reservations`、`ag_gateway_calls`、`ag_usage_items`，只包含本阶段列集；P05的产物引用及P10的root_run_id/budget_root_run_id后置。前两表使用B/U/T/W及revision，usage为B/T/W只追加。三表合计11个索引：预留唯一(run_id,logical_call_id,attempt,cost_kind)，查询(run_id,status,id)、(status,expires_at,id)；调用全局唯一(logical_call_id,attempt)与gateway_request_id，查询(run_id,id)、(reconcile_status,updated_at,id)、(workspace_id,funding_token_id,created_at,id)；usage全局唯一source_event_key，查询(run_id,id)、(workspace_id,occurred_at,id)。全局键冲突不能借跨Run/租户作用域重新绑定原意图。
+
+逻辑调用及网关请求ID限定16–64字节小写ASCII `[a-z0-9][a-z0-9._:-]{15,63}`，不直接复用可能混合大小写的HTTP跟踪ID；来源事件与摘要为小写SHA256。全部引用检查同Team/Workspace/Run/Step及固定版本，当前只登记model首attempt=1。金额使用非负有界int64 quota并受`common.MaxQuota`限制，对外沿用十进制字符串；未知actual/settled金额为NULL，确认零费用与未知分开。JSON为严格对象TEXT、最多60KiB并保留原字节，不解析远程资源、不因格式合法宣称自动脱敏。gateway的`consume_log_id`可空，未来赋值只能来自可信真实持久化消费凭证，不能用列表序号或普通request_id推断付款。
+
+reserve把调用、reservation、Step引用、Run reserved/count、事件和通知同事务写入，完整意图重放不新增任何事实。发送转换同时检查已接受的报价/请求时窗和有效累计执行余量，最终Run CAS再次核对有效窗、owner/epoch/lease及适用deadline/取消条件；通用修改、删除和upsert拒绝。只有确定未发送且无外部观察的prepared调用可以释放预留，model_call_count不回减。unknown路径保留预留及已确认资金事实，将Run标为failed待核账；当前live lease可以在deadline/取消后记录未知结果，旧lease仍拒绝。预留到期不能自动清零，费用未知也不能假作零额。
+
+usage当前只接受model/charge，并核对同域模型Step、逻辑调用、已确认settled网关状态和额度；这些是存储引用约束，不替代可信结算生产者。退款、关联净额、可信费用投影和资金修正后置，usage不能反向触发扣费。真实三库验收须覆盖新建/升级、11索引、旧Run/Journal及其他旧行和独立日志保留、三次真实启动、唯一冲突、事务回滚和阶段隔离；测试用合成准入不得进入正式代码。
