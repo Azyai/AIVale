@@ -1,0 +1,570 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIVale Agent editor support API",
+    "version": "1.0.0",
+    "description": "P02-T06 stored validation reports and current editor catalog. Does not execute, publish or grant a funding Key."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "Local development example, not a deployed service"
+    }
+  ],
+  "security": [
+    {
+      "DashboardSession": []
+    }
+  ],
+  "paths": {
+    "/api/agent-platform/workspaces/{workspace_id}/agents/{agent_id}/validate": {
+      "post": {
+        "operationId": "validateStoredAgentDraft",
+        "summary": "Validate the saved draft",
+        "description": "API-020. Strict {draft_revision} and no query. Current editor rights are rechecked. A stored pending draft or current configuration policy failure returns valid=false report; no configuration is saved, model called or money reserved.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            },
+            "description": "Authorized Team workspace ID."
+          },
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            },
+            "description": "Agent in the authorized workspace."
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Malformed or unsupported request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid management session required",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current workspace does not permit editing",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace or Agent is not available",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe internal failure",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stored draft revision changed.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body too large",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Validate the saved draft",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/validationResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./agent-editor.schema.json#/$defs/validationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-platform/workspaces/{workspace_id}/model-options": {
+      "get": {
+        "operationId": "listAgentEditorModelOptions",
+        "summary": "List scoped model options",
+        "description": "API-029. Editor-only current agent:write. Single page/page_size/q query values, q is case-sensitive literal substring; fixed byte-order model sorting. No funding_token_id or sort. Unavailable entries expose only a generic reason. Eligibility does not assert funding, runtime readiness or permanent permission.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            },
+            "description": "Authorized Team workspace ID."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Raw maximum128 Unicode code points/512 UTF-8 bytes, then trimmed; literal case-sensitive substring."
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Malformed or unsupported request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid management session required",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current workspace does not permit editing",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace or Agent is not available",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe internal failure",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Platform admission is disabled",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body too large",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/errorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "List scoped model options",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "X-Oneapi-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Server-owned ID equal to the JSON request_id."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./agent-editor.schema.json#/$defs/modelOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DashboardSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Existing signed dashboard access JWT backed by a live login session. PAT and model bearer keys are not valid."
+      }
+    }
+  }
+}

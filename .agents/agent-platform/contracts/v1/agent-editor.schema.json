@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:agent-editor:1.0.0",
+  "title": "AIVale Agent editor support1.0.0",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P02-T06",
+    "api_ids": [
+      "API-020",
+      "API-029"
+    ],
+    "authorization": "Explicit live management session, current agent:write and active Team workspace. No PAT or model tokens.",
+    "validation": "Stored draft_revision only. 200 report valid=false for pending draft or current semantic/policy failure; stale revision409. Invalid stored content500. No saving, changing normalization, external model calls, budget reservation or publication.",
+    "models": "Only catalog names in server-derived currently authorized usable groups. Exact existing validator eligibility and pricing; generic unavailable reason. Same legal-name filtering before total and pagination, byte-order sorting, q literal case-sensitive trimmed substring. No channel/group IDs or credentials.",
+    "funding": "Editor options only. funding_token_id and other unknown query parameters are rejected; Run funding and run:create admission are not granted.",
+    "query": "Model options page/page_size/q only, each single-valued, default1/20, maximum100. q raw at most128 code points/512 UTF-8 bytes; no sort input.",
+    "report_lifetime": "Client must bind report to workspace/Agent/session/draft revision and clear it when the form changes. A validation report is not permission to publish or run."
+  },
+  "$defs": {
+    "validationRequest": {
+      "type": "object",
+      "properties": {
+        "draft_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Canonical positive safe JSON integer spelling only."
+        }
+      },
+      "required": [
+        "draft_revision"
+      ],
+      "additionalProperties": false
+    },
+    "validationIssue": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "code": {
+          "enum": [
+            "AG_INVALID_ARGUMENT",
+            "AG_DEPENDENCY_UNAVAILABLE"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "path",
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "validationReport": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "draft_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/validationIssue"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "maxItems": 0,
+          "items": {
+            "$ref": "#/$defs/validationIssue"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "draft_revision",
+        "valid",
+        "errors",
+        "warnings"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "valid": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "errors": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "errors": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "modelOption": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\u0000-\u001f-]+(?![\\s\\S])",
+          "description": "Exact catalog name, at most256 valid UTF-8 bytes, no leading/trailing whitespace."
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "enum": [
+            null,
+            "unavailable"
+          ]
+        }
+      },
+      "required": [
+        "model",
+        "available",
+        "unavailable_reason"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "available": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "unavailable_reason": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "unavailable_reason": {
+                "const": "unavailable"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "modelOptionPage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/modelOption"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size"
+      ],
+      "additionalProperties": false
+    },
+    "validationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/validationReport"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "modelOptionsResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/modelOptionPage"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    }
+  }
+}

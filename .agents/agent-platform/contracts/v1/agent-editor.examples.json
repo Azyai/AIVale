@@ -1,0 +1,108 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P02-T06",
+  "examples": [
+    {
+      "name": "valid-draft",
+      "schema": "validationResponse",
+      "http_status": 200,
+      "request_schema": "validationRequest",
+      "request": {
+        "draft_revision": 2
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-editor-valid",
+        "data": {
+          "id": "201",
+          "draft_revision": 2,
+          "valid": true,
+          "errors": [],
+          "warnings": []
+        }
+      }
+    },
+    {
+      "name": "pending-draft",
+      "schema": "validationResponse",
+      "http_status": 200,
+      "request_schema": "validationRequest",
+      "request": {
+        "draft_revision": 1
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-editor-pending",
+        "data": {
+          "id": "201",
+          "draft_revision": 1,
+          "valid": false,
+          "errors": [
+            {
+              "path": "config",
+              "code": "AG_INVALID_ARGUMENT",
+              "message": "Save a complete configuration before validation"
+            }
+          ],
+          "warnings": []
+        }
+      }
+    },
+    {
+      "name": "unavailable-model",
+      "schema": "validationResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-editor-model",
+        "data": {
+          "id": "201",
+          "draft_revision": 2,
+          "valid": false,
+          "errors": [
+            {
+              "path": "model_policy.model",
+              "code": "AG_DEPENDENCY_UNAVAILABLE",
+              "message": "A required dependency is not available"
+            }
+          ],
+          "warnings": []
+        }
+      }
+    },
+    {
+      "name": "model-options",
+      "schema": "modelOptionsResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-editor-models",
+        "data": {
+          "items": [
+            {
+              "model": "example-text-current",
+              "available": true,
+              "unavailable_reason": null
+            },
+            {
+              "model": "example-text-retired",
+              "available": false,
+              "unavailable_reason": "unavailable"
+            }
+          ],
+          "total": 2,
+          "page": 1,
+          "page_size": 20
+        }
+      }
+    }
+  ]
+}
