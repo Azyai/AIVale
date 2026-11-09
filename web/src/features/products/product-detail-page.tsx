@@ -87,7 +87,28 @@ const PRODUCT_PRESENTATION = {
   'model-library': {
     benefitKey: 'Find the right model for every idea.',
     journeyKey: 'From discovery to your first request',
-    steps: ['Models', 'Capabilities', 'Pricing', 'Model API access'],
+    steps: [
+      {
+        titleKey: 'Choose a model',
+        descriptionKey:
+          'Browse model capabilities and pricing in the Model Square. The site settings determine whether sign-in is required.',
+      },
+      {
+        titleKey: 'API keys',
+        descriptionKey:
+          'Create an API key in the console and store it securely.',
+      },
+      {
+        titleKey: 'Model API access',
+        descriptionKey:
+          'Choose a model available to your account and configure the gateway address in your API client.',
+      },
+      {
+        titleKey: 'Usage and billing',
+        descriptionKey:
+          'After the request, check usage and charges in the console.',
+      },
+    ],
     relatedLink: {
       to: '/products/$productId',
       params: { productId: 'aitoken' },
@@ -98,21 +119,71 @@ const PRODUCT_PRESENTATION = {
   workbench: {
     benefitKey: 'A shared home for your Agents.',
     journeyKey: 'From workspace to controlled access',
-    steps: ['Workspace management', 'Workspace members', 'API keys', 'Agents'],
+    steps: [
+      {
+        titleKey: 'Workspace management',
+        descriptionKey:
+          'Open an authorized workspace to manage its details and member roles.',
+      },
+      {
+        titleKey: 'Workspace members',
+        descriptionKey:
+          'Use your existing account. Workspace roles control who can view and manage workspace resources.',
+      },
+      {
+        titleKey: 'Agents',
+        descriptionKey:
+          'The workbench demo illustrates the experience. It does not create workspaces or run real agent tasks.',
+      },
+    ],
     relatedLink: { to: '/business' },
     relatedTitleKey: 'Business hall',
   },
   'agent-scheduling': {
     benefitKey: 'Connect triggers, runs, and decisions.',
     journeyKey: 'From request to a reviewed result',
-    steps: ['Task center', 'Agent scheduling', 'Approval center', 'Deliver'],
+    steps: [
+      {
+        titleKey: 'Request',
+        descriptionKey: 'Describe the work and its expected deliverable.',
+      },
+      {
+        titleKey: 'Execute',
+        descriptionKey: 'Follow runs and check their results.',
+      },
+      {
+        titleKey: 'Approve',
+        descriptionKey: 'Review requests that need approval.',
+      },
+      {
+        titleKey: 'Deliver',
+        descriptionKey:
+          'Confirm the delivered work separately from the run result.',
+      },
+    ],
     relatedLink: { to: '/business' },
     relatedTitleKey: 'Business hall',
   },
   datasets: {
     benefitKey: 'A versioned foundation for your AI data.',
     journeyKey: 'From source files to reusable knowledge',
-    steps: ['File', 'Versions', 'Data and knowledge'],
+    steps: [
+      {
+        titleKey: 'File',
+        descriptionKey:
+          'The dataset demo uses example data. Dataset storage, versioning, and upload are planned.',
+      },
+      {
+        titleKey: 'Versions',
+        descriptionKey:
+          'The planned service will organize dataset versions and files for retrieval and evaluation.',
+      },
+      {
+        titleKey: 'Data and knowledge',
+        descriptionKey:
+          'The dataset preview uses examples. Uploads, processing, and training are not available there.',
+      },
+    ],
     relatedLink: {
       to: '/products/$productId',
       params: { productId: 'workbench' },
@@ -124,7 +195,7 @@ const PRODUCT_PRESENTATION = {
   {
     benefitKey: string
     journeyKey: string
-    steps: readonly string[]
+    steps: readonly { titleKey: string; descriptionKey: string }[]
     relatedLink:
       | { to: '/business' }
       | {
@@ -252,7 +323,7 @@ export function ProductDetailPage(props: { product: ProductDefinition }) {
       </header>
       <section
         aria-labelledby='product-scope-heading'
-        className='px-5 py-12 sm:px-8 sm:py-16 lg:px-12 2xl:px-16'
+        className='grid gap-7 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)] lg:gap-16 lg:px-12 2xl:px-16'
       >
         <h2
           id='product-scope-heading'
@@ -260,25 +331,21 @@ export function ProductDetailPage(props: { product: ProductDefinition }) {
         >
           {t('Product scope')}
         </h2>
-        <dl className='mt-7 grid gap-5 lg:grid-cols-2 lg:gap-8'>
-          {scope.map((item, index) => (
+        <dl className='divide-primary/15 border-primary/15 divide-y border-t'>
+          {scope.map((item) => (
             <div
               key={item.titleKey}
-              className={cn(
-                'rounded-2xl border px-6 py-7 sm:px-8 sm:py-9',
-                accent.border,
-                index === 0 && accent.wash
-              )}
+              className='grid gap-3 py-7 first:pt-6 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] sm:gap-7'
             >
               <dt
                 className={cn(
-                  'text-xl leading-snug font-semibold sm:text-2xl',
+                  'text-lg leading-snug font-semibold sm:text-xl',
                   accent.text
                 )}
               >
                 {t(item.titleKey)}
               </dt>
-              <dd className='text-foreground/75 mt-4 max-w-2xl text-base leading-relaxed'>
+              <dd className='text-foreground/75 max-w-2xl text-base leading-relaxed'>
                 {t(item.descriptionKey)}
               </dd>
             </div>
@@ -288,57 +355,75 @@ export function ProductDetailPage(props: { product: ProductDefinition }) {
       <section
         aria-labelledby='product-path-heading'
         className={cn(
-          'border-y border-primary/10 px-5 py-12 sm:px-8 sm:py-16 lg:px-12 2xl:px-16',
+          'grid gap-9 border-y border-primary/10 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:gap-16 lg:px-12 2xl:px-16',
           accent.wash
         )}
       >
-        <h2
-          id='product-path-heading'
-          className='max-w-3xl text-2xl leading-snug font-semibold tracking-tight sm:text-3xl'
-        >
-          {t(presentation.journeyKey)}
-        </h2>
-        <ol className='mt-8 grid gap-4 sm:grid-cols-2 xl:flex xl:gap-0'>
+        <div>
+          <h2
+            id='product-path-heading'
+            className='max-w-xl text-3xl leading-snug font-semibold tracking-tight sm:text-4xl'
+          >
+            {t(presentation.journeyKey)}
+          </h2>
+          {product.releaseStage === 'planned' && (
+            <div className='mt-5'>
+              <ProductStage stage='planned' />
+            </div>
+          )}
+          <div className='mt-7 flex flex-wrap items-center gap-3'>
+            <Link
+              {...presentation.relatedLink}
+              className={cn(
+                buttonVariants({ size: 'lg' }),
+                'h-auto min-h-11 max-w-full gap-3 px-5 py-3 whitespace-normal'
+              )}
+            >
+              {t(presentation.relatedTitleKey)}
+              <ProductArrow />
+            </Link>
+            <Link
+              to='/products'
+              className={cn(
+                buttonVariants({ size: 'lg', variant: 'outline' }),
+                'h-auto min-h-11 max-w-full px-5 py-3 whitespace-normal'
+              )}
+            >
+              {t('View all products')}
+            </Link>
+          </div>
+        </div>
+        <ol className='relative'>
           {presentation.steps.map((step, index) => (
             <li
-              key={step}
-              className='border-primary/20 flex min-w-0 items-center gap-4 border-t pt-5 xl:flex-1 xl:pr-6'
+              key={step.titleKey}
+              className='relative min-w-0 pb-8 pl-14 last:pb-0'
             >
-              <span className={cn('size-2 shrink-0 rounded-full', accent.wash)}>
-                <span className='block size-2 rounded-full bg-current' />
-              </span>
-              <span className='min-w-0 flex-1 text-base leading-snug font-medium'>
-                {t(step)}
-              </span>
               {index < presentation.steps.length - 1 && (
-                <span className={cn('shrink-0', accent.text)}>
-                  <ProductArrow />
-                </span>
+                <span
+                  aria-hidden='true'
+                  className='border-primary/25 absolute top-10 bottom-0 left-5 border-l'
+                />
               )}
+              <span
+                aria-hidden='true'
+                className={cn(
+                  'bg-background absolute top-0 left-0 flex size-10 items-center justify-center rounded-full border',
+                  accent.border,
+                  accent.text
+                )}
+              >
+                <ProductArrow />
+              </span>
+              <h3 className={cn('pt-1.5 text-lg font-semibold', accent.text)}>
+                {t(step.titleKey)}
+              </h3>
+              <p className='text-foreground/75 mt-2 max-w-2xl text-sm leading-relaxed sm:text-base'>
+                {t(step.descriptionKey)}
+              </p>
             </li>
           ))}
         </ol>
-        <div className='mt-10 flex flex-wrap items-center gap-3'>
-          <Link
-            {...presentation.relatedLink}
-            className={cn(
-              buttonVariants({ size: 'lg' }),
-              'h-auto min-h-11 max-w-full gap-3 px-5 py-3 whitespace-normal'
-            )}
-          >
-            {t(presentation.relatedTitleKey)}
-            <ProductArrow />
-          </Link>
-          <Link
-            to='/products'
-            className={cn(
-              buttonVariants({ size: 'lg', variant: 'outline' }),
-              'h-auto min-h-11 max-w-full px-5 py-3 whitespace-normal'
-            )}
-          >
-            {t('View all products')}
-          </Link>
-        </div>
       </section>
     </ProductPortal>
   )

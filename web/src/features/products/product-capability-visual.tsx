@@ -41,14 +41,15 @@ export function ProductCapabilityVisual(props: {
   const { t } = useTranslation()
 
   return (
-    <figure
-      className={cn(
-        'relative min-w-0 rounded-[2rem] border bg-linear-to-br p-5 shadow-2xl shadow-primary/8 sm:p-8',
-        props.accent.surface,
-        props.accent.border
-      )}
-    >
-      <div className='relative flex min-h-80 items-center justify-center py-3 sm:min-h-96'>
+    <figure className='relative min-w-0 py-5 sm:px-5 lg:px-0'>
+      <div
+        aria-hidden='true'
+        className={cn(
+          'pointer-events-none absolute inset-x-4 inset-y-8 -z-10 rounded-full bg-linear-to-br opacity-80 blur-3xl',
+          props.accent.surface
+        )}
+      />
+      <div className='relative mx-auto flex min-h-80 w-full max-w-2xl items-center justify-center py-3 sm:min-h-96'>
         {props.id === 'model-library' && <ModelLibraryVisual />}
         {props.id === 'workbench' && <WorkbenchVisual />}
         {props.id === 'agent-scheduling' && <SchedulingVisual />}
@@ -56,8 +57,7 @@ export function ProductCapabilityVisual(props: {
       </div>
       <figcaption
         className={cn(
-          'mt-5 border-t pt-4 text-center text-xs leading-relaxed',
-          props.accent.border,
+          'mt-6 text-center text-xs leading-relaxed',
           props.accent.text
         )}
       >
@@ -77,7 +77,7 @@ function ConceptNode(props: {
   return (
     <div
       className={cn(
-        'relative z-10 flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-current/15 bg-background/90 px-3 py-5 text-center shadow-lg shadow-primary/5 sm:px-5',
+        'relative z-10 flex min-w-0 flex-col items-center justify-center gap-3 rounded-xl border border-current/15 bg-background/75 px-3 py-5 text-center shadow-lg shadow-primary/5 sm:px-5',
         props.className
       )}
     >
@@ -144,7 +144,7 @@ function WorkbenchVisual() {
       <ConceptNode
         titleKey='Workspace management'
         icon={Folder01Icon}
-        className='row-span-3 min-h-48 bg-violet-50 px-3 sm:min-h-56 dark:bg-violet-950'
+        className='row-span-3 aspect-square rounded-full border-violet-400/40 bg-violet-100/80 px-3 sm:gap-5 dark:bg-violet-950/80 [&>svg]:size-10'
       />
       <ConceptNode titleKey='Workspace members' icon={AiBrain01Icon} />
       <ConceptNode titleKey='API keys' icon={ApiIcon} />
@@ -218,7 +218,7 @@ function DatasetVisual() {
       <ol className='space-y-3'>
         {DATASET_STEPS.map((step, index) => (
           <li key={step.titleKey}>
-            <div className='bg-background/90 flex min-h-20 items-center gap-5 rounded-2xl border border-amber-400/35 px-5 py-4 shadow-lg shadow-amber-950/5 sm:px-7'>
+            <div className='flex min-h-20 items-center gap-5 border-b border-amber-400/35 px-3 py-4 sm:px-7'>
               <span className='flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10'>
                 <HugeiconsIcon
                   icon={step.icon}
