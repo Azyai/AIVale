@@ -74,7 +74,7 @@
 | 操作 | 同一事务的最小一致性边界 |
 | --- | --- |
 | P01 授权变更 | 授权对象、父子归属与状态校验、幂等结果 |
-| P02 发布 | 草稿版本比较、不可变版本及阶段内绑定、发布指针、幂等结果；该阶段不依赖尚未实现的 outbox |
+| P02 发布 | 草稿版本比较、不可变版本与Schema、发布指针、版本序号、幂等结果及最小审计outbox；不开放运行通知 |
 | P03 创建 Run | 幂等受理、固定版本、Run、首个 `run.queued` 事件、适用消息及 `run_ready` outbox；提交后才返回已受理 |
 | 领取 Run | Workspace 槽位、合法状态、租约与 `lease_epoch`、对应事件；只有一个竞争者成功 |
 | 预留预算 | 校验状态与限额，写 reservation/step，原子修改 reserved 和次数；不扣 Team 钱包 |
@@ -171,6 +171,18 @@ P01-T06 只在主库加 `ag_token_grants`，不迁移旧 Key 权限；唯一 `(t
 
 P01-T07 沿用表和索引，以原位 CAS 增加 revision；归属、授权 ID、Key 和 scope 不变。续发只接受撤销或已过期行；新期限、续发幂等收据及 `token_grant_renewal_audit` v4 同主库事务。v4 保存原状态、期限、撤销时间和新期限；历史事件保持不变，收据不跨授权代次使用。
 
+### 8.7 Agent 定义与发布事务
+
+P02-T03复用工作区写锁顺序与现有幂等/outbox表，不新增迁移。创建、最小收据与`agent_definition_audit` v5同事务；编辑只更新草稿、摘要、草稿修订号和修改人，不改元数据revision或发布指针。未配置草稿以固定存储标记区分，对外为config:null，不能发布或运行。
+
+P02-T04在相同工作区事务中锁Agent，校验草稿修订号及规范化配置摘要，分配唯一version_no并追加release快照，条件更新next_version、current_version_id及元数据revision。草稿不随发布改写。`agent.publish`收据和`agent_publication_audit` v6与快照同事务提交；v6与v5使用不同kind，旧事件格式不变。重放按当前主体和资源重新授权、核对原快照引用，仅返回不可变收据，不重新激活旧版本。事务错误或收据/审计写入失败须回滚版本、序号和指针。SQL采用现有方言比较及锁工具，禁止把配置或说明写入GORM错误日志。
+
+P02-T05版本读取在SQL中校验当前会话和父Agent，排除debug；元数据不选择正文或说明，详情另检查编辑内容权和规范化快照、摘要及独立输入输出Schema。归档Agent不删除版本，历史查询按当前工作区权限继续限制；对外published_by仅作为版本归属说明，不带姓名、邮箱或其他主体资料。
+
+恢复在原事务内锁同Agent的release并以草稿修订号复制，切换/启停/归档以元数据修订号更新；快照内容与next_version不变。变更与`agent_lifecycle_audit` v7同事务，理由只存摘要。CAS命令不建立受理收据，未知结果先重新读取，不用旧revision覆盖后续意图。归档是保留数据的终态，不回收slug；对尚无适配的运行/调度表存在情形关闭归档，不能虚构引用排空或执行删除。
+
+P02-T06的配置检查与模型选项复用工作区事务内实时编辑授权，不写草稿、发布或资金。模型目录仅流式读取授权分组中的名称，以跨库一致的Unicode规则排除非法记录、统计总数并保留一页；关闭Rows后批量核对该页文本模型资格，无逐模型SQL，不读取渠道Key。既有单模型可用性入口与新批量检查共用相同规则，避免选择器与保存校验分歧。无表结构或迁移变更，仍需真实三库和旧政策回归。
+
 ## 9. 留存、归档与删除
 
 运行元数据、事件内容、文件、版本、幂等记录与费用关联分别管理保留期，具体默认值按计划 §5.17；部署调整只改变未来清理策略，不能静默立即删除历史数据。
@@ -184,3 +196,33 @@ Workspace 退出按“停止触发 → 禁止新任务 → 处理活跃任务 �
 涉及数据行为的变更须实际验证事务回滚、唯一冲突、版本竞争、跨租户引用、旧 epoch、重复事件、零值/NULL、int64 与 UTF-8 边界及必要恢复路径；根据影响范围执行真实数据库矩阵，不以 mock 或编译替代。
 
 验证要求与证据存放见 [测试与验收](07-acceptance.md)。测试源码和夹具仅本地保存；详细报告、SQL 输出、数据库备份、凭据及日志不提交，提交正文只记录实际验证摘要和未验证范围。迁移、正式模型、契约、配置和必要文档仍按 [Git 规范](08-git-commit.md) 同步交付。
+
+
+### 8.8 Run身份与幂等基础
+
+P02-T08仅新增主库`ag_runs`并复用幂等和outbox，不新增执行事件/步骤表。显式Run身份、Team/Workspace/Agent/release、发起者和资金引用、输入/关联元数据、摘要、期限、预算/调用上界与初始租约/计数按字典持久化；本批无会话、检查点、父子Run或execution_phase字段。四个索引覆盖工作区历史、Agent历史、状态/可领取时间及状态/租约期限；无长输入索引、外键级联或JSON方言依赖。
+
+创建沿既有User→Session→TeamMember→Team→Workspace→WorkspaceMember锁序，再锁Agent、固定release和资金Token；SQL始终带归属约束，资金查询只选择ID/持有人/状态/期限，不读Key和余额。仅metadata_only、queued/production/manual，严格预算、pending用量及零计数/租约，不能通过通用更新或删除绕过后续状态机。输入摘要和请求指纹都绑定固定版本与当前主体；原始幂等键不入库。
+
+Run、`run.create`完成收据及`run_metadata_audit` v8在同一事务写入，重放不新增Run或审计。仅确认回滚的忙/死锁按已有机制有界重试，COMMIT错误不自动重做；调用方保留原意图与键查回。独立日志故障保留pending审计，恢复后幂等投影；输入、metadata、授权摘要、Key和内部SQL异常不进入审计或错误。
+
+现有工作区和Agent归档在`ag_runs`存在且运行领域适配未完成时继续503关闭保护。历史前置切片的归档成功用例只可在标记隔离库中证明Run表为空后临时移除，再于重启比较前恢复；本批另以真实Run表断言保护，不能把历史夹具成功当作当前部署支持排空。三库新建/升级须验证新表、列与索引、三次真实启动、前行/独立日志库保留和全事务回滚；禁止用model mock或仅SQLite代替。
+
+
+### 8.9 预算与调用关联的阶段边界
+
+P02-T09只增加纯预算规则、只读准备端口及关联DTO，不修改表、索引、迁移、驱动、事务或现有账务。P02-T08三库持久化证据保留；P03新增`ag_gateway_calls/ag_usage_items/ag_budget_reservations`时必须重新执行真实三库门禁，不以本批桩测试代替。
+
+未来调用以logical_call_id+attempt及gateway_request_id去重并绑定Run/Step、资金、请求/价格摘要和lease epoch。预留先检查合法计量范围，再用limit-consumed-reserved比较完整调用上界，不先求和；预留不扣钱包。当前readonlyPreparation的expected_run_revision和valid_until不是持久化收据，事务需重读并CAS。
+
+`consume_log_id`只关联真实存储事件ID且可空；现有日志列表可能重编号，RequestId非唯一，缺日志不代表未扣款。只有确认的网关结算事实可投影模型用量；未知费用NULL、source_event_key去重、重复事实内容核对、累计退款净额及跨库核账均在后续持久化层闭合，不从DTO验证或用量投影反向调用Settle。
+
+### 8.10 步骤、事件与运行发件箱
+
+P03-T01新增ag_run_steps与ag_run_events，复用ag_outbox而不建立第二发件箱。步骤使用B/U/T/W字段、nullable外部回执/输入输出及父引用，唯一(run_id,step_key,attempt)，索引(run_id,status,id)、(workspace_id,logical_call_id)；当前只接受首尝试pending和同Run当前epoch。step_key限定小写ASCII且无空白，避免MySQL排序规则使唯一语义与SQLite/PostgreSQL不同。事件为B/T/W只追加，唯一(run_id,seq)和(run_id,event_key)，索引(workspace_id,run_id,seq)，event_type是可扩展可见ASCII字符串，不是封闭枚举；载荷对象最大16KiB、schema_version=1、visibility user/admin。
+
+逻辑步骤意图逐字段比较，重复event_key逐项核对type/step/payload/schema/visibility；冲突不分配新seq。受控事务先锁同Team/Workspace的Run，检查execution快照、owner/epoch/期限，追加后以revision/lastseq/status/epoch和当前有效lease/deadline做CAS；步计数与事件、通知一起回滚。序号和版本不越过安全整数上界。普通Run/Step/Event更新、删除和upsert拒绝，后续状态机只能增加专用受控CAS。
+
+通知两kind的严格引用payload与原审计v1–v8分流。pending/delivering/delivered/dead及revision复用现有列，不添加第二租约代次；claim/reclaim使revision和attempts递增，ack/retry必须匹配完整未过期回执。最多5次后保留dead，显式重投同一记录重开有界周期，不创建Run/步骤/新event。SQL提交后才能发布；投递确认失败允许重复唤醒。无清理器、自动后台投递或真实Redis依赖。
+
+新建/升级矩阵保留旧ag_runs及其他旧表和独立日志行，新两表/索引与三次真实InitDB/InitLogDB启动后不变；实际子进程提交后退出，由父进程重新读取并补投。已持久化的metadata_only记录没有execution升级路径，合成准入只存在标记隔离测试。预算预留、gateway/usage账本及钱包仍留给P03-T02以后。

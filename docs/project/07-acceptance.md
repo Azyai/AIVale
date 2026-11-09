@@ -92,6 +92,8 @@ P01-T04使用workspace-write配置，共25项：基础21项、管理会话适配
 
 ## 10. 独立工作台顶部入口门禁
 
+本节记录P00-T07a历史门禁。v1.21不再要求新界面平铺“模型广场→智能体工作台”，P12按第17节验收分类导航；独立布局、实时开关、原地址及登录回跳继续回归。
+
 P00-T07a 按开发计划第 10.2.6 节执行 G-UI、G-BASE 及会话路由回归。保留既有能力探测的开关、故障、刷新和取消验证，并验证真实页面导航：公共站点与控制台顶部顺序、移动菜单、移除控制台侧栏和命令面板重复入口、工作台独立布局及选中语义。开启时验证访客登录后返回原站内路径；关闭、失败、离线时验证入口隐藏、直达不显示资源内容，恢复后可重试。检查三个兼容 URL、深链接不回显未验证 ID、键盘焦点、语言与主题。
 
 受影响测试、类型检查、定向 lint / 格式和生产构建之外，使用真实前端构建验证主要路由。仅导航布局变更不要求新增数据库、计费或运行矩阵，但不得以浏览器页面打开宣称工作区 CRUD、角色矩阵或客户运行能力验收。截图和详细结果仍只保留本地。
@@ -135,3 +137,64 @@ P02-T01 使用 `agent-definition` 配置，在七阶段工作区与旧功能回�
 ## 16. Agent 配置校验门禁
 
 P02-T02 用 `agent-definition` 配置和任务编号 `P02-T02` 执行定向 Go 测试与第九阶段。每库新建与升级场景实际核对当前编辑角色、跨租户和失效会话、精确模型与分组、渠道启停、文本兼容性、计费配置、可信工作区上下限、规范化和只读性。定向 Go 测试及独立离线 Schema 校验覆盖输入输出契约、未知字段与重复键、数值溢出、字节/深度/节点上限、非法绑定和公开样例。旧 P00 固定样例仍须通过；门禁不执行模型、不扣费、不宣称客户 Agent API 已开放。
+
+R02将配置定向测试迁至`service/agentdefinition/application`，固定门禁继续核对原7项测试；三库策略阶段保留在`service/agent`，经原兼容入口验证实时权限和模型政策。
+
+Agent定义读取切片复用真实工作区读取环境。仓库根目录设置`TEST_AGENT_DEFINITION_READ=1`，分别执行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --read --output <新的本地忽略目录>`。新库和升级场景须各出现一条`AGENT_DEFINITION_READ_HTTP_RESULT`，证明API-015/017真实路由、会话/PAT、跨租户、筛选后COUNT、稳定排序、元数据白名单和不安全版本值拒绝实际执行。默认工作区门禁不把缺少该本地用例或标记视为新接口验收通过。
+
+Agent草稿编辑切片在仓库根目录同时设置`TEST_AGENT_DEFINITION_READ=1`和`TEST_AGENT_DEFINITION_WRITE=1`，分别执行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --config-validation --output <该引擎新的本地忽略目录>`。每个引擎的新库及升级场景须在真实HTTP测试输出分别找到`AGENT_DEFINITION_READ_HTTP_RESULT`和`AGENT_DEFINITION_WRITE_HTTP_RESULT`，并确认矩阵成功、隔离实例已关闭。API-016/018/019覆盖会话及角色、跨工作区隔离、创建重放、待配置与已配置读取、非法输入、保存时模型资格、同修订号并发只允许一个更新、已发布快照不变、审计脱敏及写入失败回滚。只有默认矩阵成功、缺少任一显式标记时，不算此切片验收通过。
+
+P02-T04发布切片额外设置`TEST_AGENT_DEFINITION_PUBLISH=1`，保留上述两个开关，执行同一`--config-validation`三库矩阵。每库fresh/upgrade必须各有`AGENT_DEFINITION_PUBLISH_HTTP_RESULT`，同时保留定义读取与草稿标记，核对实际请求数、身份/范围、版本隔离、重放与故障回滚证据，矩阵成功并正常关闭。真实路由覆盖发布权限、失效会话、跨对象、非法输入、待配置/停用/旧草稿拒绝、当前模型与策略变化；核对精确快照及Schema、唯一版本号、同键并发只创建一次、不同键并发序号、旧收据不回切指针，以及收据/审计失败时整体回滚。版本历史、恢复/激活、运行和正式部署不由该证据代替。
+
+P02-T05保留前三个开关并加`TEST_AGENT_DEFINITION_LIFECYCLE=1`，每库继续运行同一完整`--config-validation`矩阵。fresh/upgrade各须出现`AGENT_DEFINITION_LIFECYCLE_HTTP_RESULT`，且读取、草稿、发布三种旧标记仍完整，退出码与隔离关闭成功。覆盖release-only和分页COUNT、内容权、跨Agent版本替换、暂停/归档边界、当前身份变化、损坏快照安全拒绝、历史可读与精确恢复、两种revision并发、政策收紧拒绝切换/启用、可逆启停、状态no-op、归档保留与未来表guard，以及四个命令审计失败回滚。默认门禁缺少显式新标记不能证明此功能通过；真实Run引用与准入在P03后另验收。
+
+P02-T06再加`TEST_AGENT_EDITOR=1`，三库新建/升级各须出现`AGENT_EDITOR_HTTP_RESULT`，同时保留四种定义读取/草稿/发布/生命周期标记、完整后续旧回归和正常关闭。验证目录作用域、合法名称过滤、精确顺序与分页、批量资格一致、只读校验报告、失效会话/角色、畸形输入及无正文/凭据泄漏。
+
+前端专项覆盖严格客户端契约、创建未知结果同键恢复（包括HTTP500）、保存与人工冲突合并、父查询落后时仍可用确认过的新修订号、保存后校验、未保存离开确认、离线保留和失权限撤正文。运行类型检查、涉及文件lint/format和生产构建。浏览器以生产构建检查真实创建/保存/校验、冲突合并、刷新与深链接、移动明暗/中英文和viewer权限；若登录引导或设置使用合成壳，应与实际Go路由/数据库业务路径分开记录，不宣称生产登录、模型执行或部署通过。
+
+## 17. 平台导航、业务大厅与分层迁移门禁
+
+本节规定v1.21未来实现的验收，不表示本轮已执行。详细矩阵见[导航与大厅设计](11-平台导航与业务大厅设计.md)第10节和[分层设计](10-模块分层与渐进迁移设计.md)第8节。
+
+- P12：公共/控制台/工作台/移动同源目录；产品成熟度与操作权限分开；旧HeaderNavModules禁用、需登录配置和docs_link保持。验证开关关闭、启用但运行未就绪、探测失败、离线恢复；工作区元数据与运行能力分别处理。保留`/pricing`详情及查询、`/agent-platform/**`深链接、会话回跳和原控制台路径。
+- P12交互：真实构建验证键盘/触控/Esc/焦点、明暗主题、中英文长文本、200%缩放及320/390/768/1024/1440等宽度；不是只看截图或hover。首页与产品CTA没有虚构数据、死链或未实现执行承诺。
+- P13：授权先于列表COUNT/分页/汇总；跨工作区缓存隔离；Run、业务任务与维护任务分别保存状态。审批/调度复用已验收领域命令，交付验收不随Run成功自动完成；内部揭榜验证并发定榜、撤回、到期、重复提交与权限撤销。
+- P14：真实存储和数据库验证上传限额、版本固定、作用域、导入失败、恢复、对象清理和引用删除保护；概念页或mock返回不构成资产验收。
+- R系列：依赖方向按存量例外增量收紧；保持旧API、事务、幂等、授权、启动退出和独立模块构建。影响数据库、资金或运行时继续执行原专项门禁，目录移动本身不是安全证明。
+
+文档变更只做版本、链接、任务及镜像一致性检查，不运行无关业务测试，不把文档检查写成前端或业务验收通过。
+
+
+## P02-T07 发布与版本历史前端验收
+
+此批只接入已验收的API-021至026及026A，不改变Go行为、表结构或迁移。保留P02-T04/T05/T06三库新建与升级证据；如果后续修改服务端或数据库行为，必须重新执行受影响的真实三库矩阵。前端专项至少覆盖严格版本契约、版本分页与Agent筛选隔离、UTF-8边界、同键发布、代理提交后5xx、较新发布后重放旧收据、双击、实时降权与私有正文撤下。
+
+生命周期用例区分草稿和元数据CAS，验证准备/确认之间状态冲突、后台重验证保留原因、未知结果仅重读后再次显式确认。浏览器使用生产构建及真实隔离Go/SQLite Agent接口，登录/设置壳可用合成引导但必须注明；至少验证发布预览、提交后响应丢失、外部较新版本与同键恢复、不可变历史对比、恢复与切换互不误改、停用/启用、viewer元数据深链、390px与简繁中英文。检查实际请求和数据库结果，不能只以成功提示断言。
+
+类型、受影响文件lint/format、生产前端构建及嵌入该产物的根应用构建需要通过。关闭临时浏览器、HTTP代理和隔离服务；截图、请求摘要和测试源码保留在本地忽略目录。不由本批宣称运行引擎、真实模型调用、灰度或正式部署完成。
+
+
+## P02-T08 Run元数据基础验收
+
+在仓库根运行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --runs --output .local-tests/agent-platform/delivery/<该引擎全新目录>`。`--runs`隐含此前九阶段，并强制定义读取/草稿/发布/生命周期及编辑器辅助接口回归开关；检查两场景五类真实HTTP标记、同一run_id/engine/版本及正数请求量。随后独立执行`TestAgentRunDatabaseMatrix`和`TestAgentRunMetadataDatabaseMatrix`，后者直接调用正式application/repository而不虚构运行HTTP请求。缺本地源码或任何标记、跳过、阶段失败、版本不一致、异常关闭均不得通过。既有agent-definition交付profile不等于已包含本批新增阶段。
+
+迁移阶段核对fresh/upgrade、旧表和独立日志库、Run列与四个索引、三次真实启动、状态词汇、初始限额/零租约/计数、父子及资金引用、更新/删除/upsert拒绝和事务回滚。业务阶段实际计数metadata_operations，验证同scope并发只有一行/收据/审计、规范化同意图重放、不同Agent/版本/输入/资金冲突、到期键保留、跨租户/工作区、版本撤销、资金引用失效、身份与角色撤销、SQL故障及收据/审计失败或panic后无孤儿记录。独立日志投影失败不能改变已提交业务，恢复后投影幂等，敏感正文/凭据不流入SQL日志、收据或审计。
+
+真实当前schema须验证有ag_runs时的工作区/Agent归档503保护、通用RunCreate仍需资源检查、无新Run路由、Probe.runtime_ready=false及无模型调用/费用改变。历史前置归档用例的临时空表夹具不证明当前可以排空运行。另执行精确数字/Schema/Unicode/深度节点和v1–v8审计隔离专项；Go格式、vet及嵌入真实前端的根应用构建需通过。本批不证明最低数据库版本、ClickHouse日志、正式运行队列、扣费或部署完成。
+
+
+## P02-T09 预算与调用关联验收
+
+本批不改变数据库行为或现有账务公式。使用真实`domain.EffectiveLimits/CheckCall`、`application.PrepareModelCall`及调用关联校验器，只有实时事实/报价端口与下游本地模型计数器可作依赖替身。覆盖预算不足、未知价格/无上界、零资金/Token、无限Token仍受资金约束、各层交集与请求仅下调、metadata_only/未知结果/待核账/旧lease、报价完整绑定和过期、取消/时钟回退、总deadline裁剪、整型最大值/溢出拒绝、指针快照冻结及私有JSON。所有拒绝场景桩模型计数必须0；通过准备也不证明正式派发或原子预留。
+
+调用DTO验证正int32 attempt、caller/funding一致、scope/Run/Step/版本/请求/价格关联、unknown最终费用NULL、确认0与无log合法、用量只能来自确认事实、单条refund上限；不把shape验证写成来源鉴权、数据库去重或总净额核算成功。离线Schema样例还须配Go跨对象/数字语义负例，不能用JSON Schema假装验证算术与真实引用。
+
+在仓库根以`GOWORK=off`执行`go test -mod=readonly -count=1 -json ./types/agent ./service/agentrun/application ./service/agent ./model ./common ./relay/helper -run "^(TestRunBudget|TestRunMetadata|TestModelCall|TestGatewayCall|TestModelUsage|TestAgentModelCallGatewayLimits|TestAgentRunMetadataAudit|TestQuota|TestWalletQuotaFromDecimalStrict|TestMaxTokensBounds)"`；保留本批预算、DTO、host及P02-T08输入/审计、原安全额度和网关输出上限回归。精确用例/子例数量从实际Go事件计数；无失败/跳过。Go格式、vet、根构建及离线契约需通过，证据只保留忽略目录。未触DB可保留T08矩阵，后续接持久化/资金必须重新跑受影响三库；未接报价/资金/Worker保持关闭。
+
+## P03-T01 Journal及发件箱验收
+
+仓库根执行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --run-journal --output .local-tests/agent-platform/delivery/<全新目录>`。该参数隐含--runs的十一前置阶段（含五类Agent HTTP回归），再执行model/router的`TestAgentRunJournalDatabaseMatrix`，共十三阶段。必须同run_id、engine、实际版本、fresh/upgrade和全部严格标记通过，测试源缺失、跳过、异常退出或服务未正常停止均不得通过。旧agent-definition交付profile不自动涵盖新journal阶段。
+
+存储验收包括两表全部列与六索引、唯一冲突、NULL/精确大整数/严格JSON、父引用与跨scope、初始值和普通修改拒绝、原子回滚、旧ag_runs及其他旧行/独立日志保留、三次真实启动。应用验收实际记录journal_operations，验证metadata_only关闭、Run插入+首事件+通知同事务回滚、重复/并发wake只有一逻辑步骤、冲突意图不改序号、引用事件递增、旧owner/epoch/过期租约拒绝、两个写故障点无孤儿事实。
+
+恢复必须真实子进程提交后退出，再由父进程重新打开仓储补投；仅close/reopen不得标为进程恢复。覆盖发布成功但未确认的重复投递、旧投递代次和过期回执拒绝、失败退避/最大次数dead/同记录显式重投、审计白名单不领取运行消息、引用载荷无正文/Key、无模型调用/计费改变。测试只在标记隔离库构造synthetic execution Run，不装配真实准入或Worker。Go vet、根构建、受影响回归、离线契约和文档镜像检查均需通过，报告仍只保留忽略目录。
