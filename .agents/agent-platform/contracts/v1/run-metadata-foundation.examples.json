@@ -1,0 +1,378 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P02-T08",
+  "visibility": "Internal offline examples; there is no Run HTTP endpoint in this task.",
+  "examples": [
+    {
+      "name": "minimal-internal-command",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "business-metadata",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": {
+          "external_ref": "invoice-example-42"
+        }
+      }
+    },
+    {
+      "name": "created-immutable-receipt",
+      "schema": "receipt",
+      "value": {
+        "id": "301",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "status": "queued",
+        "mode": "production",
+        "created_at": 1794196800000
+      }
+    },
+    {
+      "name": "created-internal-result",
+      "schema": "result",
+      "value": {
+        "run": {
+          "id": "301",
+          "agent_id": "101",
+          "agent_version_id": "201",
+          "status": "queued",
+          "mode": "production",
+          "created_at": 1794196800000
+        },
+        "idempotency_expires_at": 1794283200000
+      },
+      "stored_receipt_status": 201
+    },
+    {
+      "name": "same-intent-replay",
+      "schema": "result",
+      "value": {
+        "run": {
+          "id": "301",
+          "agent_id": "101",
+          "agent_version_id": "201",
+          "status": "queued",
+          "mode": "production",
+          "created_at": 1794196800000
+        },
+        "idempotency_expires_at": 1794283200000
+      },
+      "stored_receipt_status": 201
+    }
+  ],
+  "negative_examples": [
+    {
+      "name": "numeric-version-id",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": 201,
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "implicit-current-is-not-a-fixed-version",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "current",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "overflowed-int64-id",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "9223372036854775808",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "newline-id",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201\n",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "missing-funding-reference",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "null-input",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": null,
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "array-input",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": [],
+        "idempotency_key": "local-run-metadata-example-key"
+      }
+    },
+    {
+      "name": "null-is-not-omitted-metadata",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": null
+      }
+    },
+    {
+      "name": "actor-is-server-owned",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "created_by": "8"
+      }
+    },
+    {
+      "name": "client-limits-are-not-supported",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "limits": {
+          "max_cost_quota": "1000"
+        }
+      }
+    },
+    {
+      "name": "debug-is-not-supported",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "mode": "debug"
+      }
+    },
+    {
+      "name": "short-key",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "short"
+      }
+    },
+    {
+      "name": "newline-key",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key\n"
+      }
+    },
+    {
+      "name": "receipt-does-not-return-input",
+      "schema": "receipt",
+      "value": {
+        "id": "301",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "status": "queued",
+        "mode": "production",
+        "created_at": 1794196800000,
+        "input": {
+          "text": "private"
+        }
+      }
+    },
+    {
+      "name": "receipt-does-not-return-input-hash",
+      "schema": "receipt",
+      "value": {
+        "id": "301",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "status": "queued",
+        "mode": "production",
+        "created_at": 1794196800000,
+        "input_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "receipt-is-not-a-live-running-view",
+      "schema": "receipt",
+      "value": {
+        "id": "301",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "status": "running",
+        "mode": "production",
+        "created_at": 1794196800000
+      }
+    },
+    {
+      "name": "unsafe-receipt-time",
+      "schema": "receipt",
+      "value": {
+        "id": "301",
+        "agent_id": "101",
+        "agent_version_id": "201",
+        "status": "queued",
+        "mode": "production",
+        "created_at": 9007199254740992
+      }
+    },
+    {
+      "name": "unknown-public-run-state",
+      "schema": "runStatus",
+      "value": "waiting_children"
+    },
+    {
+      "name": "reserved-metadata-field",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": {
+          "FuNdInG_ToKeN_Id": "30"
+        }
+      }
+    },
+    {
+      "name": "nested-metadata-object",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": {
+          "ref": {}
+        }
+      }
+    },
+    {
+      "name": "nested-metadata-array",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": {
+          "ref": []
+        }
+      }
+    },
+    {
+      "name": "empty-metadata-key",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": {
+          "": true
+        }
+      }
+    },
+    {
+      "name": "nul-metadata-key",
+      "schema": "foundationInput",
+      "value": {
+        "version_id": "201",
+        "funding_token_id": "30",
+        "input": {
+          "text": "Review this local synthetic invoice."
+        },
+        "idempotency_key": "local-run-metadata-example-key",
+        "metadata": {
+          "\u0000": true
+        }
+      }
+    }
+  ],
+  "semantic_rejections": [
+    "The current management session is revoked or expired, or the actor is no longer a current Team/workspace member.",
+    "The workspace is inactive/archived or its actor has no metadata-only role candidate.",
+    "The Agent or fixed version belongs to another Team/workspace, the Agent is disabled/archived, or the version is unpublished/revoked/corrupt.",
+    "The funding Token is absent, disabled, expired, belongs to a different user/Team, or has been deleted.",
+    "The input violates the exact frozen release schema, raw JSON has duplicate decoded keys/invalid Unicode/trailing data, or byte/depth/node limits are exceeded.",
+    "A retained key is reused with a different actual Agent/version/funding reference/input/metadata, or is expired.",
+    "Any Run, receipt or audit write fails: all are rolled back together. A lost COMMIT response cannot be converted into a new-key retry."
+  ]
+}

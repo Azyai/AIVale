@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:run-metadata-foundation:1.0.0",
+  "title": "AIVale internal Run metadata foundation contract 1.0.0",
+  "description": "Offline JSON projections of internal Go command values. This is not an HTTP request/response contract or a permission to execute a Run.",
+  "x-contract": {
+    "version": "version_id is an explicit fixed release belonging to the requested Agent and workspace. Agent must be active; the release must be published, structurally verified, hash verified and unrevoked. current, drafts, debug snapshots and other workspaces are not accepted.",
+    "task_id": "P02-T08",
+    "entry_point": "CreateMetadata(ctx, workspaceID, agentID, input, requestID, repository)",
+    "visibility": "Internal, explicitly constructed metadata-only foundation. No public or management Run route is registered; runtime_ready remains false.",
+    "authorization": "A current management session, live Team/workspace membership and an active workspace are checked inside the short write transaction. Only admin/developer/operator role candidates qualify for this metadata-only path; this does not remove RunCreate resource-check requirements or authorize model execution. PAT and model Token identities are not accepted by this entry point.",
+    "funding": "A caller-owned, same-Team, enabled, unexpired model Token reference is checked transactionally by numeric ID. This foundation does not read its usable Key, inspect or change balances, reserve quota, or determine final model/tool/billing eligibility. caller_token_id is NULL for the management-session path.",
+    "input": "input must be one valid UTF-8 JSON object with no duplicate decoded keys, malformed Unicode, trailing document or non-JSON number. Raw and canonical forms are each limited to 60 KiB, depth is at most 16 (root=0), at most 4096 values/nodes are visited, each numeric source lexeme is at most 128 bytes and numeric exponents are between -308 and 308. Canonicalization preserves exact decimals and array order. The exact verified frozen release input_schema is applied inside the use case, with rational number comparisons. Raw input is never returned in the receipt or audit.",
+    "metadata": "Omission becomes {}. Business metadata is a flat object of at most 32 scalar values, with raw/canonical UTF-8 size at most 4 KiB. Keys contain 1..128 UTF-8 bytes, no NUL, and none of the case-insensitive reserved authority/secret names. Object and array values are rejected. Metadata is never used as authority, a funding override or an execution limit.",
+    "effective_limits": "No client limits are accepted. Stored limits come from the verified release and remain metadata upper bounds only. There is no reservation, consumption, settlement, model invocation or current-price assertion in this task.",
+    "execution": "New records are queued/production/manual with authorization snapshot admission=metadata_only. They have no execution admission, run.queued event, run_ready outbox, Worker claim or execution capability. P03 must complete runtime admission before such a record can be executed.",
+    "atomicity": "Run, completed run.create receipt and redacted run_metadata_audit v8 commit in one main-database transaction. No network call is made under the transaction. Rollback leaves none of these facts; a commit error does not authorize an automatic retry with a new key.",
+    "idempotency": "Reuse ag_idempotency_keys unique (scope_hash,key_hash). Scope binds Team, workspace, principal category/ID and operation; request fingerprint binds actual target Agent, fixed version, funding reference, canonical input and metadata. Reauthorize live before replay. Same key/same normalized intent returns the original immutable six-field receipt; a different intent conflicts. Retained expired keys are not recycled. Raw key is not persisted or audited.",
+    "receipt": "The six-field receipt reports only the original metadata creation. Its queued status is immutable acceptance metadata, not a fresh read of future Run lifecycle state. The stored receipt status is 201 internally; P03 public HTTP 202 admission is separate and is not implemented here.",
+    "audit": "run_metadata_audit schema version 8 uses aggregate_type=run and contains only actor/Team/workspace/Run/Agent/version references, fixed operation, revisions 0->1, request ID and timestamp. It contains no input, metadata, auth snapshot, credential, raw idempotency key, model instruction or trace body. Existing v1-v7 audit payloads do not accept run_id.",
+    "archive": "The presence of ag_runs keeps existing workspace/Agent archive dependency checks closed until the corresponding runtime drain adapters are implemented; zero counters are not proof that future Run resources are safe.",
+    "wire_ids": "The string IDs below document the offline JSON projection; Go command identity fields are typed positive int64 values. No client-supplied actor, Team, caller, trigger, mode, status, limit, lease, priority or trace field is accepted."
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "maxLength": 19,
+      "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807.",
+      "not": {
+        "pattern": "[^0-9]"
+      }
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "runStatus": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "waiting_approval",
+        "cancelling",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed_out"
+      ]
+    },
+    "foundationInput": {
+      "type": "object",
+      "properties": {
+        "version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "funding_token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "input": {
+          "type": "object",
+          "description": "An inline JSON object; the frozen release input_schema supplies the actual data rules and the service enforces byte/depth/node bounds."
+        },
+        "metadata": {
+          "type": "object",
+          "default": {},
+          "maxProperties": 32,
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          "description": "Optional flat business metadata; missing is canonicalized to {}. Raw/canonical UTF-8 byte limit: 4096. Every key has 1..128 UTF-8 bytes, no NUL or reserved authority name.",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "\\u0000"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "^(?:[aA][uU][tT][hH][oO][rR][iI][zZ][aA][tT][iI][oO][nN]|[pP][aA][sS][sS][wW][oO][rR][dD]|[sS][eE][cC][rR][eE][tT]|[tT][oO][kK][eE][nN]|[aA][pP][iI]_[kK][eE][yY]|[kK][eE][yY]|[aA][cC][cC][eE][sS][sS]_[tT][oO][kK][eE][nN]|[cC][aA][lL][lL][eE][rR]_[tT][oO][kK][eE][nN]_[iI][dD]|[fF][uU][nN][dD][iI][nN][gG]_[tT][oO][kK][eE][nN]_[iI][dD]|[tT][eE][aA][mM]_[iI][dD]|[wW][oO][rR][kK][sS][pP][aA][cC][eE]_[iI][dD]|[uU][sS][eE][rR]_[iI][dD]|[cC][rR][eE][aA][tT][eE][dD]_[bB][yY]|[sS][uU][bB][jJ][eE][cC][tT]_[iI][dD]|[sS][uU][bB][jJ][eE][cC][tT]_[tT][yY][pP][eE]|[pP][eE][rR][mM][iI][sS][sS][iI][oO][nN][sS]|[aA][uU][tT][hH]_[sS][nN][aA][pP][sS][hH][oO][tT]|[aA][uU][tT][hH]_[sS][nN][aA][pP][sS][hH][oO][tT]_[jJ][sS][oO][nN]|[bB][uU][dD][gG][eE][tT]|[lL][iI][mM][iI][tT][sS]|[mM][oO][dD][eE]|[tT][rR][iI][gG][gG][eE][rR]_[tT][yY][pP][eE]|[pP][rR][iI][oO][rR][iI][tT][yY]|[aA][dD][mM][iI][sS][sS][iI][oO][nN]|[vV][eE][rR][sS][iI][oO][nN]_[iI][dD]|[aA][gG][eE][nN][tT]_[vV][eE][rR][sS][iI][oO][nN]_[iI][dD])(?![\\s\\S])"
+                }
+              }
+            ]
+          }
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128,
+          "pattern": "^[!-~]+$",
+          "not": {
+            "pattern": "[^!-~]"
+          },
+          "description": "One case-sensitive visible ASCII value. This internal command field is not an HTTP body parameter and is hashed before persistence."
+        }
+      },
+      "required": [
+        "version_id",
+        "funding_token_id",
+        "input",
+        "idempotency_key"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "const": "queued"
+        },
+        "mode": {
+          "const": "production"
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "agent_id",
+        "agent_version_id",
+        "status",
+        "mode",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "$ref": "#/$defs/receipt"
+        },
+        "idempotency_expires_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "required": [
+        "run",
+        "idempotency_expires_at"
+      ],
+      "additionalProperties": false,
+      "description": "Internal result projection only; expiry is the original retained receipt expiry, not execution admission or a public HTTP header."
+    }
+  }
+}
