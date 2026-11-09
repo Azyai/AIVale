@@ -8,6 +8,7 @@ import (
 
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/service/agentdefinition/application"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	agenttypes "github.com/QuantumNous/new-api/types/agent"
@@ -15,52 +16,49 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type agentConfigPolicy struct {
-	modelAvailable   bool
-	defaultCostQuota int64
-	maxCostQuota     int64
-	maxRunSeconds    int32
-}
-
 // loadAgentConfigPolicy checks the current editor and workspace. The Team
 // controls funding, while the existing gateway makes channel groups available
 // to each user. At draft time there is no funding Key; Run admission must
 // recheck that exact Key, its owner, model allowlist and funding separately.
-func loadAgentConfigPolicy(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, workspaceID int64, modelName string) (agentConfigPolicy, error) {
+func loadAgentConfigPolicy(ctx context.Context, db *gorm.DB, identity model.AuthSessionIdentity, workspaceID int64, modelName string) (application.DraftPolicy, error) {
 	if err := validateWorkspaceSessionInput(ctx, db, identity); err != nil {
-		return agentConfigPolicy{}, err
+		return application.DraftPolicy{}, err
 	}
 	db = db.Session(&gorm.Session{Logger: logger.Discard})
 	access, err := AuthorizeWorkspace(ctx, db, identity, workspaceID, AgentWrite)
 	if err != nil {
 		var public *agenttypes.Error
 		if errors.As(err, &public) && public.Code() == agenttypes.InternalError {
-			return agentConfigPolicy{}, agenttypes.NewError(agenttypes.InternalError, nil)
+			return application.DraftPolicy{}, agenttypes.NewError(agenttypes.InternalError, nil)
 		}
-		return agentConfigPolicy{}, err
+		return application.DraftPolicy{}, err
 	}
-	policy := agentConfigPolicy{
-		defaultCostQuota: access.defaultCostQuota,
-		maxCostQuota:     access.maxCostQuota,
-		maxRunSeconds:    access.maxRunSeconds,
+	return loadAgentConfigModelPolicy(ctx, db, access.modelGroup, modelName, application.DraftPolicy{
+		DefaultCostQuota: access.defaultCostQuota,
+		MaxCostQuota:     access.maxCostQuota,
+		MaxRunSeconds:    access.maxRunSeconds,
+	})
+}
+
+func loadAgentConfigModelPolicy(ctx context.Context, db *gorm.DB, modelGroup, modelName string, policy application.DraftPolicy) (application.DraftPolicy, error) {
+	if policy.DefaultCostQuota < 0 || policy.MaxCostQuota < policy.DefaultCostQuota || policy.MaxRunSeconds < 0 {
+		return application.DraftPolicy{}, agenttypes.NewError(agenttypes.InternalError, nil)
 	}
-	if policy.defaultCostQuota < 0 || policy.maxCostQuota < policy.defaultCostQuota || policy.maxRunSeconds < 0 {
-		return agentConfigPolicy{}, agenttypes.NewError(agenttypes.InternalError, nil)
-	}
-	if access.modelGroup == "" || access.modelGroup == "auto" || strings.TrimSpace(access.modelGroup) != access.modelGroup || !ratio_setting.ContainsGroupRatio(access.modelGroup) ||
+	if modelGroup == "" || modelGroup == "auto" || strings.TrimSpace(modelGroup) != modelGroup || !ratio_setting.ContainsGroupRatio(modelGroup) ||
 		modelName == "" || strings.TrimSpace(modelName) != modelName || !hasAgentConfigBilling(modelName) {
 		return policy, nil
 	}
 	groups := []string{}
-	for group := range service.GetUserUsableGroups(access.modelGroup) {
+	for group := range service.GetUserUsableGroups(modelGroup) {
 		if group != "" && group != "auto" && ratio_setting.ContainsGroupRatio(group) {
 			groups = append(groups, group)
 		}
 	}
-	policy.modelAvailable, err = model.AgentConfigTextModelAvailable(db.WithContext(ctx), modelName, groups)
+	available, err := model.AgentConfigTextModelAvailable(db.WithContext(ctx), modelName, groups)
 	if err != nil {
-		return agentConfigPolicy{}, agenttypes.NewError(agenttypes.InternalError, nil)
+		return application.DraftPolicy{}, agenttypes.NewError(agenttypes.InternalError, nil)
 	}
+	policy.ModelAvailable = available
 	return policy, nil
 }
 
