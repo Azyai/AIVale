@@ -7845,6 +7845,9 @@
     "From source files to reusable knowledge": "From source files to reusable knowledge",
     "Static capability diagram": "Static capability diagram",
     "Versioned data flow": "Versioned data flow",
-    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site."
+    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.",
+    "Compute orchestration and": "Compute orchestration and",
+    "Enterprise AI compute and Token services": "Enterprise AI compute and Token services",
+    "Make large-model compute as easy as water and electricity — on tap, metered.": "Make large-model compute as easy as water and electricity — on tap, metered."
   }
 }

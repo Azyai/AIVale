@@ -7845,6 +7845,9 @@
     "From source files to reusable knowledge": "从源文件，到可复用的知识",
     "Static capability diagram": "能力结构示意",
     "Versioned data flow": "数据版本流程",
-    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "订阅按所配置的套餐提供额度；钱包扣费遵循本站配置的模型价格与计费规则。"
+    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "订阅按所配置的套餐提供额度；钱包扣费遵循本站配置的模型价格与计费规则。",
+    "Compute orchestration and": "算力调度与",
+    "Enterprise AI compute and Token services": "企业级 AI 算力与 Token 服务",
+    "Make large-model compute as easy as water and electricity — on tap, metered.": "让大模型算力，像水与电一样 —— 随取随用，按表计量。"
   }
 }
