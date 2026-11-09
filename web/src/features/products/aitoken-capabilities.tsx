@@ -63,75 +63,69 @@ export function AITokenCapabilities() {
       aria-labelledby='aitoken-capabilities-title'
       className='relative scroll-mt-24 px-5 py-12 sm:px-8 md:py-16 lg:px-12 2xl:px-16'
     >
-      <div className='mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end'>
+      <div className='mb-8 text-center'>
         <h2
           id='aitoken-capabilities-title'
-          className='max-w-4xl text-2xl leading-tight font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl'
+          className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight text-balance'
         >
           {t('Model access, keys, usage, and plans in one place.')}
         </h2>
-        <p className='text-muted-foreground max-w-lg text-sm leading-relaxed sm:text-base'>
+        <p className='text-muted-foreground mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
           {t('Compatible API routes for common AI application workflows')}
         </p>
       </div>
 
-      <Tabs defaultValue='access' className='gap-5'>
-        <TabsList className='border-primary/15 bg-primary/5 grid h-auto! w-full grid-cols-1 gap-1 rounded-xl border p-1.5 sm:grid-cols-3'>
+      <Tabs
+        defaultValue='access'
+        orientation='vertical'
+        className='flex-col gap-8 rounded-3xl bg-linear-to-br from-blue-500/10 via-violet-500/5 to-cyan-400/5 p-5 sm:p-6 md:flex-row md:items-stretch md:gap-12 md:p-10'
+      >
+        <TabsList
+          variant='line'
+          className='h-auto w-full items-stretch justify-start gap-0 p-0 md:w-2/5 md:justify-between'
+        >
           {CAPABILITIES.map((capability) => (
             <TabsTrigger
               key={capability.id}
               value={capability.id}
-              className='data-active:text-primary min-h-12 gap-2 rounded-lg px-4 py-3 whitespace-normal'
+              aria-label={t(capability.titleKey)}
+              aria-describedby={`aitoken-tab-description-${capability.id}`}
+              className='group/aitoken-tab border-border/50 data-active:text-foreground text-muted-foreground/70 hover:text-foreground block h-auto w-full flex-none rounded-none border-0 border-b bg-transparent px-0 py-4 text-left whitespace-normal after:hidden last:border-b-0 data-active:bg-transparent md:py-5 dark:data-active:bg-transparent'
             >
-              <HugeiconsIcon icon={capability.icon} aria-hidden='true' />
-              {t(capability.titleKey)}
+              <span className='flex w-full items-start gap-3'>
+                <span
+                  aria-hidden='true'
+                  className='bg-border group-data-active/aitoken-tab:bg-primary group-data-active/aitoken-tab:shadow-primary/30 mt-1 h-6 w-1 shrink-0 rounded-full group-data-active/aitoken-tab:shadow-sm'
+                />
+                <span className='min-w-0 flex-1'>
+                  <span className='block text-xl font-semibold tracking-tight md:text-2xl'>
+                    {t(capability.titleKey)}
+                  </span>
+                  <span
+                    id={`aitoken-tab-description-${capability.id}`}
+                    className='text-muted-foreground mt-3 hidden text-base leading-relaxed font-normal group-data-active/aitoken-tab:block md:text-lg'
+                  >
+                    {t(capability.descriptionKey)}
+                  </span>
+                </span>
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>
-        {CAPABILITIES.map((capability) => (
-          <TabsContent
-            key={capability.id}
-            value={capability.id}
-            className='via-background overflow-hidden rounded-2xl border border-violet-400/20 bg-linear-to-br from-violet-500/8 to-cyan-400/8'
-          >
-            <div className='grid lg:grid-cols-[0.85fr_1.5fr]'>
-              <div className='flex flex-col items-start justify-center p-6 sm:p-8 lg:p-10'>
-                <span className='bg-primary/10 text-primary mb-5 flex size-12 items-center justify-center rounded-xl'>
-                  <HugeiconsIcon
-                    icon={capability.icon}
-                    className='size-6'
-                    aria-hidden='true'
-                  />
-                </span>
-                <h3 className='text-2xl font-semibold'>
-                  {t(capability.titleKey)}
-                </h3>
-                <p className='text-muted-foreground mt-4 text-base leading-relaxed'>
-                  {t(capability.descriptionKey)}
-                </p>
-                <a
-                  href='#api-access'
-                  className={cn(
-                    buttonVariants({ variant: 'link' }),
-                    'mt-5 h-auto max-w-full px-0 py-2 text-left whitespace-normal'
-                  )}
-                >
-                  {t('Use the API')}
-                  <HugeiconsIcon
-                    icon={ArrowRight01Icon}
-                    data-icon='inline-end'
-                    aria-hidden='true'
-                  />
-                </a>
-              </div>
-              <div className='border-primary/10 flex min-h-72 flex-col justify-center border-t p-5 sm:p-8 lg:border-t-0 lg:border-l lg:p-10'>
-                {capability.id === 'access' && <AccessPreview />}
-                {capability.id === 'keys' && <KeysPreview />}
-                {capability.id === 'usage' && <UsagePreview />}
-              </div>
-            </div>
-          </TabsContent>
-        ))}
+        <div className='grid min-w-0 flex-1'>
+          {CAPABILITIES.map((capability) => (
+            <TabsContent
+              key={capability.id}
+              value={capability.id}
+              className='border-border/60 bg-card/80 col-start-1 row-start-1 flex h-[34rem] w-full flex-col justify-center overflow-y-auto rounded-2xl border p-5 shadow-sm backdrop-blur-sm sm:p-6 md:h-[29rem] md:p-7'
+            >
+              <h3 className='sr-only'>{t(capability.titleKey)}</h3>
+              {capability.id === 'access' && <AccessPreview />}
+              {capability.id === 'keys' && <KeysPreview />}
+              {capability.id === 'usage' && <UsagePreview />}
+            </TabsContent>
+          ))}
+        </div>
       </Tabs>
     </section>
   )

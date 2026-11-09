@@ -77,14 +77,14 @@ type Chip = {
   depth: number
 }
 
-function buildChips(): Chip[] {
-  return ORBIT_CHIPS.map((_, i) => {
+function buildChips(count: number): Chip[] {
+  return Array.from({ length: count }, (_, i) => {
     const r1 = seeded(i, 1)
     const r2 = seeded(i, 2)
     const r3 = seeded(i, 3)
     const r4 = seeded(i, 4)
     return {
-      phase: (i / ORBIT_CHIPS.length) * Math.PI * 2 + r1 * 0.7,
+      phase: (i / count) * Math.PI * 2 + r1 * 0.7,
       speed: 0.1 + r2 * 0.055,
       rxF: 0.78 + r3 * 0.5,
       ryF: 0.3 + r4 * 0.3,
@@ -115,8 +115,10 @@ function buildChips(): Chip[] {
  * it breaks orbit, diffuses outward at random, then eases back onto the track.
  * Purely decorative, and painted below the starfield canvas.
  */
-export function HeroBrandSystem() {
+export function HeroBrandSystem(props: { labels?: readonly string[] } = {}) {
   const { t } = useTranslation()
+  const labels = props.labels ?? ORBIT_CHIPS
+  const chipCount = labels.length
   const layerRef = useRef<HTMLDivElement>(null)
   const ringRef = useRef<HTMLDivElement>(null)
   const chipsRef = useRef<Array<HTMLSpanElement | null>>([])
@@ -128,7 +130,7 @@ export function HeroBrandSystem() {
 
     const swarmMedia = window.matchMedia(SWARM_QUERY)
     const reduced = window.matchMedia(REDUCED_QUERY).matches
-    const chips = buildChips()
+    const chips = buildChips(chipCount)
 
     // The orbit radius is read off the rendered corona ring (its diameter is
     // 1.5 × --orbit-r), so chips and ring can never disagree about the size of
@@ -285,7 +287,7 @@ export function HeroBrandSystem() {
       swarmMedia.removeEventListener('change', onResize)
       clearTimeout(rzT)
     }
-  }, [])
+  }, [chipCount])
 
   return (
     <div
@@ -300,7 +302,7 @@ export function HeroBrandSystem() {
         </div>
         <div ref={ringRef} className='hero-orbit-ring' />
         <div className='hero-swarm'>
-          {ORBIT_CHIPS.map((chip, i) => (
+          {labels.map((chip, i) => (
             <span
               key={chip}
               ref={(el) => {
@@ -308,7 +310,7 @@ export function HeroBrandSystem() {
               }}
               className='hero-chip hero-swarm-chip'
             >
-              {t(chip)}
+              {props.labels ? chip : t(chip)}
             </span>
           ))}
         </div>
