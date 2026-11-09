@@ -82,3 +82,9 @@ P02-T08直接运行`matrix.py --engine <sqlite|mysql|postgresql> --runs --output
 在仓库根运行`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --run-journal --output .local-tests/agent-platform/delivery/<全新目录>`。该参数隐含--runs的十一前置阶段及五类Agent HTTP回归，再执行model/router两个`TestAgentRunJournalDatabaseMatrix`，共十三阶段。需要本地ignored测试源，缺少即失败；不接受旧报告或跳过。两新阶段严格检查同engine/run_id/版本、fresh/upgrade、实际操作数和必需布尔断言；存储必须三次真实启动、保留旧ag_runs/其他数据及独立日志；应用必须实际子进程提交后退出再补投、步骤去重、原子回滚、过期/旧回执拒绝、dead及同记录重投、审计分流。三库完整通过并确认隔离服务正常停止才算本批验收，旧agent-definition交付profile不包含这两阶段。
 
 测试仅在标记隔离库中显式构造synthetic execution Run。正式metadata创建不能获得execution准入，当前无公开Run HTTP、Worker认领/进程或真实模型传输。新表/索引和投递事务已实现不等于执行闭环或费用核账完成；详细长期边界见docs/project/02、04–07及内部run-journal-foundation合同。
+
+## P03-T02 预算预留与网关调用账本
+
+`python .agents/agent-platform/database/matrix.py --engine <sqlite|mysql|postgresql> --run-ledger --output .local-tests/agent-platform/delivery/<全新目录>`隐含此前十三阶段，再执行model/router两个`TestAgentRunLedgerDatabaseMatrix`，共十五阶段。缺本地ignored源码、缺fresh/upgrade、版本/run_id不匹配、非正实际操作数、任何标记缺失/失败/跳过或关闭未确认均不得通过。存储核对三表和11索引、三次真实启动、旧Run/Journal/其他旧行及独立日志保留；应用核对原子预留、并发上界、完整意图/全局键、当前lease、确定未发送释放、quote/执行窗、unknown保留及无钱包或模型副作用。
+
+本批测试只在标记隔离库使用synthetic execution及已结算fixture；生产准入端口未装配，普通worker不能自报收费。测试源及详细证据保留ignored目录；正式模型、合同和runner跟踪。旧agent-definition profile不涵盖新增账本两阶段，不能据其结果宣称本批兼容。

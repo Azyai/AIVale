@@ -39,7 +39,8 @@ def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int
             raise
 
 
-def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, definitions: bool = False, config_validation: bool = False, runs: bool = False, run_journal: bool = False) -> dict:
+def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, definitions: bool = False, config_validation: bool = False, runs: bool = False, run_journal: bool = False, run_ledger: bool = False) -> dict:
+    run_journal = run_journal or run_ledger
     runs = runs or run_journal
     config_validation = config_validation or runs
     definitions = definitions or config_validation
@@ -64,6 +65,7 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
         'config_validation_requested': config_validation,
         'runs_requested': runs,
         'run_journal_requested': run_journal,
+        'run_ledger_requested': run_ledger,
     }
     owned_output = None
     state_path = None
@@ -106,6 +108,8 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
             raise ValueError('The required local Run metadata migration and behavior tests are missing.')
         if run_journal and any(not (REPO / name).is_file() for name in ('model/agent_run_journal_database_test.go', 'router/agent_run_journal_database_test.go')):
             raise ValueError('The required local Run journal migration and application tests are missing.')
+        if run_ledger and any(not (REPO / name).is_file() for name in ('model/agent_run_ledger_database_test.go', 'router/agent_run_ledger_database_test.go')):
+            raise ValueError('The required local Run ledger migration and application tests are missing.')
         env = os.environ.copy()
         if runs:
             for name in ('TEST_AGENT_DEFINITION_READ', 'TEST_AGENT_DEFINITION_WRITE', 'TEST_AGENT_DEFINITION_PUBLISH', 'TEST_AGENT_DEFINITION_LIFECYCLE', 'TEST_AGENT_EDITOR'):
@@ -298,6 +302,23 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
                     raise ValueError('Run journal must match the migration database version and exact test.')
                 report[label + '_tests'] = actual['tests']
                 report[label + '_evidence'] = actual['evidence']
+        if run_ledger:
+            for label, package, marker, application in (
+                ('run_ledger_storage', './model', 'AGENT_RUN_LEDGER_DATABASE_RESULT ', False),
+                ('run_ledger_application', './router', 'AGENT_RUN_LEDGER_APPLICATION_RESULT ', True),
+            ):
+                test = 'TestAgentRunLedgerDatabaseMatrix'
+                argv = [shutil.which('go'), 'test', '-mod=readonly', '-count=1', '-json', '-timeout=5m', package, '-run', '^' + test + '$']
+                report[label + '_go_argv'] = argv
+                report[label + '_go_exit_code'] = run_logged(argv, env, output, label + '-go-test', 330)
+                if report[label + '_go_exit_code'] != 0:
+                    report['status'] = 'failed'
+                    raise ValueError('The real Run ledger ' + label + ' stage failed; inspect ignored Go logs.')
+                actual = run_ledger_log_result(output / (label + '-go-test.stdout.log'), engine, run_id, marker, application)
+                if actual['tests']['top_level_passed'] != 1 or actual['evidence']['version'] != report['evidence']['version']:
+                    raise ValueError('Run ledger must match the migration database version and exact test.')
+                report[label + '_tests'] = actual['tests']
+                report[label + '_evidence'] = actual['evidence']
         report['status'] = 'passed'
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         report['reason'] = str(error) or type(error).__name__
@@ -374,6 +395,28 @@ def run_journal_log_result(path: Path, engine: str, run_id: str, marker: str, ap
     return result
 
 
+def run_ledger_log_result(path: Path, engine: str, run_id: str, marker: str, application: bool) -> dict:
+    result = go_test_summary(path, 'TestAgentRunLedgerDatabaseMatrix', marker)
+    evidence = result['evidence']
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not isinstance(evidence.get('version'), str) or not evidence['version'].strip():
+        raise ValueError('Run ledger evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if not isinstance(scenarios, list) or len(scenarios) != 2 or any(not isinstance(scenario, dict) for scenario in scenarios) or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Run ledger requires both fresh and upgraded databases.')
+    storage_fields = ('isolated_schema', 'indexes_verified', 'prior_rows_preserved', 'scope_isolation', 'parent_consistency',
+                      'initial_state', 'mutation_rejected', 'transaction_rollback', 'restart_preservation')
+    app_fields = ('admission_closed', 'metadata_only_closed', 'reservation_atomic', 'scope_isolation', 'complete_intent_replay',
+                  'global_keys', 'concurrent_budget_limit', 'stale_fence_rejected', 'unissued_release', 'outcome_unknown_retained',
+                  'transaction_rollback', 'zero_and_overflow', 'no_wallet_changes', 'no_model_dispatch', 'reference_redacted')
+    for scenario in scenarios:
+        count = scenario.get('ledger_operations' if application else 'repository_operations')
+        if type(count) is not int or count < 1 or any(scenario.get(field) is not True for field in (app_fields if application else storage_fields)):
+            raise ValueError('Run ledger lacks executed operations or required assertions.')
+        if not application and (type(scenario.get('startup_passes')) is not int or scenario['startup_passes'] != 3):
+            raise ValueError('Run ledger storage requires exactly three successful startup passes.')
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--engine', choices=('sqlite', 'mysql', 'postgresql'), required=True)
@@ -388,8 +431,9 @@ def main() -> int:
     parser.add_argument('--config-validation', action='store_true', help='Execute the eight prerequisite stages and P02-T02 model and workspace policy checks in order.')
     parser.add_argument('--runs', action='store_true', help='Execute all prerequisite stages, Run metadata migration and internal creation checks; no runtime execution.')
     parser.add_argument('--run-journal', action='store_true', help='Execute all 11 prerequisites plus Run steps/events migration and recoverable notification delivery; no worker or model execution.')
+    parser.add_argument('--run-ledger', action='store_true', help='Execute all 13 prerequisites plus budget reservation and gateway/usage ledger migration and atomic application checks; no worker or model dispatch.')
     args = parser.parse_args()
-    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members, args.grants, args.governance, args.definitions, args.config_validation, args.runs, args.run_journal)
+    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members, args.grants, args.governance, args.definitions, args.config_validation, args.runs, args.run_journal, args.run_ledger)
     print(json.dumps({key: report.get(key) for key in ('engine', 'status', 'run_id', 'reason', 'cleanup')}, ensure_ascii=False))
     return {'passed': 0, 'failed': 1, 'incomplete': 2}[report['status']]
 
