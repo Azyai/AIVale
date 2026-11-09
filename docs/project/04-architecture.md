@@ -39,8 +39,8 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 
 ## 3. 目录职责与依赖方向
 
-新业务依赖方向为 `router → controller → service/<domain> → model`；跨领域用 application service 编排，避免 service 相互导入形成循环。
-旧代码存在直接调用不代表新代码应继续扩散该模式，也不授权顺带进行全仓分层重构。
+当前迁移期依赖为 `router → controller → service/<domain> → model`。v1.21按用户要求增加R01–R08领域分层设计：新建或明确迁移的领域采用`controller/<domain> → service/<domain>/application → domain`；application定义窄端口，repository适配旧model/GORM，由bootstrap显式注入。跨领域由上层用例编排，避免service循环依赖。
+具体所有权、目录、事务样板与迁移批次见[模块分层与渐进迁移设计](10-模块分层与渐进迁移设计.md)。按明确R任务切片实施，不借导航任务一次性搬迁全仓。旧领域在完成迁移前保持既有结构，拆层不改变既有协议或表名。
 
 | 位置 | 职责与边界 | 当前状态 |
 | --- | --- | --- |
@@ -48,19 +48,27 @@ API 与 Worker 按计划复用同版本代码和镜像；运行角色参数尚�
 | `controller/agent*.go` | 请求解析、调用 service、HTTP 状态和响应封装 | 当前有能力探测及工作区读写生命周期的严格解析和白名单DTO转换，其他按任务扩展 |
 | `dto/`、`types/agent/` | 边界 DTO、Agent 错误 wire 类型 | 已有；Agent 类型保持根模块叶子依赖 |
 | `model/agent*.go` | 持久化实体及带归属条件的数据库操作 | 已有工作区、成员、Key 授权及个人工作区存储；P02-T01 增加 Agent 定义和不可变版本仓储。仓储归属约束与 `AgentScope` 均不替代服务端身份和动作授权 |
-| `service/agent/` | 草稿、验证、发布与授权编排 | 已有工作区访问、读写和授权；P02-T02 增加只读 `ValidateAgentConfig`，复用实时工作区与模型政策，不注册客户草稿或发布接口 |
+| `service/agent/` | 工作区访问、读写与授权；Agent草稿校验兼容入口 | `ValidateAgentConfig`绑定可信管理会话，适配实时工作区、模型策略和网关限额，不注册客户草稿或发布接口 |
+| `service/agentdefinition/application/` | 定义用例；分设元数据/历史读取、配置策略、草稿、发布及生命周期事务端口 | 配置校验、定义与release历史、草稿读写、发布、恢复、切换、启停和归档；共享快照结构与摘要校验，不直接依赖GORM、HTTP或relay包 |
+| `controller/agentdefinition/`、`repository/agentdefinition/` | 定义、版本内容及生命周期的HTTP白名单与model适配 | 绑定可信管理会话，读SQL限制实时可见范围和内容权，写复用工作区事务与审计投影。两类revision按命令分开；发布指针与历史内容分别变更，版本快照不可覆盖 |
+| `service/agentrun/application/`、`repository/agentrun/` | Run元数据创建、预算准备端口与主库适配 | P02-T08复用事务锁及Run/收据/v8审计；P02-T09预算只读准备通过可信事实、严格报价与host输出校验端口，不直接依赖GORM/HTTP/relay，不装配执行或修改RunCreate准入 |
+| `service/agentrun/domain/` | 纯预算领域规则 | 限额交集、仅下调覆盖、费用/资金/次数/步骤/时间边界；无数据库、网关请求、扣费或派发 |
+| `service/agent/run_budget.go`、`types/agent/model_call.go` | host边界与调用关联投影 | host复用现有输出上限，避免复制relay常量；DTO仅校验内部身份、真实scope/版本/价格关联和确认用量形状，不能作为授权/结算收据 |
 | `service/agentexecution/` | 单步骤适配及未来Run、状态机、租约与恢复 | 当前仅P00-T08的单步接口/Eino适配；持久化执行及恢复仍规划 |
 | `service/skill/`、`service/mcp/` | 技能包与工具连接适配 | 规划，不把供应商任务插件当客户 Skills |
 | `service/agentartifact/` | 产物存储、授权读取、清理 | 规划，不把既有禁用存储实现称为可用 |
 | `service/authz/` | 扩展资源动作及现有权限框架 | 已有，工作区归属仍需显式实现 |
-| `web/src/features/agent-platform/` | 能力查询、类型、独立工作台布局及业务页面 | 提供工作台侧栏、团队工作区列表和深链接、创建、编辑、归档、成员管理，以及账号私有的个人工作区页面 |
-| `web/src/features/agents/`、`skills/`、`mcp/`、`agent-runs/` | 各业务页面、表单、查询和交互 | 规划，避免提前创建空壳 |
+| `web/src/features/agent-platform/` | 能力查询、独立工作台及工作区管理 | 团队与个人工作区、成员及深链接；公共可用性临时失败时隐藏已授权页面并保留表单，显式关闭或身份变化卸载 |
+| `web/src/features/agent-platform/agents/` | Agent列表、创建、草稿编辑、类型契约、查询与表单 | P02-T06/T07在现有feature内复用会话隔离、读写传输和通用业务控件；非嵌套工作区子路由承载列表、编辑和版本历史。release-api/release-schemas处理发布与生命周期契约，release-diff比较规范配置字段，页面和弹窗只编排授权及操作状态；草稿、版本正文、发布请求和原因只在组件内存保留，不落本地持久存储 |
+| `web/src/features/skills/`、`mcp/`、`agent-runs/` | 后续领域页面、表单和交互 | 规划，避免提前创建空壳 |
 
 独立 Worker 入口与单二进制角色只能按冻结方案选择，不能同时维护两套无必要的启动装配。
 `relaykit/` 只承担协议 DTO 与转换；传输、认证、数据库、结算留在宿主。`tokenkit/` 只承担 token 计数及估算，不依赖根模块或 `relaykit/`。
 Agent 的 Run、事件、错误和检查点契约归平台所有，不直接暴露 Eino、MCP SDK 或供应商内部类型。
 
 ## 4. 后端实现规则
+
+下列service/model规则继续约束未迁移领域；已迁领域通过窄事务端口维持相同的业务原子性，application不直接接收GORM或Gin。不得为了符合新目录把实时授权移到事务外、引入双写或绕过原幂等审计。
 
 - controller 只处理边界解析、身份上下文、服务调用与响应，不持有长事务，不启动脱离生命周期的 goroutine。
 - service 定义业务操作及事务边界；model 负责可复用的持久化操作，不从 model 反向调用 controller 或 HTTP 层。
@@ -205,3 +213,9 @@ P01-T04另注册创建、编辑和归档三个管理写接口，复用同一type
 每批交付包含完成该行为必要的契约、服务端实现、前端类型与状态、路由装配、配置、迁移及长期规范；互相依赖的文件不拆成不可构建的中间状态。
 验证用例和夹具保留本地，执行摘要写交付说明或授权提交正文；不将报告、日志和截图塞入规范或源码目录。
 提交前复核权限、兼容、取消、错误恢复与未实现部分，说明实际运行的检查和限制；提交组织及授权遵守 [Git 提交规范](08-git-commit.md)。
+
+## P03-T01 Journal与运行通知的分层
+
+`types/agent/run_journal.go`只定义内部scope、fence、pending意图、结果和唤醒引用；全部内部值不作为公共JSON。`service/agentrun/application/journal.go`定义journal/通知仓储与发布端口及显式投递用例，不依赖GORM、Gin或relay。`repository/agentrun/journal.go`负责主库事务和固定错误映射；`model/agent_run_journal.go`提供加入调用方事务的原子操作，拒绝基础连接，事务包装拒绝嵌套并仅重试确定已回滚的并发冲突。
+
+`model/agent_run_step.go/agent_run_event.go`拥有结构与引用校验，`model/agent_run_delivery.go`拥有通知持久化、领取和回执fence。步骤逻辑键、事件双唯一、Run CAS及投递revision分别约束各自重复窗口，不用进程锁或缓存替代数据库事实。旧审计投影保留v1–v8 kind白名单，不消费运行通知；投递不持业务事务锁调用网络。当前未把内部port注册为Worker、HTTP或执行准入，后续接线仍需可信服务身份及实时资源授权。

@@ -71,6 +71,20 @@ P01-T08d 的编辑与归档入口只使用本次详情的 `workspace:manage`，�
 
 P02-T02 校验 Agent 配置时重新判定当前会话的 `agent:write` 和 Team/Workspace 关系。模型、渠道与分组使用服务端的实时事实，不接收客户端分组、渠道或资金凭据。非法配置只返回固定错误和字段位置，Schema 不解析外部引用或执行表达式；模型不可用不区分其他租户、停用或缺价。校验不提供运行许可，后续发布和运行重新检查各自依赖与权限。
 
+API-015/017复用既有管理会话认证和实时`agent:read`；PAT与模型Token不获得读取权限。查询前后复查会话和工作区权限，COUNT、分页及详情SQL本身仍约束有效会话、当前Team和显式工作区授权。列表/详情只投影允许的元数据，禁止草稿、提示词、哈希、主体ID和内部异常流出；不可见资源使用同一404，所有响应使用no-store。此切片参考[OWASP逐请求鉴权](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)和[输入白名单](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)，不改变登录或刷新流程。
+
+API-016/018/019进一步要求活跃工作区和当前`agent:write`。读取草稿、创建收据重放和保存都在工作区事务内重新检查会话、Team、成员与工作区状态；仓储按Team、Workspace、Agent约束草稿行。保存对照当前草稿修订号和服务端实时模型政策。成功创建/编辑仅记录固定操作、主体和对象ID、请求ID、修订号和时间；耐久审计与业务同事务，投影失败保留待处理事件。拒绝审计为独立的尽力记录。两类审计及草稿仓储SQL日志均不记录提示词、配置、描述或原始幂等键。草稿的规范化配置只对当前获授权的编辑者返回，响应使用no-store。
+
+API-021使用同一管理会话边界，但显式要求`agent:publish`，不以编辑权限或幂等收据代替当前授权。新发布只允许活跃工作区的active Agent，并重新检查模型与工作区限额；保存后的草稿不因发布而被自动改写。收据不含正文、说明、凭据或内部主体，重放不改变指针。成功事实以独立`agent_publication_audit` v6耐久保存Agent、版本、草稿与元数据修订号；失败沿用固定拒绝审计。会话撤销、退组、降权、工作区暂停/归档与跨Agent/Workspace替换均须负向验证。此入口不调用模型或产生费用。实现参考[OWASP逐请求权限校验](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)与[服务端事务授权](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html)，不声明通过整站安全认证。
+
+API-022只提供release元数据。API-023把当前`agent:write`明确作为内容权，SQL与用例授权均限制owner双事实或当前显式active admin/developer；operator/viewer不能读取历史提示词。详情的验证摘要只说明读取时结构与摘要检查，不代表当前模型或运行许可；已下架模型及已撤销版本可读历史内容，恢复或激活已撤销版本则拒绝。归档Agent历史仍按当前工作区权限可查，归档工作区保持不可见。
+
+API-024恢复草稿、026归档及026A启停要求实时`agent:write`；025版本切换要求`agent:publish`。切换及从disabled启用有发布版本的Agent时复核精确版本的当前模型/工作区政策，不能靠启用绕过检查。恢复只复制配置，不授予运行权限。所有写均要求active工作区、规范JSON和相应revision，理由摘要与变更通过v7审计原子提交；旧revision不冒充成功重试，未知结果先读当前状态。归档后禁止新写但不删除历史，尚无Run引擎时不宣称已验证在途运行处置。
+
+API-020/029只接受当前管理会话的实时编辑权限；校验报告不含草稿正文，模型目录只暴露当前授权候选名称和通用可用状态，不接收资金Key，也不授予执行资格。客户端严格检查白名单响应、ID和revision对应关系，不保留服务器未知字段路径或原始失败对象。
+
+编辑页面及查询按当前用户、会话SID、工作区和Agent隔离；身份丢失、权限拒绝或平台显式关闭后撤下正文并清理表单。临时网络/公共能力探测失败只隐藏且禁用同会话表单，恢复后保留未保存修改；不把提示词持久化到localStorage或sessionStorage。创建未知结果锁定原输入与幂等键，包含HTTP500窗口；保存未知结果先人工读取服务器草稿。手动采用或合并更高修订号后，滞后的父查询不能再阻挡该已确认版本；后续更高修订号及服务端CAS仍阻止覆盖。校验报告仅在与当前base修订号一致且表单未改动时显示，不能据其发布或运行。
+
 四角色的24动作候选范围见计划6.2，候选不等于最终许可：元数据读取不包含私密正文，run:create/内容/取消/审批、credential:use、Token grant、费用与Artifact父资源等还缺真实资源条件的动作，本入口一律拒绝；后续领域服务必须实现相应持久化授权和策略交集，不接受body中的sharing/binding/approval布尔值直接放行。暂停工作区仅允许已有读取及必要workspace/member管理；新写配置、发布和执行拒绝。常规读/写授权对归档资源拒绝，T04仅为当前管理者提供特定同Key归档收据重放；未来历史资源读取例外单独设计。
 
 P01-T04三写只接受已有显式Bearer管理会话，拒Cookie降级、PAT和模型Token；JSON内容类型和严格单对象边界避免表单/simple content-type替代。创建为当前Team双事实owner，编辑/归档为当前owner或显式active admin，权限和业务写入在同一短事务校验并持锁；请求Team/role/旧Scope不参与授权。
@@ -158,3 +172,34 @@ MCP 测试/调用、OAuth 元数据、Git 拉取、URL 下载及重定向共用�
 - 留存分开配置内容、产物、检查点、账务和审计；删除内容不级联抹去核账关联，也不以财务留存为由保存不必要的原文。
 
 验证至少覆盖跨租户 ID 替换、角色/Token 降权、撤销后的下一次调用、旧审批重放、SSRF 重定向、压缩包逃逸和审计秘密泄露。按 [测试与验收规范](07-acceptance.md) 执行本地验证；测试、报告和日志遵循 [Git 提交规范](08-git-commit.md) 与 [内容管理规范](09-repository-hygiene.md)，不将未实现能力写成已通过。
+
+
+## Agent 发布与版本界面的授权及未知结果
+
+P02-T07复用当前工作区实时权限：版本元数据需要agent:read，正文与对比需要启用工作区的agent:write，发布和切换当前版本另需agent:publish。Agent元数据响应里的读取权限不能代替工作区写入授权。查询缓存绑定用户、管理会话、工作区及Agent；重新验证时撤下私有正文并锁定操作，保留内存中的草稿和操作原因。明确失权、会话变化或功能关闭时卸载私有内容，不写浏览器持久存储。
+
+新发布只接受已保存、无本地修改且修订号已核对的草稿。写入结果未知时保留原请求体和幂等键，以同一请求找回原版本收据；普通代理5xx或丢失响应不等于服务端未提交。收据只证明那次发布，当前版本指针必须重新查询，不能由旧收据覆盖。明确的运行功能不可用与普通代理503分开处理。
+
+恢复为草稿使用最新草稿修订号，切换版本、停用/启用和归档使用最新元数据修订号。各操作先只读准备，再独立确认；冲突保留原因，未知结果只允许重新读取并核对当前状态后发起新操作，不自动重放CAS写入。恢复不发布，切换不覆盖草稿，停用保留版本指针，归档不删除历史。服务端继续执行实时授权、政策与不可变快照检查；页面对比不证明旧模型当前仍可发布。
+
+
+## Run 元数据基础的受控身份
+
+P02-T08的内部管理会话基础函数在主库事务内重新检查User/Session版本与状态、当前Team成员、owner双事实、工作区及候选admin/developer/operator角色。它只允许持久化metadata_only记录，保持通用RunCreate的RequiresResourceCheck=true；不授予模型、工具或资金执行许可。资金引用限定同Team且本人持有、启用未删除未到期的Token，版本限定同Agent/Workspace的active release且未撤销；重放同样重新核对。
+
+输入、metadata与能力摘要不出现在创建收据或日志；数据库语句日志在整条敏感事务路径关闭。保留键不能从metadata覆盖主体或预算，输入Schema不解析URL/$ref，精确数字与结构深度/节点/字节上限先校验。审计只记录run/Agent/version、主体、工作区、时间和固定动作；v8新增run_id，不让旧v1–v7载荷接受此字段。
+
+本批按2026-11-09核对的[OWASP ASVS 5.0.0](https://asvs.owasp.org/)及[逐请求授权](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)、[会话管理](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)约束，重点验证默认拒绝、服务端实时对象归属、撤销后重放失败、最小化凭据读取和脱敏失败。此范围不改变登录协议，也不声称全站ASVS认证。
+
+
+## Run预算准备与可信计量
+
+P02-T09内部身份和全部预算事实均标记json:"-"，不把用户提交的known_price/has_funding、金额或scope当作实时许可。真实事实reader将来必须绑定当前服务/用户身份，检查Run/Step/固定版本、lease owner/epoch、成员与资金控制权；本批只定义该端口，未装配授权或报价实现。quoted upper bound必须针对完全匹配的身份、Run revision、模型/配置、输出/时长及请求摘要，报价过期、指针意图改变、未知结果和metadata_only均拒绝。
+
+公开Token的caller=funding，管理会话caller为NULL；同一逻辑调用不能因未知结果换attempt/request_id重做。未来可信producer才可写gateway和usage；最小关联DTO的结构校验不证明付款、来源事件真实性或对象存在。未知金额NULL与确认零值分开；可空消费log引用不会使未知成本变成成功。错误仅保留固定分类，不输出余额、价格内部详情、输入或依赖原文。本批不改变登录、旧Key、Token grant或资金选择规则。
+
+## P03-T01 内部持久化与投递边界
+
+Journal scope/fence及通知receipt不是用户认证、可复用授权或Run执行租约。仓储入口仅接受完整持久化execution快照并核对Run引用，当前管理metadata创建不能获得该标记；代码不提供升级函数。将来Worker host必须另验可信服务身份、实时成员/资源/资金控制权，不能以收到run_ready或通过快照结构校验代替。当前没有新HTTP路由或正式execution准入。
+
+步骤及事件引用始终同Team/Workspace/Run；写操作还校验当前owner/epoch、lease、deadline和取消状态。通知回执与Run租约独立，旧owner、旧revision或过期回执不能确认。MySQL涉及owner/kind/status的条件采用精确比较；错误只有固定分类，SQL日志关闭。引用producer和通知不复制输入、metadata、Key、模型正文或隐藏推理；原始Step/Event JSON的结构校验不是自动脱敏保证，新增正文producer必须自行履行该责任。死信保留并以显式CAS重投，不自动重发外部调用或释放资金。
