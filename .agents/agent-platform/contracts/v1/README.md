@@ -308,3 +308,7 @@ created_at:desc,id:desc
 ## P03-T01 Run步骤、事件与可靠通知基础
 
 [`run-journal-foundation.md`](run-journal-foundation.md)、[Schema](run-journal-foundation.schema.json)及[正反样例](run-journal-foundation.examples.json)冻结内部事务原语与离线值投影，不是HTTP/OpenAPI。步骤只创建pending/attempt=1，事件type开放、seq/key分别唯一；运行通知只保存引用，SQL持久化及revision/owner/expiry回执fence支持至少一次投递和死信重投。metadata_only不能升级；execution准入、Run claim、后台Worker、真实传输及模型/账务仍未装配。
+
+## P03-T02 预算预留与调用账本
+
+[`run-ledger-foundation.md`](run-ledger-foundation.md)、[Schema](run-ledger-foundation.schema.json)和[正反样例](run-ledger-foundation.examples.json)定义内部事务值投影，不是HTTP或付款凭证。新增三表；reserved/prepared登记、仅未发送释放、结果未知保留原预算和已确认资金事实、同调用完整意图重放均同Run/Step/事件/outbox事务。默认准入端口关闭，真实Worker、身份/资金/价格适配及模型尚未接通；usage仅charge存储引用检查，P06实际核账投影及退款后置。

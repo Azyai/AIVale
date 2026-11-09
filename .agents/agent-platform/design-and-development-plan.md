@@ -778,6 +778,7 @@ P01-T07 续发另写 `token_grant_renewal_audit` v4，记录原状态、原期�
 | `upstream_request_id` | V(128) | Y | NULL | 上游收据引用 |
 | `preconsume_quota` | QUOTA | Y | NULL | 网关实际预扣值，仅关联记录，不再次扣款 |
 | `actual_quota` | QUOTA | Y | NULL | 网关确认的最终收费；未知必须 NULL，不能写 0 |
+| `consume_log_id` | ID | Y | NULL | 真实持久化消费事件主键，来源未确认时为空；不是列表序号或普通RequestId |
 | `funding_state` | V(16) | N | pending | pending、applied、refunded、unknown |
 | `token_state` | V(16) | N | pending | 同上，区分资金来源与 Token 使用统计提交 |
 | `funding_source` | V(24) | Y | NULL | 实际钱包/订阅等来源 |
@@ -3235,7 +3236,7 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
 
 #### P03-T02 创建预算预留与网关调用账本
 
-- [ ] 完成并记录验收证据
+- [x] 完成并记录验收证据
 - **前置依赖**：P02-T09、P03-T01。
 - **目标**：在真实模型请求前建立可追踪的预算和调用身份。
 - **具体操作**：
@@ -3244,6 +3245,8 @@ P03 首次真实模型调用前必须已完成预算预留、可信运行身份�
   3. 把调用结果未知的step标为outcome_unknown，Run转failed且error_code=CALL_OUTCOME_UNKNOWN、usage_state=reconciliation_required；保留预留，禁止重发模型或自动退款。
 - **交付物与落点**：三表、预算仓储与调用账本，不替代现有网关钱包结算。
 - **验收**：并发预留不超过Run上限；重复call_id返回已有状态，模拟未知响应不释放预留。
+- **实施范围**：新增预算预留、网关调用和用量三表及11索引；真实消费凭证以nullable consume_log_id关联，P05产物和P10根Run列后置。types/application/repository/model分层；事务内锁同域execution Run/模型Step、核对固定release摘要/模型/有效限额和lease，原子登记reserved/prepared、绑定逻辑call、更新Run reserved/modelcount、追加引用事件及通知。同调用完整意图重放只返回已有状态；新动作重查quote与有效累计/单调用窗口并在最终CAS复查。仅确定未发送且无任何资金/响应观测可释放，不减少已接受调用数；dispatched未知使Step/调用/预留unknown、Run failed与待核账，保留预算及已确认资金事实，未确认金额NULL，不重发或退款。应用准入端口未装配生产身份/价格资金实现，nil关闭；用量仅提供同域可信settled父引用的charge存储校验，P06核账与实际投影消费后置，不改变钱包结算。
+- **验收记录**：2026-11-09在SQLite 3.50.4、MySQL 26.7.0、PostgreSQL 18.6 fresh/upgrade完成十五阶段，各存储场景三次真实启动，保留旧Run/步骤/事件、其他旧行和独立日志；新增390次存储操作、546次账本应用操作，覆盖原子回滚、并发预算/次数、全局唯一键/完整意图、跨scope、旧lease、报价/累计窗、未发送释放、未知及部分已确认资金事实保留、零额度/整型上界、默认准入关闭和钱包不变。此前十三阶段及1734次Agent五类HTTP回归通过，三个隔离环境正常停止。45顶层/连同子例235项定向回归、5正29反内部合同、Go格式/vet及真实前端嵌入的根构建通过（Go1.27.0/模块目标1.26）。此为内部账本基础，不证明生产执行准入、真实模型/钱包、最低数据库版本、ClickHouse、完整核账或部署。
 - **回退**：暂停新Run；保留预留及账本供核账，不批量清零。
 - **估算与门禁**：1.5 人日；G-DB、G-BILL。
 
