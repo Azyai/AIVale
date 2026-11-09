@@ -1,0 +1,243 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P02-T05",
+  "examples": [
+    {
+      "name": "list",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-list",
+        "data": {
+          "items": [
+            {
+              "id": "301",
+              "agent_id": "201",
+              "version_no": 1,
+              "version_kind": "release",
+              "source_draft_revision": 2,
+              "config_hash": "19a9f8e6163692118bf4cfe940ca02194a18c6ead40fc3477b173fa8fa32da6b",
+              "published_at": 1794196800000,
+              "revoked_at": null,
+              "published_by": "41"
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "page_size": 20
+        }
+      }
+    },
+    {
+      "name": "detail",
+      "schema": "detailResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-detail",
+        "data": {
+          "id": "301",
+          "agent_id": "201",
+          "version_no": 1,
+          "version_kind": "release",
+          "source_draft_revision": 2,
+          "config_hash": "19a9f8e6163692118bf4cfe940ca02194a18c6ead40fc3477b173fa8fa32da6b",
+          "published_at": 1794196800000,
+          "revoked_at": null,
+          "published_by": "41",
+          "config": {
+            "schema_version": 1,
+            "name": "文本摘要助手",
+            "instructions": "只根据用户提供的文本生成一句摘要，并说明缺失的信息。",
+            "model_policy": {
+              "model": "baseline-text-model",
+              "temperature": 0.2,
+              "max_output_tokens": 1024
+            },
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20000
+                }
+              },
+              "required": [
+                "question"
+              ],
+              "additionalProperties": false
+            },
+            "output_schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "skill_bindings": [],
+            "tool_bindings": [],
+            "limits": {
+              "max_steps": 4,
+              "max_model_calls": 1,
+              "max_tool_calls": 0,
+              "timeout_seconds": 60,
+              "max_cost_quota": "1000"
+            }
+          },
+          "release_note": "首个版本",
+          "validation_summary": {
+            "schema_version": 1,
+            "config_hash_verified": true
+          }
+        }
+      }
+    },
+    {
+      "name": "restore",
+      "schema": "restoreResponse",
+      "http_status": 200,
+      "request_schema": "restoreRequest",
+      "request": {
+        "version_id": "301",
+        "expected_revision": 3
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-restore",
+        "data": {
+          "id": "201",
+          "revision": 4,
+          "config": {
+            "schema_version": 1,
+            "name": "文本摘要助手",
+            "instructions": "只根据用户提供的文本生成一句摘要，并说明缺失的信息。",
+            "model_policy": {
+              "model": "baseline-text-model",
+              "temperature": 0.2,
+              "max_output_tokens": 1024
+            },
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20000
+                }
+              },
+              "required": [
+                "question"
+              ],
+              "additionalProperties": false
+            },
+            "output_schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "skill_bindings": [],
+            "tool_bindings": [],
+            "limits": {
+              "max_steps": 4,
+              "max_model_calls": 1,
+              "max_tool_calls": 0,
+              "timeout_seconds": 60,
+              "max_cost_quota": "1000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "activate",
+      "schema": "stateResponse",
+      "http_status": 200,
+      "request_schema": "activateRequest",
+      "request": {
+        "version_id": "301",
+        "expected_revision": 2,
+        "reason": "回切已验证版本"
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-activate",
+        "data": {
+          "id": "201",
+          "status": "active",
+          "revision": 3,
+          "current_version_id": "301",
+          "archived_at": null
+        }
+      }
+    },
+    {
+      "name": "status",
+      "schema": "stateResponse",
+      "http_status": 200,
+      "request_schema": "statusRequest",
+      "request": {
+        "status": "disabled",
+        "expected_revision": 3,
+        "reason": "暂停新任务"
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-disable",
+        "data": {
+          "id": "201",
+          "status": "disabled",
+          "revision": 4,
+          "current_version_id": "301",
+          "archived_at": null
+        }
+      }
+    },
+    {
+      "name": "archive",
+      "schema": "stateResponse",
+      "http_status": 200,
+      "request_schema": "archiveRequest",
+      "request": {
+        "expected_revision": 4,
+        "reason": "保留历史归档"
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-archive",
+        "data": {
+          "id": "201",
+          "status": "archived",
+          "revision": 5,
+          "current_version_id": "301",
+          "archived_at": 1794196801000
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,518 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:agent-lifecycle:1.0.0",
+  "title": "AIVale Agent version history and lifecycle1.0.0",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P02-T05",
+    "api_ids": [
+      "API-022",
+      "API-023",
+      "API-024",
+      "API-025",
+      "API-026",
+      "API-026A"
+    ],
+    "authorization": "Explicit live management session; no PAT or model tokens. Metadata agent:read; content/restore/status/archive agent:write; activation agent:publish. Content and writes need active workspace.",
+    "history": "Release-only scoped COUNT and pagination; debug excluded. Archived Agent history remains readable under live workspace rights; archived workspaces are invisible. PublisherID is explicit version attribution.",
+    "restore": "Exact verified snapshot to new draft, draft revision CAS. Retired model may be restored. No pointer/version change.",
+    "activate": "Metadata revision CAS and exact version recheck against current model/workspace policy. Preserve draft/status.",
+    "status": "Reversible active/disabled. Enabling current release rechecks policy. Same target state with correct revision is no-op. Archive terminal, retains history and fails closed until future runtime/schedule integration.",
+    "concurrency": "No idempotency receipt or automatic POST retry for CAS commands. Unknown outcome: reread. Stale draft=AG_DRAFT_REVISION_CONFLICT, stale metadata=AG_INVALID_STATE; fixed error shape.",
+    "audit": "Mutation and schema7 redacted audit same transaction. No prompts, raw reasons, notes, credentials in audit/SQL logs. No model execution, deletion or Run cancellation."
+  },
+  "$defs": {
+    "versionMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "agent_id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "version_no": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "version_kind": {
+          "const": "release"
+        },
+        "source_draft_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Canonical frozen configuration SHA-256; not an authorization credential."
+        },
+        "published_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Publication time in UTC Unix milliseconds."
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "description": "UTC Unix milliseconds."
+            }
+          ]
+        },
+        "published_by": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        }
+      },
+      "required": [
+        "id",
+        "agent_id",
+        "version_no",
+        "version_kind",
+        "source_draft_revision",
+        "config_hash",
+        "published_at",
+        "revoked_at",
+        "published_by"
+      ],
+      "additionalProperties": false
+    },
+    "versionDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "agent_id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "version_no": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "version_kind": {
+          "const": "release"
+        },
+        "source_draft_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Canonical frozen configuration SHA-256; not an authorization credential."
+        },
+        "published_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Publication time in UTC Unix milliseconds."
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "description": "UTC Unix milliseconds."
+            }
+          ]
+        },
+        "published_by": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "config": {
+          "$ref": "urn:aivale:agent-platform:agent-config:1.0.0#/$defs/normalizedConfig"
+        },
+        "release_note": {
+          "type": "string",
+          "maxLength": 4096,
+          "description": "At most4096 UTF-8 bytes."
+        },
+        "validation_summary": {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": 1
+            },
+            "config_hash_verified": {
+              "const": true
+            }
+          },
+          "required": [
+            "schema_version",
+            "config_hash_verified"
+          ],
+          "additionalProperties": false,
+          "description": "Structural and digest checks at read time, not current model or runtime readiness."
+        }
+      },
+      "required": [
+        "id",
+        "agent_id",
+        "version_no",
+        "version_kind",
+        "source_draft_revision",
+        "config_hash",
+        "published_at",
+        "revoked_at",
+        "published_by",
+        "config",
+        "release_note",
+        "validation_summary"
+      ],
+      "additionalProperties": false
+    },
+    "versionPage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/versionMetadata"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "page",
+        "page_size"
+      ],
+      "additionalProperties": false
+    },
+    "lifecycleState": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "status": {
+          "enum": [
+            "active",
+            "disabled",
+            "archived"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "current_version_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+              "maxLength": 19,
+              "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+            }
+          ]
+        },
+        "archived_at": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "description": "UTC Unix milliseconds."
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "revision",
+        "current_version_id",
+        "archived_at"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "archived"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "archived_at": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991,
+                "description": "UTC Unix milliseconds."
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "archived_at": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "restoreRequest": {
+      "type": "object",
+      "properties": {
+        "version_id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Expected DRAFT revision as canonical positive safe JSON integer."
+        }
+      },
+      "required": [
+        "version_id",
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "activateRequest": {
+      "type": "object",
+      "properties": {
+        "version_id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Expected METADATA revision as canonical positive safe JSON integer."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^\u0000]*$",
+          "description": "Nonblank after trimming; raw value at most1024 valid UTF-8 bytes. Durable audit stores its SHA-256 only."
+        }
+      },
+      "required": [
+        "version_id",
+        "expected_revision",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "statusRequest": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "disabled"
+          ]
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Canonical positive safe JSON integer; no decimal, exponent or string spelling."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^\u0000]*$",
+          "description": "Nonblank after trimming; raw value at most1024 valid UTF-8 bytes. Durable audit stores its SHA-256 only."
+        }
+      },
+      "required": [
+        "status",
+        "expected_revision",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "archiveRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Canonical positive safe JSON integer; no decimal, exponent or string spelling."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^\u0000]*$",
+          "description": "Nonblank after trimming; raw value at most1024 valid UTF-8 bytes. Durable audit stores its SHA-256 only."
+        }
+      },
+      "required": [
+        "expected_revision",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "listResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/versionPage"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "detailResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/versionDetail"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "stateResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/lifecycleState"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "restoreResponse": {
+      "$ref": "urn:aivale:agent-platform:agent-definition-drafts:1.0.0#/$defs/updateResponse"
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    }
+  }
+}
