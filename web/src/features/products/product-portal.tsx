@@ -35,6 +35,7 @@ import {
   RELEASE_STAGE_LABEL_KEYS,
   type ProductDefinition,
 } from '@/features/platform-catalog'
+import { cn } from '@/lib/utils'
 
 const productIcons = {
   aitoken: ApiIcon,
@@ -44,10 +45,19 @@ const productIcons = {
   datasets: Database01Icon,
 }
 
-export function ProductPortal(props: { children: ReactNode }) {
+export function ProductPortal(props: {
+  children: ReactNode
+  fullBleed?: boolean
+}) {
   return (
     <PublicLayout showMainContainer={false}>
-      <main className='from-primary/8 via-background to-background min-h-svh w-full bg-linear-to-br px-5 pt-24 pb-12 sm:px-8 lg:px-12 lg:pt-28 lg:pb-16 2xl:px-16'>
+      <main
+        className={cn(
+          'from-primary/8 via-background to-background min-h-svh w-full bg-linear-to-br',
+          !props.fullBleed &&
+            'px-5 pt-24 pb-12 sm:px-8 lg:px-12 lg:pt-28 lg:pb-16 2xl:px-16'
+        )}
+      >
         {props.children}
       </main>
       <Footer />
