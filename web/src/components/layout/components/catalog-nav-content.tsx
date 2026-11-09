@@ -131,13 +131,6 @@ export function ProductMenuContent(props: {
                       {t(product.descriptionKey)}
                     </span>
                   </Link>
-                  {product.operation && (
-                    <CatalogNavLink
-                      link={product.operation}
-                      className='text-primary inline-flex min-h-11 items-center gap-1 text-sm font-medium lg:min-h-8'
-                      onSelect={props.onSelect}
-                    />
-                  )}
                 </li>
               ))}
             </ul>
