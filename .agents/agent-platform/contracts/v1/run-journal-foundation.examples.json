@@ -1,0 +1,325 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P03-T01",
+  "visibility": "Offline internal values only; schema validation does not grant execution.",
+  "examples": [
+    {
+      "name": "queued-notification",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "step-notification",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 2,
+        "step_id": "501"
+      }
+    },
+    {
+      "name": "int64-id-and-safe-sequence-boundaries",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "9223372036854775807",
+        "event_id": "401",
+        "event_seq": 9007199254740991
+      }
+    },
+    {
+      "name": "pending-node-intent",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "workflow_node",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        }
+      }
+    },
+    {
+      "name": "pending-model-intent-has-no-call-permit",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "model/0",
+        "kind": "model",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        },
+        "input": {
+          "text": "Synthetic local input"
+        },
+        "input_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "side_effect_policy": "unknown"
+      }
+    },
+    {
+      "name": "open-event-name",
+      "schema": "eventType",
+      "value": "future.reference-observed"
+    }
+  ],
+  "negative_examples": [
+    {
+      "name": "numeric-id",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": 301,
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "zero-id",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "0",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "leading-zero-id",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "0301",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "overflow-id",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "9223372036854775808",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "signed-id",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "+301",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "id-newline",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301\n",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "zero-seq",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 0
+      }
+    },
+    {
+      "name": "unsafe-seq",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 9007199254740992
+      }
+    },
+    {
+      "name": "fractional-seq",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 1.5
+      }
+    },
+    {
+      "name": "unknown-version",
+      "schema": "notification",
+      "value": {
+        "schema_version": 2,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 1
+      }
+    },
+    {
+      "name": "null-step",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 1,
+        "step_id": null
+      }
+    },
+    {
+      "name": "copied-prompt",
+      "schema": "notification",
+      "value": {
+        "schema_version": 1,
+        "run_id": "301",
+        "event_id": "401",
+        "event_seq": 1,
+        "prompt": "Do not include input in notifications"
+      }
+    },
+    {
+      "name": "status-override",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "workflow_node",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        },
+        "status": "running"
+      }
+    },
+    {
+      "name": "attempt-override",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "workflow_node",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        },
+        "attempt": 2
+      }
+    },
+    {
+      "name": "logical-call-override",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "workflow_node",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        },
+        "logical_call_id": "call-1"
+      }
+    },
+    {
+      "name": "unknown-step-kind",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "shell",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        }
+      }
+    },
+    {
+      "name": "upper-step-key",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "Model/0",
+        "kind": "workflow_node",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        }
+      }
+    },
+    {
+      "name": "unpaired-hash",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "workflow_node",
+        "target_ref": {
+          "node_id": "review-v1"
+        },
+        "retry_policy": {
+          "max_attempts": 1
+        },
+        "input_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "name": "non-object-target",
+      "schema": "pendingStepIntent",
+      "value": {
+        "step_key": "workflow/root:0",
+        "kind": "workflow_node",
+        "target_ref": [],
+        "retry_policy": {
+          "max_attempts": 1
+        }
+      }
+    },
+    {
+      "name": "empty-event-type",
+      "schema": "eventType",
+      "value": ""
+    },
+    {
+      "name": "event-type-newline",
+      "schema": "eventType",
+      "value": "run.ready\n"
+    },
+    {
+      "name": "upper-hash",
+      "schema": "sha256",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  ],
+  "runtime_rejection_cases": [
+    "metadata_only Run never becomes execution-admitted or receives a run notification",
+    "cross-Team/workspace/Run/Event/Step references fail persisted checks",
+    "same event key or logical step with different immutable intent conflicts",
+    "old owner, old revision, expired lease or superseded claim cannot acknowledge or retry",
+    "same notification key upsert is rejected; dead replay preserves its key",
+    "rollback leaves no step/event/notification or Run sequence advance",
+    "malformed UTF-8, duplicate decoded JSON keys, malformed Unicode and source byte overflow fail strict production codecs"
+  ],
+  "schema_limits": "JSON Schema checks shape only, not source duplicate keys, 16KiB notification bytes, 60KiB step JSON bytes, input hash equality, actual references, lease time or admission."
+}
