@@ -375,6 +375,8 @@ func migrateDB() error {
 		&AgentDefinition{},
 		&AgentVersion{},
 		&AgentRun{},
+		&AgentRunStep{},
+		&AgentRunEvent{},
 		&AgentTokenGrant{},
 		&AgentIdempotencyKey{},
 		&AgentOutbox{},

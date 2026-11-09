@@ -25,6 +25,8 @@ const (
 	AgentOutboxKindPublicationAudit       = "agent_publication_audit"
 	AgentOutboxKindLifecycleAudit         = "agent_lifecycle_audit"
 	AgentOutboxKindRunMetadataAudit       = "run_metadata_audit"
+	AgentOutboxKindRunReady               = "run_ready"
+	AgentOutboxKindRunEvent               = "run_event"
 	agentDefinitionAuditSchemaVersion     = 5
 	agentPublicationAuditSchemaVersion    = 6
 	agentLifecycleAuditSchemaVersion      = 7
@@ -56,6 +58,9 @@ type AgentOutbox struct {
 func (AgentOutbox) TableName() string { return "ag_outbox" }
 
 func (event *AgentOutbox) BeforeCreate(tx *gorm.DB) error {
+	if agentRunNotificationKindValid(event.Kind) {
+		return prepareAgentRunNotification(tx, event)
+	}
 	if event.ID != 0 || event.TeamID <= 0 || event.WorkspaceID <= 0 || !agentDigestValid(event.EventKey) ||
 		!agentAuditAggregateValid(event) || event.Status != "pending" || event.Attempts != 0 ||
 		event.LeaseOwner != nil || event.LeaseExpiresAt != nil || event.DeliveredAt != nil || event.LastErrorCode != nil ||
