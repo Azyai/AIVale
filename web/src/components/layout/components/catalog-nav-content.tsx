@@ -77,6 +77,12 @@ export function CatalogNavLink(props: CatalogNavLinkProps) {
 const sectionLinkClassName =
   'text-primary hover:text-primary/80 focus-visible:ring-ring inline-flex min-h-11 w-fit items-center gap-2 rounded-sm text-sm font-medium focus-visible:ring-2 focus-visible:outline-none'
 
+const productGroupColors = {
+  models: 'text-violet-700 dark:text-violet-300',
+  agents: 'text-cyan-800 dark:text-cyan-300',
+  data: 'text-emerald-800 dark:text-emerald-300',
+}
+
 export function ProductMenuContent(props: {
   products: readonly CatalogProduct[]
   onSelect: () => void
@@ -96,7 +102,12 @@ export function ProductMenuContent(props: {
             key={group.id}
             className='grid gap-2 px-1 py-3 lg:grid-cols-[10.5rem_1fr] lg:gap-3 lg:px-4 lg:py-4'
           >
-            <h2 className='text-muted-foreground px-2 text-sm font-medium lg:pt-2'>
+            <h2
+              className={cn(
+                'px-2 text-sm font-semibold lg:pt-3',
+                productGroupColors[group.id]
+              )}
+            >
               {t(group.titleKey)}
             </h2>
             <ul className='grid gap-1 lg:grid-cols-2'>
@@ -106,7 +117,7 @@ export function ProductMenuContent(props: {
                     to='/products/$productId'
                     params={{ productId: product.id }}
                     onClick={props.onSelect}
-                    className='hover:bg-muted focus-visible:ring-ring -mx-2 block rounded-md p-2 focus-visible:ring-2 focus-visible:outline-none'
+                    className='hover:bg-primary/6 focus-visible:ring-ring hover:border-primary/15 -mx-2 block rounded-lg border border-transparent p-3 focus-visible:ring-2 focus-visible:outline-none'
                   >
                     <span className='flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold'>
                       {t(product.titleKey)}
@@ -151,10 +162,13 @@ export function BusinessMenuContent(props: { onSelect: () => void }) {
   const { t } = useTranslation()
 
   return (
-    <div className='px-3 pt-2 lg:px-4'>
-      <ul className='divide-border grid divide-y'>
+    <div className='px-3 pt-3 lg:px-5 lg:pt-5'>
+      <ul className='grid gap-3 lg:grid-cols-2'>
         {BUSINESS_AREAS.map((area) => (
-          <li key={area.id} className='py-2.5'>
+          <li
+            key={area.id}
+            className='border-primary/12 bg-primary/4 rounded-lg border p-4'
+          >
             <div className='flex flex-wrap items-center gap-2 font-medium'>
               {t(area.titleKey)}
               <Badge variant='outline'>{t('Planned')}</Badge>

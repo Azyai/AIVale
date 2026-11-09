@@ -44,7 +44,10 @@ export function AppHeader({
   const notifications = useNotifications()
 
   return (
-    <Header showSidebarTrigger={false} className='bg-background'>
+    <Header
+      showSidebarTrigger={false}
+      className='border-primary/15 bg-background/85 dark:bg-background/75'
+    >
       <div className='me-auto min-w-0 lg:me-2 lg:max-w-40'>
         <SystemBrand variant='inline' />
       </div>

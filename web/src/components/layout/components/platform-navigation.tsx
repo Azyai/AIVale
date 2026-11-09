@@ -77,7 +77,7 @@ function PlatformNavigationMenu(props: {
   const searchableProducts = catalog.showProducts ? catalog.products : []
   const showSearch = searchableProducts.length > 0 || docs.length > 0
   const panelClassName =
-    'max-h-[calc(100dvh-5rem)] overflow-y-auto p-0 motion-reduce:transition-none'
+    'max-h-[calc(100dvh-5rem)] overflow-y-auto border-t-2 border-primary/60 p-0 motion-reduce:transition-none'
 
   useEffect(() => {
     const media = window.matchMedia(desktopBreakpoint)
@@ -109,7 +109,7 @@ function PlatformNavigationMenu(props: {
                 {t('Products')}
               </NavigationMenuTrigger>
               <NavigationMenuContent
-                className={`w-[min(47rem,calc(100vw-2.5rem))] ${panelClassName}`}
+                className={`w-[min(76rem,calc(100vw-3rem))] ${panelClassName}`}
               >
                 <ProductMenuContent
                   products={catalog.products}
@@ -126,7 +126,9 @@ function PlatformNavigationMenu(props: {
               >
                 {t('Business Hall')}
               </NavigationMenuTrigger>
-              <NavigationMenuContent className={`w-88 ${panelClassName}`}>
+              <NavigationMenuContent
+                className={`w-[min(48rem,calc(100vw-3rem))] ${panelClassName}`}
+              >
                 <BusinessMenuContent onSelect={closeDesktop} />
               </NavigationMenuContent>
             </NavigationMenuItem>

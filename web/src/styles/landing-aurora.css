@@ -26,16 +26,25 @@ For commercial licensing, please contact support@quantumnous.com
 .hero-grad-text {
   background: linear-gradient(
     110deg,
-    #a78bfa 10%,
-    #7c5cff 32%,
-    #22d3ee 62%,
-    #a5f3fc 90%
+    #6d28d9 10%,
+    #5b4bce 32%,
+    #0369a1 62%,
+    #0e7490 90%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: hero-shimmer 9s ease-in-out infinite alternate;
+}
+.dark .hero-grad-text {
+  background-image: linear-gradient(
+    110deg,
+    #a78bfa 10%,
+    #7c5cff 32%,
+    #22d3ee 62%,
+    #a5f3fc 90%
+  );
 }
 @keyframes hero-shimmer {
   to {
@@ -46,7 +55,7 @@ For commercial licensing, please contact support@quantumnous.com
 /* ── Hero CTA: aurora gradient pill ── */
 .hero-cta {
   color: #fff;
-  background: linear-gradient(120deg, #7c5cff, #5b8cff 55%, #22d3ee);
+  background: linear-gradient(120deg, #6d28d9, #4338ca 55%, #0e7490);
   box-shadow:
     0 8px 28px rgba(92, 110, 255, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -213,9 +222,10 @@ For commercial licensing, please contact support@quantumnous.com
 .arch-core {
   background:
     linear-gradient(
-      color-mix(in oklch, var(--card) 92%, transparent),
-      var(--card)
-    ) padding-box,
+        color-mix(in oklch, var(--card) 92%, transparent),
+        var(--card)
+      )
+      padding-box,
     linear-gradient(135deg, rgba(124, 92, 255, 0.7), rgba(34, 211, 238, 0.4))
       border-box;
   border: 1.5px solid transparent;

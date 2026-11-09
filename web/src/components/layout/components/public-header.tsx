@@ -58,7 +58,10 @@ export function PublicHeader(props: PublicHeaderProps) {
   let authContent = (
     <Link
       to='/sign-in'
-      className={buttonVariants({ size: 'sm', className: 'h-11 px-3 lg:h-9' })}
+      className={buttonVariants({
+        size: 'sm',
+        className: 'hero-cta h-11 rounded-full px-5 lg:h-10',
+      })}
     >
       {t('Sign in')}
     </Link>
@@ -69,12 +72,12 @@ export function PublicHeader(props: PublicHeaderProps) {
   return (
     <header
       className={cn(
-        'bg-background text-foreground border-border fixed inset-x-0 top-0 z-40 border-b',
+        'bg-background/85 text-foreground border-primary/15 fixed inset-x-0 top-0 z-40 border-b backdrop-blur-xl dark:bg-background/75',
         props.className
       )}
     >
-      <div className='mx-auto flex h-16 max-w-[90rem] items-center gap-1 px-3 sm:gap-2 sm:px-6 lg:gap-5'>
-        <div className='me-auto min-w-0 lg:me-0 lg:max-w-40'>
+      <div className='flex h-16 w-full items-center gap-1 px-5 sm:gap-2 sm:px-8 lg:gap-6 lg:px-12 2xl:px-16'>
+        <div className='me-auto min-w-0 lg:me-0 lg:max-w-56'>
           <Link
             to={props.homeUrl || '/'}
             aria-label={name}
@@ -83,7 +86,7 @@ export function PublicHeader(props: PublicHeaderProps) {
             {SHOW_SYSTEM_LOGO && (
               <>
                 {props.logo}
-                {usesBrandLockup && <BrandLockup className='h-10 md:h-10' />}
+                {usesBrandLockup && <BrandLockup className='h-10 md:h-12' />}
                 {!usesBrandLockup && !props.logo && (
                   <span className='size-8 shrink-0'>
                     <HeaderLogo
