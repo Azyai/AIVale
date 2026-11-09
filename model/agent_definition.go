@@ -282,28 +282,16 @@ func UpdateAgentDefinitionDraft(db *gorm.DB, teamID, workspaceID, agentID, actor
 	if err != nil {
 		return err
 	}
-	hash := sha256.Sum256([]byte(draft))
 	return db.Transaction(func(tx *gorm.DB) error {
 		if err := lockAgentDefinitionParents(tx, teamID, workspaceID, actorID); err != nil {
 			return err
 		}
-		var current AgentDefinition
-		if err := lockForUpdate(tx).Where("team_id = ? AND workspace_id = ? AND id = ? AND archived_at IS NULL AND "+agentWorkspaceExactColumn(tx, "status")+" IN ?", teamID, workspaceID, agentID, []string{AgentDefinitionStatusActive, AgentDefinitionStatusDisabled}).Take(&current).Error; err != nil {
+		current, err := lockAgentDefinitionDraft(tx, teamID, workspaceID, agentID)
+		if err != nil {
 			return err
 		}
-		if current.DraftRevision != expectedDraftRevision {
-			return ErrAgentDefinitionRevision
-		}
-		updated := tx.Session(&gorm.Session{SkipHooks: true}).Model(&AgentDefinition{}).
-			Where("team_id = ? AND workspace_id = ? AND id = ? AND draft_revision = ?", teamID, workspaceID, agentID, expectedDraftRevision).
-			Updates(map[string]any{"draft_json": draft, "draft_hash": hex.EncodeToString(hash[:]), "draft_revision": expectedDraftRevision + 1, "updated_at": max(time.Now().UnixMilli(), current.UpdatedAt), "updated_by": actorID})
-		if updated.Error != nil {
-			return updated.Error
-		}
-		if updated.RowsAffected != 1 {
-			return ErrAgentDefinitionRevision
-		}
-		return nil
+		_, err = replaceAgentDefinitionDraft(tx, current, actorID, expectedDraftRevision, draft)
+		return err
 	})
 }
 

@@ -15,16 +15,22 @@ import (
 // model or selecting channel credentials. groups must come from authorized
 // current user policy, never directly from request parameters.
 func AgentConfigTextModelAvailable(db *gorm.DB, modelName string, groups []string) (bool, error) {
+	available, err := AgentConfigTextModelsAvailable(db, []string{modelName}, groups)
+	return available[modelName], err
+}
+
+// AgentConfigTextModelsAvailable shares the same eligibility rules with the
+// editor catalog, using two bounded queries for the selected page rather than
+// querying routing and metadata again for each model.
+func AgentConfigTextModelsAvailable(db *gorm.DB, modelNames, groups []string) (map[string]bool, error) {
+	available := make(map[string]bool, len(modelNames))
 	if db == nil {
-		return false, ErrAgentWorkspaceInvalid
+		return nil, ErrAgentWorkspaceInvalid
 	}
-	if modelName == "" || len(groups) == 0 || agentConfigKnownNonText(modelName) {
-		return false, nil
+	if len(modelNames) == 0 || len(groups) == 0 {
+		return available, nil
 	}
 	generation := jsplugin.DefaultRegistry.Generation()
-	if _, task := generation.GetByModel(modelName); task {
-		return false, nil
-	}
 	var candidates []struct {
 		Model         string
 		AbilityGroup  string
@@ -39,36 +45,41 @@ func AgentConfigTextModelAvailable(db *gorm.DB, modelName string, groups []strin
 	if err := db.Table("abilities").
 		Select("abilities.model, "+abilityGroup+" AS ability_group, channels.type, channels.models, "+channelGroup+" AS "+db.Statement.Quote("group")+", channels.model_mapping, channels.settings AS other_settings").
 		Joins("JOIN channels ON channels.id = abilities.channel_id").
-		Where("abilities.model = ? AND "+abilityGroup+" IN ? AND abilities.enabled = ? AND channels.status = ?", modelName, groups, true, common.ChannelStatusEnabled).
+		Where("abilities.model IN ? AND "+abilityGroup+" IN ? AND abilities.enabled = ? AND channels.status = ?", modelNames, groups, true, common.ChannelStatusEnabled).
 		Scan(&candidates).Error; err != nil {
-		return false, err
+		return nil, err
 	}
 	var metadata []Model
 	if len(candidates) == 0 {
-		return false, nil
+		return available, nil
 	}
 	if err := db.Select("id", "model_name", "status", "name_rule", "endpoints").
-		Where("(name_rule = ? AND model_name = ?) OR name_rule IN ?", NameRuleExact, modelName, []int{NameRulePrefix, NameRuleSuffix, NameRuleContains}).
+		Where("(name_rule = ? AND model_name IN ?) OR name_rule IN ?", NameRuleExact, modelNames, []int{NameRulePrefix, NameRuleSuffix, NameRuleContains}).
 		Order("id ASC").Find(&metadata).Error; err != nil {
-		return false, err
+		return nil, err
 	}
-	var declared []constant.EndpointType
-	if catalog := resolveModelMetadata(metadata, []string{modelName})[modelName]; catalog != nil {
-		if catalog.Status != 1 {
-			return false, nil
-		}
-		if strings.TrimSpace(catalog.Endpoints) != "" {
-			declared = agentConfigCatalogEndpoints(catalog.Endpoints)
-			if len(declared) == 0 {
-				return false, nil
-			}
-		}
-	}
+	catalogs := resolveModelMetadata(metadata, modelNames)
 	for _, row := range candidates {
+		modelName := row.Model
 		// SQL equality may fold case or trailing spaces, depending on the
 		// engine. Verify the exact bound model and group before using any row.
-		if row.Model != modelName || !slices.Contains(groups, row.AbilityGroup) {
+		if modelName == "" || !slices.Contains(modelNames, modelName) || !slices.Contains(groups, row.AbilityGroup) || agentConfigKnownNonText(modelName) {
 			continue
+		}
+		if _, task := generation.GetByModel(modelName); task {
+			continue
+		}
+		var declared []constant.EndpointType
+		if catalog := catalogs[modelName]; catalog != nil {
+			if catalog.Status != 1 {
+				continue
+			}
+			if strings.TrimSpace(catalog.Endpoints) != "" {
+				declared = agentConfigCatalogEndpoints(catalog.Endpoints)
+				if len(declared) == 0 {
+					continue
+				}
+			}
 		}
 		channel := Channel{Type: row.Type, Models: row.Models, Group: row.Group}
 		if !slices.Contains(channel.GetModels(), modelName) || !slices.Contains(channel.GetGroups(), row.AbilityGroup) {
@@ -87,10 +98,10 @@ func AgentConfigTextModelAvailable(db *gorm.DB, modelName string, groups []strin
 		if slices.ContainsFunc(agentConfigChannelEndpoints(row.Type, modelName, row.OtherSettings), func(endpoint constant.EndpointType) bool {
 			return agentConfigTextEndpoint(endpoint) && (declared == nil || slices.Contains(declared, endpoint))
 		}) {
-			return true, nil
+			available[modelName] = true
 		}
 	}
-	return false, nil
+	return available, nil
 }
 
 func agentConfigCatalogEndpoints(raw string) []constant.EndpointType {

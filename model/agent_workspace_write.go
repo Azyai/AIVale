@@ -19,6 +19,7 @@ type AgentWorkspaceWriteFacts struct {
 	TeamID          int64                 `json:"-"`
 	TeamOwnerUserID int64                 `json:"-"`
 	TeamMemberRole  string                `json:"-"`
+	AgentModelGroup string                `json:"-"`
 	Workspace       *AgentWorkspace       `json:"-"`
 	Member          *AgentWorkspaceMember `json:"-"`
 }
@@ -93,7 +94,7 @@ func agentWorkspaceWriteAttempt(db *gorm.DB, apply func(*gorm.DB) error) (bool, 
 
 func lockAgentWorkspaceWriteActor(tx *gorm.DB, identity AuthSessionIdentity) (*User, error) {
 	var user User
-	err := lockForUpdate(tx).Select("id", "role", "status", "auth_version").First(&user, identity.UserID).Error
+	err := lockForUpdate(tx).Select("id", "role", "status", "auth_version", "group").First(&user, identity.UserID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserSessionInactive
 	}
@@ -123,7 +124,7 @@ func lockAgentWorkspaceWriteFacts(tx *gorm.DB, identity AuthSessionIdentity, wor
 	if err != nil {
 		return nil, err
 	}
-	facts := &AgentWorkspaceWriteFacts{UserID: int64(user.Id), ActorRole: user.Role}
+	facts := &AgentWorkspaceWriteFacts{UserID: int64(user.Id), ActorRole: user.Role, AgentModelGroup: user.Group}
 	var membership TeamMember
 	err = lockForUpdate(tx).Where("user_id = ?", identity.UserID).Take(&membership).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -155,7 +156,7 @@ func LockAgentWorkspaceWriteTarget(tx *gorm.DB, facts *AgentWorkspaceWriteFacts,
 		return gorm.ErrRecordNotFound
 	}
 	var workspace AgentWorkspace
-	err := lockForUpdate(tx).Select("id", "team_id", "slug", "name", "description", "status", "created_at", "updated_at", "revision", "archived_at", "active_run_count").
+	err := lockForUpdate(tx).Select("id", "team_id", "slug", "name", "description", "status", "created_at", "updated_at", "revision", "archived_at", "active_run_count", "default_run_budget_quota", "max_run_budget_quota", "max_run_seconds").
 		Where("team_id = ? AND id = ?", facts.TeamID, workspaceID).Take(&workspace).Error
 	if err != nil {
 		return err
