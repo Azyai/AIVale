@@ -180,14 +180,6 @@ For commercial licensing, please contact support@quantumnous.com
   );
 }
 
-/* Console top bar height tracks the public header: h-20 (80px) below md,
- * h-28 (112px) from md up. */
-@media (min-width: 768px) {
-  :root {
-    --app-header-height: 6rem;
-  }
-}
-
 .dark {
   /* Deep-space canvas palette:
    * bg #05060e, panel #0b0e1b, ink #eef1ff / #aab2d4, hairline
