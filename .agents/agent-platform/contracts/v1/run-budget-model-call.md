@@ -1,0 +1,17 @@
+# P02-T09 Run预算与模型调用关联
+
+这些文件是内部Go值和未来可信账本DTO的离线投影，不是新的HTTP接口。`ModelCallIdentity`和预算上下文全部标记`json:"-"`，不能从客户端JSON还原成授权。当前不装配生产实时资金/资源适配器和严格总成本报价器，缺失适配返回不可用；`runtime_ready=false`、metadata_only不可执行保持不变。
+
+`PrepareModelCall`只读准备预算。有效费用、次数、步骤、输出和累计执行时间取发布版本、工作区、平台及Run实际上界的交集，用户只能下调。当前文本配置是一模型调用、零工具、至多64步和300秒。Token无限额度不取消资金与Run硬预算；预算不足、未知定价、无法证明严格费用上界或零剩余资金必须在调用桩前拒绝。现网输入预扣估算不是完整费用上界，单次最大输出的一次表达式求值也不证明任意表达式单调或有界。旧网关计费公式不变。
+
+报价必须绑定真实调用身份、Run修订号、模型、配置摘要、输出/时间边界、价格快照摘要及有效期限。只读准备记录expected_run_revision，valid_until取报价/Run截止/租约三者最早值；本次执行时长取累计执行余量与总截止余量的较小值。通过计算只产生`mode=preparation_only`，并非执行票据。P03仍需事务内实时复查、原子预留、计数与调用意图，再在提交后派发；不能把只读准备结果复用成长期许可。本批不创建gateway_calls、usage_items、reservations，不扣费或退款。
+
+调用身份的Team/Workspace/Run/Step/Agent/版本/执行用户/资金Token均由服务端解析。公开Token调用的caller必须等于funding；管理会话caller为NULL。logical_call_id稳定标识一个逻辑调用，attempt使用正int32，lease_epoch使用正安全整数；只有确定允许重发才能产生下一attempt，未知外部结果不能通过换request_id重做。
+
+`GatewayCallLink`只表达最小关联投影。prepared/dispatched/responded/rejected/outcome_unknown的actual_quota为NULL；funding_state/token_state/preconsume_quota仍可保存已观察的部分事实，不丢弃真实资金进度。settled且资金与Token提交状态均确认后才有非负actual_quota，可信确认的零可以是0。未来账本仍须持久化完整部分事实，本投影不将其当作最终费用。
+
+`ModelUsageLink`需要同scope、Run/Step、Agent/版本、执行人、资金、逻辑调用/attempt、网关请求、模型和价格摘要的已确认gateway来源。charge对应确认费用；refund必须关联另一条原项目且单条退款不能超过该调用确认费用，表达追加更正；此跨字段比较在Go中对规范整数精确完成。DTO校验不实现数据库source_event_key去重、真实引用检查、跨行净额或付款；这些责任留给P03可信生产者及既有网关。用量投影不能再调用Settle或改变钱包。
+
+consume_log_id允许NULL。既有日志API可能把Log.Id改写为展示序号，RequestId只是普通索引，ClickHouse也不提供同样的自增ID保证。只有从可信持久化消费事件取得的真实ID才可填；一个log ID或查到/查不到日志均不能证明资金已经提交，也不能授权补扣或完整重试结算。合法确认的费用可以尚无日志引用。
+
+wire观测金额使用非负int64十进制字符串；本阶段单调用上界准备仍受common.MaxQuota的int32上界约束。所有价格/舍入转换复用common安全工具，预算余量以边界检查后的减法比较，不通过溢出或负金额产生授信。Schema不能独立证明字节长度、两个对象相等、时间先后、实际权限或算术；Go校验和真实本地拒绝桩覆盖这些语义。固定样例不代表生产执行或扣费已经接通。

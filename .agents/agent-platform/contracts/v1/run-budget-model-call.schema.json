@@ -1,0 +1,666 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:run-budget-model-call:1.0.0",
+  "title": "AIVale internal Run budget and model call correlation 1.0.0",
+  "description": "Offline projections of internal readonly preparation and future trusted accounting DTOs. This does not define a public API or authorize dispatch, reservation, settlement or refund.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "maxLength": 19,
+      "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807.",
+      "not": {
+        "pattern": "[^0-9]"
+      }
+    },
+    "quota": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "maxLength": 19,
+      "not": {
+        "pattern": "[^0-9]"
+      },
+      "description": "Canonical nonnegative signed-int64 quota string; this is a measurement domain, not a runtime allowance."
+    },
+    "singleCallQuota": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,8}|1[0-9]{9}|20[0-9]{8}|21[0-3][0-9]{7}|214[0-6][0-9]{6}|2147[0-3][0-9]{5}|21474[0-7][0-9]{4}|214748[0-2][0-9]{3}|2147483[0-5][0-9]{2}|21474836[0-3][0-9]{1}|214748364[0-6]|2147483647)$",
+      "maxLength": 10,
+      "not": {
+        "pattern": "[^0-9]"
+      }
+    },
+    "positiveSingleCallQuota": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/singleCallQuota"
+        },
+        {
+          "not": {
+            "const": "0"
+          }
+        }
+      ]
+    },
+    "positiveSafeInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "positiveAttempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "serverReference": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]{16,64}$",
+      "minLength": 16,
+      "maxLength": 64,
+      "not": {
+        "pattern": "[^A-Za-z0-9_.:-]"
+      }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "modelName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^\\S(?:[\\s\\S]*\\S)?$",
+      "not": {
+        "pattern": "[\u0000-\u001f-]"
+      },
+      "description": "At most 256 UTF-8 bytes with no surrounding whitespace or control characters; byte length is enforced by Go."
+    },
+    "commitState": {
+      "enum": [
+        "pending",
+        "applied",
+        "refunded",
+        "unknown"
+      ]
+    },
+    "modelCallIdentityProjection": {
+      "type": "object",
+      "properties": {
+        "team_id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "step_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "execution_user_id": {
+          "$ref": "#/$defs/id"
+        },
+        "funding_token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "caller_token_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "logical_call_id": {
+          "$ref": "#/$defs/serverReference"
+        },
+        "attempt": {
+          "$ref": "#/$defs/positiveAttempt"
+        },
+        "lease_epoch": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        },
+        "gateway_request_id": {
+          "$ref": "#/$defs/serverReference"
+        },
+        "request_hash": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "team_id",
+        "workspace_id",
+        "run_id",
+        "step_id",
+        "agent_id",
+        "agent_version_id",
+        "execution_user_id",
+        "funding_token_id",
+        "caller_token_id",
+        "logical_call_id",
+        "attempt",
+        "lease_epoch",
+        "gateway_request_id",
+        "request_hash"
+      ],
+      "additionalProperties": false
+    },
+    "gatewayCallLink": {
+      "type": "object",
+      "properties": {
+        "gateway_call_id": {
+          "$ref": "#/$defs/id"
+        },
+        "team_id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "step_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "execution_user_id": {
+          "$ref": "#/$defs/id"
+        },
+        "funding_token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "caller_token_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "logical_call_id": {
+          "$ref": "#/$defs/serverReference"
+        },
+        "attempt": {
+          "$ref": "#/$defs/positiveAttempt"
+        },
+        "lease_epoch": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        },
+        "gateway_request_id": {
+          "$ref": "#/$defs/serverReference"
+        },
+        "request_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "model_name": {
+          "$ref": "#/$defs/modelName"
+        },
+        "pricing_snapshot_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "state": {
+          "enum": [
+            "prepared",
+            "dispatched",
+            "responded",
+            "settled",
+            "rejected",
+            "outcome_unknown"
+          ]
+        },
+        "funding_state": {
+          "$ref": "#/$defs/commitState"
+        },
+        "token_state": {
+          "$ref": "#/$defs/commitState"
+        },
+        "preconsume_quota": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/quota"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actual_quota": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/quota"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "consume_log_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "gateway_call_id",
+        "team_id",
+        "workspace_id",
+        "run_id",
+        "step_id",
+        "agent_id",
+        "agent_version_id",
+        "execution_user_id",
+        "funding_token_id",
+        "caller_token_id",
+        "logical_call_id",
+        "attempt",
+        "lease_epoch",
+        "gateway_request_id",
+        "request_hash",
+        "model_name",
+        "pricing_snapshot_hash",
+        "state",
+        "funding_state",
+        "token_state",
+        "preconsume_quota",
+        "actual_quota",
+        "consume_log_id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "settled"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "actual_quota": {
+                "$ref": "#/$defs/quota"
+              },
+              "funding_state": {
+                "enum": [
+                  "applied",
+                  "refunded"
+                ]
+              },
+              "token_state": {
+                "enum": [
+                  "applied",
+                  "refunded"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "actual_quota": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "modelUsageLink": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "team_id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "step_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "agent_version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "execution_user_id": {
+          "$ref": "#/$defs/id"
+        },
+        "funding_token_id": {
+          "$ref": "#/$defs/id"
+        },
+        "gateway_call_id": {
+          "$ref": "#/$defs/id"
+        },
+        "logical_call_id": {
+          "$ref": "#/$defs/serverReference"
+        },
+        "attempt": {
+          "$ref": "#/$defs/positiveAttempt"
+        },
+        "gateway_request_id": {
+          "$ref": "#/$defs/serverReference"
+        },
+        "request_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "model_name": {
+          "$ref": "#/$defs/modelName"
+        },
+        "pricing_snapshot_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "source_event_key": {
+          "$ref": "#/$defs/digest"
+        },
+        "source_kind": {
+          "const": "model"
+        },
+        "item_kind": {
+          "enum": [
+            "charge",
+            "refund"
+          ]
+        },
+        "related_item_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quota": {
+          "$ref": "#/$defs/quota"
+        },
+        "consume_log_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "occurred_at": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        }
+      },
+      "required": [
+        "id",
+        "team_id",
+        "workspace_id",
+        "run_id",
+        "step_id",
+        "agent_id",
+        "agent_version_id",
+        "execution_user_id",
+        "funding_token_id",
+        "gateway_call_id",
+        "logical_call_id",
+        "attempt",
+        "gateway_request_id",
+        "request_hash",
+        "model_name",
+        "pricing_snapshot_hash",
+        "source_event_key",
+        "source_kind",
+        "item_kind",
+        "related_item_id",
+        "quota",
+        "consume_log_id",
+        "occurred_at"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "item_kind": {
+                "const": "refund"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "related_item_id": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "modelUsageProjection": {
+      "type": "object",
+      "properties": {
+        "gateway": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/gatewayCallLink"
+            },
+            {
+              "properties": {
+                "state": {
+                  "const": "settled"
+                }
+              }
+            }
+          ]
+        },
+        "usage": {
+          "$ref": "#/$defs/modelUsageLink"
+        }
+      },
+      "required": [
+        "gateway",
+        "usage"
+      ],
+      "additionalProperties": false
+    },
+    "effectiveLimits": {
+      "type": "object",
+      "properties": {
+        "max_cost_quota": {
+          "$ref": "#/$defs/positiveSingleCallQuota"
+        },
+        "max_model_calls": {
+          "const": 1
+        },
+        "max_tool_calls": {
+          "const": 0
+        },
+        "max_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741823
+        },
+        "execution_budget_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300000
+        }
+      },
+      "required": [
+        "max_cost_quota",
+        "max_model_calls",
+        "max_tool_calls",
+        "max_steps",
+        "max_output_tokens",
+        "execution_budget_ms"
+      ],
+      "additionalProperties": false
+    },
+    "certifiedQuote": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "const": "bounded"
+        },
+        "identity": {
+          "$ref": "#/$defs/modelCallIdentityProjection"
+        },
+        "run_revision": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        },
+        "model_name": {
+          "$ref": "#/$defs/modelName"
+        },
+        "config_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741823
+        },
+        "execution_budget_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300000
+        },
+        "upper_bound_quota": {
+          "$ref": "#/$defs/singleCallQuota"
+        },
+        "pricing_snapshot_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        }
+      },
+      "required": [
+        "state",
+        "identity",
+        "run_revision",
+        "model_name",
+        "config_hash",
+        "max_output_tokens",
+        "execution_budget_ms",
+        "upper_bound_quota",
+        "pricing_snapshot_hash",
+        "issued_at",
+        "expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "budgetPreparation": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "const": "preparation_only"
+        },
+        "identity": {
+          "$ref": "#/$defs/modelCallIdentityProjection"
+        },
+        "expected_run_revision": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        },
+        "model_name": {
+          "$ref": "#/$defs/modelName"
+        },
+        "config_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "limits": {
+          "$ref": "#/$defs/effectiveLimits"
+        },
+        "requested_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741823
+        },
+        "execution_budget_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300000
+        },
+        "upper_bound_quota": {
+          "$ref": "#/$defs/singleCallQuota"
+        },
+        "remaining_before_reservation": {
+          "$ref": "#/$defs/positiveSingleCallQuota"
+        },
+        "pricing_snapshot_hash": {
+          "$ref": "#/$defs/digest"
+        },
+        "quote_expires_at": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        },
+        "valid_until": {
+          "$ref": "#/$defs/positiveSafeInteger"
+        }
+      },
+      "required": [
+        "mode",
+        "identity",
+        "expected_run_revision",
+        "model_name",
+        "config_hash",
+        "limits",
+        "requested_output_tokens",
+        "execution_budget_ms",
+        "upper_bound_quota",
+        "remaining_before_reservation",
+        "pricing_snapshot_hash",
+        "quote_expires_at",
+        "valid_until"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "x-contract": {
+    "task_id": "P02-T09",
+    "visibility": "Internal explicit construction only. ModelCallIdentity and budget context are json:- Go values, never a client request body or deserialized authorization context.",
+    "execution": "PrepareModelCall is readonly. A successful preparation is not a reservation, dispatch permit or payment receipt. The live budget source and certified upper-bound quoter are not installed in production during P02. Missing adapters fail closed, metadata_only cannot execute, and runtime_ready stays false.",
+    "pricing": "The gateway input-only preconsume estimate is not a certified strict total-cost bound. Unknown pricing, unbounded pricing or malformed/mismatched/expired price certificates must reject before a runner can be called. Existing billing expressions and formulas are unchanged.",
+    "limits": "Current text Agents allow one model call, no tools, at most 64 steps and 300000 accumulated execution ms; output tokens also use the existing relay validator. Policy intersection and caller lowering never enlarge a ceiling. Check positive remaining funding, Token quota, Run cost, counts, time/deadline and lease separately. Unlimited Token quota never removes concrete funding and Run limits.",
+    "quota": "Wire observations use canonical nonnegative signed-int64 strings. Current calculation and per-call upper-bound preparation use the common.MaxQuota int32 boundary. No arithmetic or charging occurs in a DTO. Actual cost is NULL unless the minimal settled projection confirms both funding and Token outcomes; known free settlement may be 0.",
+    "partial_facts": "prepared/dispatched/responded/rejected/outcome_unknown keep actual_quota NULL in this minimal projection. funding_state, token_state and preconsume_quota may preserve partial observed facts. The future P03 ledger must retain those observations even though this projection does not expose partial facts as a final usage item.",
+    "identity": "IDs are canonical positive signed-int64 decimal strings in offline/wire projections. Go context uses positive int64 IDs, positive int32 attempt and safe positive lease values. caller_token_id is NULL for session calls; if present it must equal funding_token_id. This cross-field condition is enforced in Go, not standard JSON Schema.",
+    "correlation": "Model usage validation requires a structurally valid settled gateway projection and exact Team/workspace/run/step/Agent/version/execution-user/funding/call/attempt/request/model/pricing identity. Charge quota equals the confirmed final call amount. Refunds require a different related_item_id and a quota no greater than the confirmed call actual charge. These are consistency checks only; trusted producer authentication, real reference lookup, source_event_key uniqueness and cross-row nonnegative net sums remain P03 responsibilities.",
+    "logs": "consume_log_id is nullable and must be the raw persisted ID obtained from a trusted consume event in its configured log store. UI log IDs can be rewritten to display ordinals; request_id is a nonunique index and logs can be absent/duplicated/ClickHouse-backed. Neither an ID nor a matching log proves payment or allows retrying Settle. Confirmed settlement may have no log ID.",
+    "persistence": "ag_gateway_calls, ag_usage_items and ag_budget_reservations remain P03 tables. This task introduces no migrations, database writes, quota reservations, model dispatch, settlement, refund or payment repair.",
+    "schema_limits": "JSON Schema does not authenticate facts, verify database scope, correlate two objects, measure UTF-8 bytes, compare timestamps or enforce arithmetic. Go checks and actual local stub tests verify those semantic boundaries. No external schema references are used."
+  }
+}
