@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:agent-publication:1.0.0",
+  "title": "AIVale Agent publication contract 1.0.0",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P02-T04",
+    "api_ids": [
+      "API-021"
+    ],
+    "core_version": "1.1.0",
+    "authorization": "Current management session with live agent:publish in an active Team workspace; no PAT or model tokens.",
+    "snapshot": "A new publish freezes the exact normalized saved draft and inline schemas after rechecking current model and workspace policy. No bindings, model execution, channel credentials or budget reservation.",
+    "atomicity": "Snapshot, next version number, current release pointer, metadata revision, receipt and redacted durable audit commit together. The draft remains unchanged.",
+    "replay": "Scope includes actor, Team, workspace and operation; the actual Agent ID is additionally included in request intent. Reusing a scoped key for another Agent conflicts. Same key/normalized intent returns the original version after live authorization. Replay never reactivates an old version or republishes a later draft; retained expired keys cannot create again.",
+    "conflict": "A stale draft_revision returns AG_DRAFT_REVISION_CONFLICT with frozen core error shape; reread the authorized draft before retrying with a new intent."
+  },
+  "$defs": {
+    "publishRequest": {
+      "type": "object",
+      "properties": {
+        "draft_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Canonical positive JSON integer spelling only; decimal, exponent and string spellings are rejected by the server."
+        },
+        "release_note": {
+          "type": "string",
+          "maxLength": 4096,
+          "pattern": "^[^\u0000]*$",
+          "description": "Optional; at most 4096 valid UTF-8 bytes before trimming. Omission and an empty note have the same intent."
+        }
+      },
+      "required": [
+        "draft_revision"
+      ],
+      "additionalProperties": false
+    },
+    "versionReceipt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "agent_id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "version_no": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "version_kind": {
+          "const": "release"
+        },
+        "source_draft_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Canonical frozen configuration SHA-256; not an authorization credential."
+        },
+        "published_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Publication time in UTC Unix milliseconds."
+        }
+      },
+      "required": [
+        "id",
+        "agent_id",
+        "version_no",
+        "version_kind",
+        "source_draft_revision",
+        "config_hash",
+        "published_at"
+      ],
+      "additionalProperties": false
+    },
+    "publishResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/versionReceipt"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    }
+  }
+}

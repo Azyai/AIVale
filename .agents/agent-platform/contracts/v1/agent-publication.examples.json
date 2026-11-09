@@ -1,0 +1,71 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P02-T04",
+  "examples": [
+    {
+      "name": "publish",
+      "schema": "publishResponse",
+      "http_status": 201,
+      "request_schema": "publishRequest",
+      "request": {
+        "draft_revision": 2,
+        "release_note": "首个文本版本。"
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-publish",
+        "data": {
+          "id": "201",
+          "agent_id": "101",
+          "version_no": 1,
+          "version_kind": "release",
+          "source_draft_revision": 2,
+          "config_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "published_at": 1794196800000
+        }
+      }
+    },
+    {
+      "name": "same-intent-replay",
+      "schema": "publishResponse",
+      "http_status": 201,
+      "request_schema": "publishRequest",
+      "request": {
+        "draft_revision": 2,
+        "release_note": " 首个文本版本。 "
+      },
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-publish-replay",
+        "data": {
+          "id": "201",
+          "agent_id": "101",
+          "version_no": 1,
+          "version_kind": "release",
+          "source_draft_revision": 2,
+          "config_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "published_at": 1794196800000
+        }
+      }
+    },
+    {
+      "name": "stale-draft",
+      "schema": "errorResponse",
+      "http_status": 409,
+      "response": {
+        "success": false,
+        "code": "AG_DRAFT_REVISION_CONFLICT",
+        "message": "The draft revision has changed",
+        "request_id": "example-stale-revision",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    }
+  ]
+}
