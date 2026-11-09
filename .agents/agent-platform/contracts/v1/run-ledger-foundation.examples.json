@@ -1,0 +1,1183 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P03-T02",
+  "examples": [
+    {
+      "name": "reserve",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "dispatch-or-release-or-unknown-command",
+      "schema": "command",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "event_key": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    },
+    {
+      "name": "prepared-not-payment",
+      "schema": "preparedGateway",
+      "value": {
+        "gateway_call_id": "201",
+        "run_id": "103",
+        "step_id": "104",
+        "logical_call_id": "call-aabbccddeeff0011",
+        "attempt": 1,
+        "gateway_request_id": "gateway-aabbccddeeff0011",
+        "funding_token_id": "108",
+        "lease_epoch": 1,
+        "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "prepared",
+        "funding_state": "pending",
+        "token_state": "pending",
+        "actual_quota": null,
+        "preconsume_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "unknown-retains-reservation",
+      "schema": "unknownResult",
+      "value": {
+        "gateway_state": "outcome_unknown",
+        "reservation_status": "outcome_unknown",
+        "step_status": "outcome_unknown",
+        "run_status": "failed",
+        "error_code": "CALL_OUTCOME_UNKNOWN",
+        "usage_state": "reconciliation_required",
+        "requires_reconcile": 1,
+        "estimated_quota": "200",
+        "budget_reserved_quota": "200",
+        "settled_quota": null,
+        "actual_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "free-model-still-needs-positive-budget",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "0",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  ],
+  "rejected_examples": [
+    {
+      "name": "numeric-id",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": 103,
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "zero-id",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "0",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "leading-zero-id",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "0101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "overflow-id",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "9223372036854775808",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "upper-call-id",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "CALL-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "trailing-space-gateway-id",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011 ",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "logical-id-too-short",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "abc",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "attempt-two",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 2,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "zero-epoch",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 0,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "caller-token-in-session-foundation",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": "108",
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "unsafe-revision",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 9007199254740992,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "numeric-quota",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": 200,
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "negative-quota",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "-1",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "overflow-single-call-quota",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "2147483648",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "unknown-scope-override",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "team_id": "999"
+      }
+    },
+    {
+      "name": "zero-output",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 0,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "raised-output",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1073741824,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "raised-execution-ms",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 300001,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "uppercase-hash",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "lease-owner-space",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "worker a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "unknown-limit",
+      "schema": "reservationIntent",
+      "value": {
+        "identity": {
+          "team_id": "101",
+          "workspace_id": "102",
+          "run_id": "103",
+          "step_id": "104",
+          "agent_id": "105",
+          "agent_version_id": "106",
+          "execution_user_id": "107",
+          "funding_token_id": "108",
+          "caller_token_id": null,
+          "logical_call_id": "call-aabbccddeeff0011",
+          "attempt": 1,
+          "lease_epoch": 1,
+          "gateway_request_id": "gateway-aabbccddeeff0011",
+          "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "lease_owner": "internal-worker-a",
+        "expected_run_revision": 3,
+        "model_name": "model-a",
+        "config_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "pricing_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "limits": {
+          "max_cost_quota": "1000",
+          "max_model_calls": 1,
+          "max_tool_calls": 0,
+          "max_steps": 64,
+          "max_output_tokens": 4096,
+          "execution_budget_ms": 300000,
+          "ignore_budget": true
+        },
+        "upper_bound_quota": "200",
+        "max_output_tokens": 1024,
+        "execution_budget_ms": 60000,
+        "quote_expires_at": 1794200005000,
+        "valid_until": 1794200004000,
+        "event_key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "name": "prepared-claims-actual",
+      "schema": "preparedGateway",
+      "value": {
+        "gateway_call_id": "201",
+        "run_id": "103",
+        "step_id": "104",
+        "logical_call_id": "call-aabbccddeeff0011",
+        "attempt": 1,
+        "gateway_request_id": "gateway-aabbccddeeff0011",
+        "funding_token_id": "108",
+        "lease_epoch": 1,
+        "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "prepared",
+        "funding_state": "pending",
+        "token_state": "pending",
+        "actual_quota": "0",
+        "preconsume_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "prepared-claims-payment",
+      "schema": "preparedGateway",
+      "value": {
+        "gateway_call_id": "201",
+        "run_id": "103",
+        "step_id": "104",
+        "logical_call_id": "call-aabbccddeeff0011",
+        "attempt": 1,
+        "gateway_request_id": "gateway-aabbccddeeff0011",
+        "funding_token_id": "108",
+        "lease_epoch": 1,
+        "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "prepared",
+        "funding_state": "applied",
+        "token_state": "pending",
+        "actual_quota": null,
+        "preconsume_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "prepared-claims-log",
+      "schema": "preparedGateway",
+      "value": {
+        "gateway_call_id": "201",
+        "run_id": "103",
+        "step_id": "104",
+        "logical_call_id": "call-aabbccddeeff0011",
+        "attempt": 1,
+        "gateway_request_id": "gateway-aabbccddeeff0011",
+        "funding_token_id": "108",
+        "lease_epoch": 1,
+        "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "prepared",
+        "funding_state": "pending",
+        "token_state": "pending",
+        "actual_quota": null,
+        "preconsume_quota": null,
+        "consume_log_id": "501"
+      }
+    },
+    {
+      "name": "unknown-makes-zero-final",
+      "schema": "unknownResult",
+      "value": {
+        "gateway_state": "outcome_unknown",
+        "reservation_status": "outcome_unknown",
+        "step_status": "outcome_unknown",
+        "run_status": "failed",
+        "error_code": "CALL_OUTCOME_UNKNOWN",
+        "usage_state": "reconciliation_required",
+        "requires_reconcile": 1,
+        "estimated_quota": "200",
+        "budget_reserved_quota": "200",
+        "settled_quota": null,
+        "actual_quota": "0",
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "unknown-released",
+      "schema": "unknownResult",
+      "value": {
+        "gateway_state": "outcome_unknown",
+        "reservation_status": "released",
+        "step_status": "outcome_unknown",
+        "run_status": "failed",
+        "error_code": "CALL_OUTCOME_UNKNOWN",
+        "usage_state": "reconciliation_required",
+        "requires_reconcile": 1,
+        "estimated_quota": "200",
+        "budget_reserved_quota": "200",
+        "settled_quota": null,
+        "actual_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "unknown-resumable-run",
+      "schema": "unknownResult",
+      "value": {
+        "gateway_state": "outcome_unknown",
+        "reservation_status": "outcome_unknown",
+        "step_status": "outcome_unknown",
+        "run_status": "queued",
+        "error_code": "CALL_OUTCOME_UNKNOWN",
+        "usage_state": "reconciliation_required",
+        "requires_reconcile": 1,
+        "estimated_quota": "200",
+        "budget_reserved_quota": "200",
+        "settled_quota": null,
+        "actual_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "unknown-makes-final",
+      "schema": "unknownResult",
+      "value": {
+        "gateway_state": "outcome_unknown",
+        "reservation_status": "outcome_unknown",
+        "step_status": "outcome_unknown",
+        "run_status": "failed",
+        "error_code": "CALL_OUTCOME_UNKNOWN",
+        "usage_state": "final",
+        "requires_reconcile": 1,
+        "estimated_quota": "200",
+        "budget_reserved_quota": "200",
+        "settled_quota": null,
+        "actual_quota": null,
+        "consume_log_id": null
+      }
+    },
+    {
+      "name": "unknown-clears-reconcile",
+      "schema": "unknownResult",
+      "value": {
+        "gateway_state": "outcome_unknown",
+        "reservation_status": "outcome_unknown",
+        "step_status": "outcome_unknown",
+        "run_status": "failed",
+        "error_code": "CALL_OUTCOME_UNKNOWN",
+        "usage_state": "reconciliation_required",
+        "requires_reconcile": 0,
+        "estimated_quota": "200",
+        "budget_reserved_quota": "200",
+        "settled_quota": null,
+        "actual_quota": null,
+        "consume_log_id": null
+      }
+    }
+  ],
+  "runtime_rejection_cases": [
+    "metadata_only is not execution admission",
+    "cross-scope, stale epoch/owner or invalid Run state cannot reserve or dispatch",
+    "mismatched durable release/model/config/funding references fail",
+    "same logical call or request ID with changed immutable intent conflicts",
+    "sum is checked by subtracting consumed and reserved from bounded limit before accepting estimate",
+    "existing matching call returns its existing state before a new budget/call-count check",
+    "release is allowed only when prepared and definitely unsent; dispatched or outcome_unknown cannot release",
+    "unknown result preserves reserved quota and accepted call count and appends no successful usage",
+    "known-expired deadline or requested cancellation does not block current-lease observation of uncertainty",
+    "untrusted worker fields, missing log or no log record are not payment receipts",
+    "rollback preserves Run counters, Step, call, reservation, event and outbox; ambiguous COMMIT is not replayed"
+  ],
+  "schema_limits": "Shape only; not clock freshness, byte sizes, source duplicate JSON keys, authorization, cross-object equality, remaining budget arithmetic, hash truth or trusted receipt origin."
+}

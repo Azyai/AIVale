@@ -1,0 +1,19 @@
+# P03-T02 Run预算预留与网关调用账本基础
+
+本合同描述内部Go类型、事务原语及离线JSON投影，不定义HTTP接口、模型执行凭据或付款证明。当前管理入口仍仅创建metadata_only；本批不创建或提升execution准入，不启动Worker，不调用真实模型、钱包预扣、结算或退款。`runtime_ready`保持false。测试中的execution Run和已结算账本均为显式标记的隔离合成夹具。
+
+新增`ag_budget_reservations`、`ag_gateway_calls`和`ag_usage_items`。预留/调用为B/U/T/W可变版本实体，用量为B/T/W只追加事实；不提前添加P05产物、P10根Run列。gateway新增可空`consume_log_id`用于未来可信路径关联真实持久化凭证；普通RequestId和日志列表显示序号不是该ID，无日志也不证明未扣款。
+
+新producer生成的logical_call_id及gateway_request_id统一为16至64字节小写ASCII，匹配`[a-z0-9][a-z0-9._:-]{15,63}`；不复用混合大小写的HTTP跟踪ID。现有DTO较宽的形状验证不代表所有旧字符串都可以用作本批新生成ID。预留唯一(run_id,logical_call_id,attempt,cost_kind)，调用唯一(logical_call_id,attempt)和gateway_request_id；用量唯一source_event_key。每次重放还须核对完整身份、Run/Step/版本/资金、请求摘要、价格及估计意图，不能仅靠唯一冲突返回成功。
+
+当前仅model首attempt=1。原子登记需要已持久化execution Run、同域model Step、当前owner/epoch、有效租约、未取消及未过总deadline，并重新检查Run revision、固定版本/模型/配置与有效限额。注册同事务写reserved预留、prepared调用、Step逻辑调用关联、Run reserved与model_call_count、引用事件及outbox。现有相同调用先按意图返回已有状态；不能因第一次已占用调用次数使同键重查失效。预算按有界整数先做limit-consumed-reserved，再比较完整调用上界；Run预算预留不减少现有钱包或Token余额。
+
+`ModelCallReservationIntent`及`ModelCallLedgerCommand`全部是json:"-"内部值，由受信适配器构造；离线Schema不是反序列化或认证API。只读BudgetPreparation不是资金准入、预留收据或调用许可。当前没有生产完整价格上界/实时资金/执行准入适配器；后续host仍需核对可信实时事实与价格证明。未知定价、无上界、预算或资金不足不能用worker自报字段放行。
+
+prepared登记不代表请求已发出。受控发送标记只在当前有效动作fence下推进dispatched，重新检查预留绑定的报价有效期、累计执行余量和从登记开始的单调用窗口，并在最终CAS前复查，提交成功后未来broker才可出站；T02本身不出站。只有prepared且确定尚未发送、没有任何资金或响应观测时才能释放预留，保留原调用身份和已经接受的model_call_count，不通过减次数反复获得新调用。释放后的旧调用不得再次发送。期限到达、取消、Run终态和租约过期都不是无条件释放依据。
+
+已登记dispatched而外部结果不确定时，同事务将调用和reservation记outcome_unknown，Step记outcome_unknown，Run记failed、error_code=CALL_OUTCOME_UNKNOWN、usage_state=reconciliation_required、requires_reconcile=1；保留原预留，实际收费/结算仍为NULL，不生成成功0费用项目，不自动重发或退款。资金/Token已经确认applied或refunded的观测保留，尚pending的提交才改为unknown，不覆盖已知事实。未知结果是收尾观测，当前有效owner/epoch/lease可以在deadline已到或取消已请求后记录；旧epoch和过期lease仍不能写入。Run失败是终态，不以resume重新发送。
+
+用量表当前只接受model charge存储：必须关联真实同域settled调用、匹配actual_quota，并且资金和Token状态均已确认。JSON结构或行引用检查不认证来源，故本批不装配普通worker写收费投影的入口；完整可信网关回执接线在P03-T04，核账、退款/更正及投影消费在P06-T08完善。usage不得反向调用Settle，未知金额保持NULL。
+
+三模型的普通更新、删除和upsert均拒绝，后续受控状态推进显式CAS。新JSON对象保留原字节并限制60KiB，引用事件/outbox不复制输入正文、Key或隐藏推理。Schema只检验离线形状，不验证实时身份、时钟、字节上限、源JSON重复键、摘要真实性、跨对象一致、预算算术或可信结算来源；这些需要Go逻辑与真实SQLite/MySQL/PostgreSQL新建及升级验收。
