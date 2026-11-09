@@ -16,133 +16,186 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import {
-  ApiIcon,
-  ArrowRight01Icon,
-  Layers01Icon,
-  Shield01Icon,
-  WorkflowSquare01Icon,
-} from '@hugeicons/core-free-icons'
-import { HugeiconsIcon } from '@hugeicons/react'
 import { useTranslation } from 'react-i18next'
 
-import { BrandOrb } from '@/components/layout/components/header-logo'
-import { getLobeIcon } from '@/lib/lobe-icon'
+import { AnimateInView } from '@/components/animate-in-view'
 
-const GATEWAY_MODULES = [
-  { titleKey: 'Model API access', icon: ApiIcon },
-  { titleKey: 'Authentication', icon: Shield01Icon },
-  { titleKey: 'Channels', icon: WorkflowSquare01Icon },
-  { titleKey: 'Usage and billing', icon: Layers01Icon },
+const APP_CHIPS = [
+  '智能对话',
+  '代码助手',
+  'Agent 编排',
+  '内部业务系统',
 ] as const
 
+const COMPUTE_CHIPS = [
+  '千问 125B',
+  'Qwen3.8-Flash',
+  'MiniMax H3',
+  'DeepSeek',
+  'GLM',
+  '···',
+] as const
+
+const CORE_MODULES = [
+  { title: '统一网关', lines: ['鉴权 · 限流', '协议转换'] },
+  { title: '智能调度', lines: ['负载均衡 · 故障切换', '渠道权重'] },
+  { title: '计量计费', lines: ['Token 计量 · 团队钱包', '订阅套餐'] },
+  { title: '运营洞察', lines: ['数据看板 · 排行榜', '账单对账'] },
+] as const
+
+function LayerTag({
+  name,
+  sub,
+  badge,
+}: {
+  name: string
+  sub: string
+  badge: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className='mb-4 flex flex-wrap items-center justify-between gap-2'>
+      <b className='text-lg font-semibold tracking-wide'>
+        {t(name)}
+        <small className='text-muted-foreground/70 ml-3 text-sm font-medium tracking-wider'>
+          {t(sub)}
+        </small>
+      </b>
+      <em className='rounded-full border border-cyan-500/35 bg-cyan-500/[0.07] px-3.5 py-1 font-mono text-xs font-semibold tracking-[0.16em] text-cyan-600 not-italic dark:text-cyan-300'>
+        {t(badge)}
+      </em>
+    </div>
+  )
+}
+
+/** 平台总览:应用层 / 平台层(核心) / 算力层 三明治结构。 */
 export function AITokenArchitecture() {
   const { t } = useTranslation()
 
   return (
-    <section
-      aria-labelledby='aitoken-architecture-title'
-      className='relative overflow-hidden px-5 py-12 sm:px-8 md:py-16 lg:px-12 2xl:px-16'
-    >
-      <div
-        aria-hidden='true'
-        className='pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_60%,#7c5cff12,transparent_65%)]'
-      />
-      <div className='mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end'>
-        <h2
-          id='aitoken-architecture-title'
-          className='text-2xl font-semibold tracking-tight text-balance sm:text-3xl lg:text-4xl'
-        >
-          {t('One gateway, from application to model')}
-        </h2>
-        <p className='text-muted-foreground max-w-xl text-sm leading-relaxed sm:text-base'>
-          {t(
-            'Connect through OpenAI, Claude, Gemini, and other compatible API routes'
-          )}
-        </p>
-      </div>
-
-      <div className='grid gap-3'>
-        <div className='border-primary/15 bg-background/80 grid gap-4 rounded-2xl border p-5 sm:p-6 lg:grid-cols-[12rem_1fr] lg:items-center'>
-          <p className='text-primary text-sm font-semibold'>
-            {t('Your applications')}
+    <section className='px-[5%] py-12 md:py-16'>
+      <div className='mx-auto w-full'>
+        <AnimateInView className='mb-10 text-center'>
+          <h2 className='text-[clamp(2rem,3.5vw,3rem)] leading-tight font-bold tracking-tight'>
+            {t('平台总览 · 一图看清')}
+          </h2>
+          <p className='text-muted-foreground/70 mx-auto mt-3 w-[90%] text-base leading-relaxed md:text-lg'>
+            {t(
+              '我们站在业务与算力之间：对上提供标准服务，对下把一切模型收拢为可调度的渠道。'
+            )}
           </p>
-          <ul className='grid grid-cols-2 gap-3 md:grid-cols-4'>
-            {['Code', 'Text', 'Image', 'Audio'].map((label) => (
-              <li
-                key={label}
-                className='border-primary/10 bg-primary/4 rounded-lg border px-4 py-3 text-center text-sm font-medium'
-              >
-                {t(label)}
-              </li>
-            ))}
-          </ul>
-        </div>
+        </AnimateInView>
 
-        <div aria-hidden='true' className='flex justify-center'>
-          <HugeiconsIcon
-            icon={ArrowRight01Icon}
-            className='text-primary/55 size-6 rotate-90'
-          />
-        </div>
-
-        <div className='via-background relative overflow-hidden rounded-2xl border border-violet-400/35 bg-linear-to-r from-violet-500/12 to-cyan-400/10 p-5 shadow-[0_12px_48px_#7c5cff0a] sm:p-7 lg:p-8'>
-          <div className='flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8'>
-            <div className='flex shrink-0 items-center gap-4 lg:w-48 lg:flex-col lg:gap-3'>
-              <BrandOrb className='size-14 lg:size-20' />
-              <p className='hero-grad-text text-2xl font-bold tracking-tight'>
-                {t('AIToken')}
-              </p>
-            </div>
-            <ul className='grid flex-1 grid-cols-2 gap-3 xl:grid-cols-4'>
-              {GATEWAY_MODULES.map((module) => (
-                <li
-                  key={module.titleKey}
-                  className='border-primary/15 bg-background/75 flex flex-col items-start gap-4 rounded-xl border p-4 sm:p-5'
+        <div className='mx-auto flex w-full flex-col'>
+          {/* 应用层 */}
+          <AnimateInView className='border-border/60 bg-card/50 rounded-3xl border p-6 backdrop-blur-md md:p-7'>
+            <LayerTag
+              name='应用层'
+              sub='消费算力的一方'
+              badge='业务零改造接入'
+            />
+            <div className='flex flex-wrap gap-3'>
+              {APP_CHIPS.map((c) => (
+                <span
+                  key={c}
+                  className='border-border/60 bg-muted/50 rounded-xl border px-5 py-2.5 text-[16.5px] transition-transform duration-300 hover:-translate-y-0.5 hover:border-violet-400/45'
                 >
-                  <HugeiconsIcon
-                    icon={module.icon}
-                    className='text-primary size-6'
-                    aria-hidden='true'
-                  />
-                  <span className='text-sm leading-relaxed font-medium'>
-                    {t(module.titleKey)}
-                  </span>
-                </li>
+                  {t(c)}
+                </span>
               ))}
-            </ul>
-          </div>
+            </div>
+          </AnimateInView>
+
+          <BeamDown />
+
+          {/* 平台层(核心) */}
+          <AnimateInView
+            delay={120}
+            className='arch-core rounded-3xl p-6 md:p-7'
+          >
+            <LayerTag
+              name='平台层'
+              sub='算力调度和 Token 服务'
+              badge='OPENAI 兼容'
+            />
+            <div className='grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4'>
+              {CORE_MODULES.map((m) => (
+                <div
+                  key={m.title}
+                  className='bg-primary/[0.07] hover:bg-primary/[0.16] rounded-2xl border border-violet-400/30 p-4.5 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/55'
+                >
+                  <b className='text-lg font-semibold'>{t(m.title)}</b>
+                  {m.lines.map((line) => (
+                    <span
+                      key={line}
+                      className='text-muted-foreground mt-2 block text-sm leading-6'
+                    >
+                      {t(line)}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </AnimateInView>
+
+          <BeamUp />
+
+          {/* 算力层 */}
+          <AnimateInView
+            delay={240}
+            className='border-border/60 bg-card/50 rounded-3xl border p-6 backdrop-blur-md md:p-7'
+          >
+            <LayerTag name='算力层' sub='一切皆渠道' badge='可插拔 · 可扩展' />
+            <div className='flex flex-wrap gap-3'>
+              {COMPUTE_CHIPS.map((c) => (
+                <span
+                  key={c}
+                  className='border-border/60 bg-muted/50 rounded-xl border px-5 py-2.5 text-[16.5px] transition-transform duration-300 hover:-translate-y-0.5 hover:border-violet-400/45'
+                >
+                  {c}
+                </span>
+              ))}
+              <span className='text-muted-foreground/70 border-border/60 rounded-xl border border-dashed px-5 py-2.5 text-[16.5px]'>
+                {t('私有算力 · 规划中')}
+              </span>
+            </div>
+          </AnimateInView>
         </div>
 
-        <div aria-hidden='true' className='flex justify-center'>
-          <HugeiconsIcon
-            icon={ArrowRight01Icon}
-            className='size-6 rotate-90 text-cyan-600/65 dark:text-cyan-300/65'
-          />
-        </div>
-
-        <div className='bg-background/80 grid gap-4 rounded-2xl border border-cyan-400/25 p-5 sm:p-6 lg:grid-cols-[12rem_1fr] lg:items-center'>
-          <p className='text-sm font-semibold text-cyan-700 dark:text-cyan-300'>
-            {t('Model providers')}
+        <AnimateInView delay={300} className='mx-auto mt-11 w-full'>
+          <p className='text-muted-foreground text-center text-lg leading-relaxed tracking-wide text-balance md:text-2xl'>
+            {t('对上，一个标准入口；对下，一切算力皆可调度。')}
+            <br />
+            {t('业务方始终只需要 ——')}
+            <b className='text-foreground font-bold'>
+              {t('一个域名，一把密钥。')}
+            </b>
           </p>
-          <ul className='grid grid-cols-2 gap-3 md:grid-cols-4'>
-            {['OpenAI', 'Claude', 'Gemini', 'DeepSeek'].map((provider) => (
-              <li
-                key={provider}
-                className='flex min-w-0 items-center justify-center gap-3 rounded-lg bg-cyan-400/5 px-3 py-3'
-              >
-                <span aria-hidden='true'>{getLobeIcon(provider, 24)}</span>
-                <span className='truncate text-sm font-medium'>{provider}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        </AnimateInView>
       </div>
-      <p className='text-muted-foreground mt-5 text-sm leading-relaxed'>
-        {t(
-          'Model availability and supported routes depend on your account and the configured channels.'
-        )}
-      </p>
     </section>
   )
 }
+
+/* Vertical connector beams between layers (decorative, CSS-animated dots). */
+function BeamDown() {
+  return (
+    <div aria-hidden className='beam-v h-14 w-full'>
+      <i />
+      <i />
+      <i />
+    </div>
+  )
+}
+
+function BeamUp() {
+  return (
+    <div aria-hidden className='beam-v beam-up h-14 w-full'>
+      <i />
+      <i />
+      <i />
+    </div>
+  )
+}
+
+export { BeamDown, BeamUp }

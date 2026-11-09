@@ -39,9 +39,12 @@ import type {
 } from '@/features/platform-catalog'
 import { cn } from '@/lib/utils'
 
+import { AITokenAchievements } from './aitoken-achievements'
 import { AITokenArchitecture } from './aitoken-architecture'
-import { AITokenCapabilities, AITokenClients } from './aitoken-capabilities'
+import { AITokenCapabilities } from './aitoken-capabilities'
 import { AITokenGuide } from './aitoken-guide'
+import { AITokenRoadmap } from './aitoken-roadmap'
+import { AITokenTools } from './aitoken-tools'
 import { OPERATION_STATUS_KEYS } from './product-copy'
 import { ProductPortal, ProductStage } from './product-portal'
 
@@ -113,26 +116,27 @@ export function AITokenLanding(props: {
           </p>
 
           <div className='mt-11 flex flex-wrap items-center justify-center gap-4'>
-            {access?.operation && (
-              <Link
-                to={access.operation.href}
-                className={cn(
-                  buttonVariants({ size: 'lg' }),
-                  'hero-cta h-auto min-h-13 max-w-full rounded-full px-9 py-3 text-base font-semibold whitespace-normal'
-                )}
-              >
-                {t(access.operation.titleKey)}
-              </Link>
-            )}
             <a
               href='#plans'
               className={cn(
-                buttonVariants({ size: 'lg', variant: 'outline' }),
-                'bg-background/60 h-auto min-h-13 max-w-full rounded-full px-9 py-3 text-base whitespace-normal'
+                buttonVariants({ size: 'lg' }),
+                'hero-cta h-auto min-h-13 max-w-full rounded-full px-9 py-3 text-base font-semibold whitespace-normal'
               )}
             >
-              {t('Compare plans')}
+              {t('查看套餐')}
             </a>
+            {access?.operation && (
+              <Link
+                to='/dashboard/$section'
+                params={{ section: 'models' }}
+                className={cn(
+                  buttonVariants({ size: 'lg', variant: 'outline' }),
+                  'bg-background/60 h-auto min-h-13 max-w-full rounded-full px-9 py-3 text-base whitespace-normal'
+                )}
+              >
+                {t('数据看板')}
+              </Link>
+            )}
           </div>
           {access &&
             !access.operation &&
@@ -144,10 +148,10 @@ export function AITokenLanding(props: {
 
           <div className='mt-11 flex flex-wrap items-center justify-center gap-3 sm:gap-4'>
             {[
-              { dot: 'bg-violet-400', label: 'Model API access' },
-              { dot: 'bg-cyan-400', label: 'API keys' },
-              { dot: 'bg-amber-400', label: 'Usage and billing' },
-              { dot: 'bg-emerald-400', label: 'Channels' },
+              { dot: 'bg-violet-400', label: '统一接入' },
+              { dot: 'bg-cyan-400', label: '智能调度' },
+              { dot: 'bg-amber-400', label: '精确计量' },
+              { dot: 'bg-emerald-400', label: '安全运营' },
             ].map((item) => (
               <span
                 key={item.label}
@@ -167,27 +171,16 @@ export function AITokenLanding(props: {
       <AITokenCapabilities />
       <AITokenArchitecture />
 
-      <div
-        id='request-flow'
-        className='scroll-mt-24 border-y border-violet-400/15'
-      >
-        <div className='flex flex-col gap-3 px-5 pt-10 sm:px-8 lg:flex-row lg:items-start lg:gap-6 lg:px-12 2xl:px-16'>
-          <p className='border-primary/20 bg-primary/8 text-primary w-fit shrink-0 rounded-full border px-3 py-1 text-sm font-medium'>
-            {t('Concept preview only')}
-          </p>
-          <p className='text-muted-foreground max-w-5xl text-sm leading-relaxed'>
-            {t(
-              'This is an illustrative request flow. The values and channels shown are examples, not live usage or a performance guarantee.'
-            )}
-          </p>
-        </div>
+      <div id='request-flow' className='scroll-mt-24'>
         <TokenFlowTheater />
       </div>
 
       <div id='plans' className='scroll-mt-24'>
         <PricingSection />
       </div>
-      <AITokenClients />
+      <AITokenAchievements />
+      <AITokenTools />
+      <AITokenRoadmap />
       <AITokenGuide />
     </ProductPortal>
   )
