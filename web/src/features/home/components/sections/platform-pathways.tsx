@@ -88,7 +88,7 @@ export function PlatformPathways(props: PlatformPathwaysProps) {
   return (
     <section
       aria-labelledby='platform-pathways'
-      className='mx-auto max-w-[90rem] px-5 pt-2 pb-14 sm:px-8 lg:px-10 lg:pb-20'
+      className='w-full px-5 pt-2 pb-12 sm:px-8 lg:px-12 lg:pb-16 2xl:px-16'
     >
       <h2
         id='platform-pathways'
@@ -98,7 +98,7 @@ export function PlatformPathways(props: PlatformPathwaysProps) {
       </h2>
       <ul
         className={cn(
-          'mt-6 grid gap-6',
+          'mt-6 grid gap-4',
           pathways.length > 1 && 'md:grid-cols-2',
           pathways.length > 2 && 'lg:grid-cols-3'
         )}
@@ -106,7 +106,7 @@ export function PlatformPathways(props: PlatformPathwaysProps) {
         {pathways.map((pathway) => (
           <li
             key={pathway.id}
-            className='flex min-w-0 flex-col items-start border-t pt-4'
+            className='border-primary/20 bg-primary/5 flex min-w-0 flex-col items-start rounded-2xl border p-5 sm:p-6'
           >
             <h3 className='text-lg font-semibold'>{pathway.title}</h3>
             <p className='text-muted-foreground mt-2 max-w-[46ch] text-sm leading-relaxed'>
@@ -117,7 +117,7 @@ export function PlatformPathways(props: PlatformPathwaysProps) {
               className={buttonVariants({
                 variant: 'link',
                 className:
-                  'text-foreground mt-1 min-h-11 max-w-full px-0 text-start whitespace-normal',
+                  'text-primary mt-auto min-h-11 max-w-full px-0 pt-4 text-start whitespace-normal',
               })}
             >
               {pathway.action}
@@ -162,9 +162,9 @@ export function BusinessHallOverview() {
   return (
     <section
       aria-labelledby='platform-business'
-      className='bg-muted/35 border-y'
+      className='border-primary/15 from-primary/12 via-primary/5 border-y bg-linear-to-r to-cyan-500/10'
     >
-      <div className='mx-auto max-w-[90rem] px-5 py-12 sm:px-8 lg:px-10 lg:py-16'>
+      <div className='w-full px-5 py-12 sm:px-8 lg:px-12 lg:py-16 2xl:px-16'>
         <div className='flex flex-wrap items-center gap-3'>
           <h2
             id='platform-business'
@@ -179,9 +179,12 @@ export function BusinessHallOverview() {
             'The Business Hall will bring tasks, scheduling, approvals, and internal collaboration together. Explore the planned flow today.'
           )}
         </p>
-        <ol className='divide-border mt-7 grid divide-y border-y sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4'>
+        <ol className='mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
           {steps.map((step, index) => (
-            <li key={step.id} className='relative min-w-0 py-4 sm:pr-6'>
+            <li
+              key={step.id}
+              className='border-primary/15 bg-card/75 relative min-w-0 rounded-xl border p-5'
+            >
               <div className='flex items-center gap-3'>
                 <h3 className='font-semibold'>{step.title}</h3>
                 {index < steps.length - 1 && (

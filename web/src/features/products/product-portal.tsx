@@ -47,7 +47,7 @@ const productIcons = {
 export function ProductPortal(props: { children: ReactNode }) {
   return (
     <PublicLayout showMainContainer={false}>
-      <main className='mx-auto min-h-[70svh] w-full max-w-6xl px-5 pt-24 pb-16 sm:px-8 sm:pt-28 sm:pb-24'>
+      <main className='from-primary/8 via-background to-background min-h-svh w-full bg-linear-to-br px-5 pt-24 pb-12 sm:px-8 lg:px-12 lg:pt-28 lg:pb-16 2xl:px-16'>
         {props.children}
       </main>
       <Footer />

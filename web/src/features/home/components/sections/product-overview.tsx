@@ -33,6 +33,7 @@ import {
   RELEASE_STAGE_LABEL_KEYS,
   type CatalogProduct,
 } from '@/features/platform-catalog'
+import { cn } from '@/lib/utils'
 
 const productIcons = {
   aitoken: CodeSquareIcon,
@@ -42,41 +43,83 @@ const productIcons = {
   datasets: Database02Icon,
 } satisfies Record<CatalogProduct['id'], typeof CpuIcon>
 
+const productColors = {
+  aitoken: {
+    panel: 'border-violet-500/25 from-violet-500/12 hover:border-violet-400/60',
+    icon: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  },
+  'model-library': {
+    panel: 'border-cyan-500/25 from-cyan-500/12 hover:border-cyan-400/60',
+    icon: 'bg-cyan-500/15 text-cyan-800 dark:text-cyan-300',
+  },
+  workbench: {
+    panel:
+      'border-fuchsia-500/25 from-fuchsia-500/12 hover:border-fuchsia-400/60',
+    icon: 'bg-fuchsia-500/15 text-fuchsia-800 dark:text-fuchsia-300',
+  },
+  'agent-scheduling': {
+    panel:
+      'border-emerald-500/25 from-emerald-500/12 hover:border-emerald-400/60',
+    icon: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300',
+  },
+  datasets: {
+    panel: 'border-amber-500/25 from-amber-500/12 hover:border-amber-400/60',
+    icon: 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
+  },
+} satisfies Record<CatalogProduct['id'], { panel: string; icon: string }>
+
 export function ProductOverview(props: { products: CatalogProduct[] }) {
   const { t } = useTranslation()
 
   return (
     <section
       aria-labelledby='platform-products'
-      className='mx-auto grid max-w-[90rem] gap-8 px-5 py-14 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.25fr)] lg:gap-16 lg:px-10 lg:py-20'
+      className='w-full px-5 py-12 sm:px-8 lg:px-12 lg:py-16 2xl:px-16'
     >
-      <div>
+      <div className='mb-7 flex flex-wrap items-end justify-between gap-x-10 gap-y-3'>
         <h2
           id='platform-products'
-          className='text-3xl font-semibold tracking-tight'
+          className='text-3xl font-semibold tracking-tight sm:text-4xl'
         >
           {t('Products')}
         </h2>
-        <p className='text-muted-foreground mt-3 max-w-sm text-base leading-relaxed'>
+        <p className='text-muted-foreground max-w-2xl text-base leading-relaxed'>
           {t('Find the right capability and see what you can use today.')}
         </p>
       </div>
-      <ul className='divide-border divide-y border-y'>
+      <ul className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'>
         {props.products.map((product) => (
           <li key={product.id}>
             <Link
               to='/products/$productId'
               params={{ productId: product.id }}
-              className='group hover:bg-muted/60 focus-visible:ring-ring grid min-h-21 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-2 py-4 focus-visible:ring-2 focus-visible:outline-none sm:grid-cols-[auto_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4 sm:px-4'
+              className={cn(
+                'group to-card focus-visible:ring-ring flex h-full min-h-64 flex-col rounded-2xl border bg-linear-to-br p-5 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:p-6 motion-reduce:transition-none',
+                productColors[product.id].panel
+              )}
             >
-              <HugeiconsIcon
-                icon={productIcons[product.id]}
-                aria-hidden='true'
-                className='text-primary mt-0.5 size-5 sm:mt-0'
-              />
-              <div className='min-w-0'>
-                <h3 className='font-semibold'>{t(product.titleKey)}</h3>
-                <p className='text-muted-foreground mt-1 text-sm leading-relaxed'>
+              <div className='mb-5 flex w-full items-center justify-between gap-3'>
+                <span
+                  className={cn(
+                    'grid size-12 place-items-center rounded-xl',
+                    productColors[product.id].icon
+                  )}
+                >
+                  <HugeiconsIcon
+                    icon={productIcons[product.id]}
+                    aria-hidden='true'
+                    className='size-6'
+                  />
+                </span>
+                <HugeiconsIcon
+                  icon={ArrowUpRight01Icon}
+                  aria-hidden='true'
+                  className='text-muted-foreground group-hover:text-primary size-5 shrink-0'
+                />
+              </div>
+              <div className='mb-6 min-w-0'>
+                <h3 className='text-lg font-semibold'>{t(product.titleKey)}</h3>
+                <p className='text-muted-foreground mt-2 text-sm leading-relaxed'>
                   {t(product.descriptionKey)}
                 </p>
               </div>
@@ -84,15 +127,10 @@ export function ProductOverview(props: { products: CatalogProduct[] }) {
                 variant={
                   product.releaseStage === 'available' ? 'secondary' : 'outline'
                 }
-                className='col-start-2 row-start-2 sm:col-start-auto sm:row-start-auto'
+                className='mt-auto h-auto min-h-6 max-w-full whitespace-normal'
               >
                 {t(RELEASE_STAGE_LABEL_KEYS[product.releaseStage])}
               </Badge>
-              <HugeiconsIcon
-                icon={ArrowUpRight01Icon}
-                aria-hidden='true'
-                className='text-muted-foreground group-hover:text-foreground col-start-3 row-start-1 mt-0.5 size-4 sm:col-start-auto sm:row-start-auto sm:mt-0'
-              />
             </Link>
           </li>
         ))}

@@ -20,6 +20,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { PRODUCT_GROUPS, usePlatformCatalog } from '@/features/platform-catalog'
+import { cn } from '@/lib/utils'
 
 import {
   ProductArrow,
@@ -27,6 +28,12 @@ import {
   ProductPortal,
   ProductStage,
 } from './product-portal'
+
+const groupColors = {
+  models: 'border-violet-500/25 from-violet-500/12 hover:border-violet-400/60',
+  agents: 'border-cyan-500/25 from-cyan-500/12 hover:border-cyan-400/60',
+  data: 'border-emerald-500/25 from-emerald-500/12 hover:border-emerald-400/60',
+}
 
 export function ProductCatalogPage() {
   const { t } = useTranslation()
@@ -44,38 +51,41 @@ export function ProductCatalogPage() {
           )}
         </p>
       </header>
-      <div className='divide-border divide-y'>
+      <div className='grid items-stretch gap-8 pt-8 lg:gap-6 xl:grid-cols-3 xl:pt-10'>
         {PRODUCT_GROUPS.map((group) => (
           <section
             key={group.id}
             aria-labelledby={`product-group-${group.id}`}
-            className='grid gap-4 py-6 md:grid-cols-[minmax(10rem,1fr)_3fr] md:gap-8 md:py-8'
+            className='flex min-w-0 flex-col gap-4'
           >
             <h2
               id={`product-group-${group.id}`}
-              className='text-lg font-semibold md:pt-3'
+              className='text-primary text-xl font-semibold'
             >
               {t(group.titleKey)}
             </h2>
-            <ul className='divide-border divide-y'>
+            <ul className='grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-1'>
               {products
                 .filter((product) => product.group === group.id)
                 .map((product) => (
-                  <li key={product.id}>
+                  <li key={product.id} className='min-w-0 only:col-span-full'>
                     <Link
                       to='/products/$productId'
                       params={{ productId: product.id }}
-                      className='group hover:bg-muted/50 focus-visible:ring-ring/70 flex min-h-11 items-start gap-3 rounded-lg px-3 py-4 outline-none focus-visible:ring-2 sm:items-center sm:gap-4'
+                      className={cn(
+                        'group to-card focus-visible:ring-ring/70 flex h-full min-h-44 items-start gap-4 rounded-2xl border bg-linear-to-br p-6 outline-none focus-visible:ring-2 sm:gap-5',
+                        groupColors[group.id]
+                      )}
                     >
                       <ProductIcon id={product.id} />
                       <div className='min-w-0 flex-1'>
-                        <div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-                          <span className='font-semibold'>
+                        <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
+                          <span className='text-lg font-semibold text-balance'>
                             {t(product.titleKey)}
                           </span>
                           <ProductStage stage={product.releaseStage} />
                         </div>
-                        <p className='text-muted-foreground mt-1 text-sm leading-relaxed'>
+                        <p className='text-muted-foreground mt-3 max-w-prose text-sm leading-relaxed'>
                           {t(product.descriptionKey)}
                         </p>
                       </div>

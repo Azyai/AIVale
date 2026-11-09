@@ -84,7 +84,7 @@ export function PlatformGuide(props: {
   const documentationClassName = buttonVariants({
     variant: 'link',
     className:
-      'text-foreground mt-2 min-h-11 max-w-full px-0 text-start whitespace-normal',
+      'text-primary mt-2 min-h-11 max-w-full px-0 text-start whitespace-normal',
   })
   const documentationContent = documentation && (
     <>
@@ -98,15 +98,18 @@ export function PlatformGuide(props: {
   )
 
   return (
-    <div className='mx-auto grid max-w-[90rem] gap-10 px-5 py-14 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10 lg:py-20'>
-      <section aria-labelledby='platform-governance'>
+    <div className='grid w-full gap-5 px-5 py-12 sm:px-8 lg:grid-cols-2 lg:px-12 lg:py-16 2xl:px-16'>
+      <section
+        aria-labelledby='platform-governance'
+        className='border-primary/15 from-primary/6 to-card rounded-2xl border bg-linear-to-br p-5 sm:p-7'
+      >
         <h2
           id='platform-governance'
           className='text-3xl font-semibold tracking-tight'
         >
           {t('Platform governance')}
         </h2>
-        <dl className='divide-border mt-6 divide-y border-y'>
+        <dl className='divide-primary/15 mt-5 divide-y'>
           {governance.map((item) => (
             <div
               key={item.id}
@@ -121,14 +124,17 @@ export function PlatformGuide(props: {
         </dl>
       </section>
 
-      <section aria-labelledby='platform-guide'>
+      <section
+        aria-labelledby='platform-guide'
+        className='to-card rounded-2xl border border-cyan-500/20 bg-linear-to-br from-cyan-500/6 p-5 sm:p-7'
+      >
         <h2
           id='platform-guide'
           className='text-3xl font-semibold tracking-tight'
         >
           {t('Getting started')}
         </h2>
-        <Accordion className='mt-6 border-y'>
+        <Accordion className='mt-5'>
           {questions.map((item) => (
             <AccordionItem key={item.id} value={item.id}>
               <AccordionTrigger className='min-h-11 items-center'>
