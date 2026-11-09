@@ -33,7 +33,7 @@ import {
 } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-import { BrandLockup, BrandOrb } from './header-logo'
+import { BrandLockup } from './header-logo'
 
 type SystemBrandProps = {
   defaultName?: string
@@ -79,14 +79,9 @@ export function SystemBrand(props: SystemBrandProps) {
       >
         {SHOW_SYSTEM_LOGO &&
           (usesBrandLockup ? (
-            <>
-              <span className='xl:hidden 2xl:block'>
-                <BrandLockup />
-              </span>
-              <BrandOrb className='hidden size-9 xl:block 2xl:hidden' />
-            </>
+            <BrandLockup className='h-10 md:h-10' />
           ) : (
-            <div className='flex size-9 shrink-0 items-center justify-center md:size-14 xl:size-9 2xl:size-14'>
+            <div className='flex size-8 shrink-0 items-center justify-center'>
               <img
                 src={logo}
                 alt={t('Logo')}
@@ -99,7 +94,7 @@ export function SystemBrand(props: SystemBrandProps) {
         {usesBrandLockup ? (
           <span className='sr-only'>{name}</span>
         ) : (
-          <span className='max-w-56 truncate text-base font-semibold tracking-tight md:max-w-xs md:text-[1.375rem] xl:hidden 2xl:block 2xl:max-w-40'>
+          <span className='truncate text-sm font-semibold tracking-tight'>
             {name}
           </span>
         )}

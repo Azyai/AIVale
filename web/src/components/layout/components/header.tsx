@@ -40,8 +40,10 @@ export function Header({
       )}
       {...props}
     >
-      <div className='flex h-full items-center gap-1.5 px-5 sm:gap-2 md:px-8'>
-        {showSidebarTrigger && <SidebarTrigger variant='ghost' className='size-11' />}
+      <div className='flex h-full items-center gap-1 px-3 sm:gap-2 sm:px-6 lg:gap-4'>
+        {showSidebarTrigger && (
+          <SidebarTrigger variant='ghost' className='size-11' />
+        )}
         {children}
       </div>
     </header>
