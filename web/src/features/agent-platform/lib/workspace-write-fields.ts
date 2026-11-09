@@ -52,7 +52,9 @@ export const workspaceArchiveReasonSchema = z
 export const workspaceWriteRevisionSchema = z.number().int().positive()
 export const workspaceWriteKeySchema = z.string().regex(/^[\x21-\x7e]{16,128}$/)
 
-export function generateWorkspaceWriteKey(kind: 'create' | 'archive'): string {
+export function generateWorkspaceWriteKey(
+  kind: 'create' | 'archive' | 'publish'
+): string {
   const random = globalThis.crypto.getRandomValues(new Uint8Array(16))
   const hex = [...random]
     .map((byte) => byte.toString(16).padStart(2, '0'))
