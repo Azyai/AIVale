@@ -216,6 +216,25 @@ export function WorkspaceDetail(props: {
         </div>
       </div>
       {content}
+      {result?.kind === 'ready' && (
+        <div className='mt-5'>
+          <Link
+            to='/agent-platform/w/$workspace_id/agents'
+            params={{ workspace_id: props.workspaceId }}
+            search={{
+              page: 1,
+              page_size: 20,
+              sort: 'created_at:desc,id:desc',
+              q: '',
+              status: '',
+              tag: '',
+            }}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            {t('Manage Agents')}
+          </Link>
+        </div>
+      )}
       {session &&
         validId &&
         !held &&

@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { Link, useLocation } from '@tanstack/react-router'
 import {
   BookOpen,
+  Bot,
   FolderKanban,
   PanelLeft,
   Play,
@@ -46,9 +47,15 @@ export function AgentPlatformSidebar() {
   const path = useLocation({ select: (location) => location.pathname })
   const { setOpenMobile, toggleSidebar } = useSidebar()
   const closeMobile = () => setOpenMobile(false)
+  const agentsActive = /^\/agent-platform\/w\/[1-9][0-9]*\/agents(?:\/|$)/.test(
+    path
+  )
   const teamActive =
     path === '/agent-platform/workspaces' ||
-    path.startsWith('/agent-platform/w/')
+    (path.startsWith('/agent-platform/w/') && !agentsActive)
+  const selectedWorkspaceId = path.match(
+    /^\/agent-platform\/w\/([1-9][0-9]{0,18})(?:\/|$)/
+  )?.[1]
 
   return (
     <Sidebar collapsible='icon'>
@@ -83,6 +90,33 @@ export function AgentPlatformSidebar() {
                   <span>{t('Personal workspace')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {selectedWorkspaceId && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={agentsActive}
+                    tooltip={t('Agents')}
+                    render={
+                      <Link
+                        to='/agent-platform/w/$workspace_id/agents'
+                        params={{ workspace_id: selectedWorkspaceId }}
+                        aria-current={agentsActive ? 'page' : undefined}
+                        search={{
+                          page: 1,
+                          page_size: 20,
+                          sort: 'created_at:desc,id:desc',
+                          q: '',
+                          status: '',
+                          tag: '',
+                        }}
+                        onClick={closeMobile}
+                      />
+                    }
+                  >
+                    <Bot aria-hidden='true' />
+                    <span>{t('Agents')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={teamActive}

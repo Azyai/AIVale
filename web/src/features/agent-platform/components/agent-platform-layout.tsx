@@ -33,6 +33,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { getCookie } from '@/lib/cookies'
+import { useAuthStore } from '@/stores/auth-store'
 
 import {
   isAgentPlatformAvailable,
@@ -44,6 +45,18 @@ export function AgentPlatformLayout() {
   const { t } = useTranslation()
   const capabilities = useAgentPlatformCapabilities()
   const available = isAgentPlatformAvailable(capabilities)
+  const session = useAuthStore((state) => {
+    const auth = state.auth
+    return auth.accessToken && auth.user && auth.session?.sid
+      ? `${auth.user.id}:${auth.session.sid}`
+      : null
+  })
+  // A failed public availability refresh must hide the workbench without
+  // discarding unsaved forms. Explicit disablement or identity loss unmounts it.
+  const retainOutlet =
+    session !== null &&
+    capabilities.isFetchedAfterMount &&
+    capabilities.data?.enabled === true
   let content: ReactNode
   if (capabilities.isError || capabilities.fetchStatus === 'paused') {
     content = (
@@ -62,7 +75,7 @@ export function AgentPlatformLayout() {
       </div>
     )
   } else if (available) {
-    content = <Outlet />
+    content = null
   } else {
     content = (
       <EmptyState
@@ -114,6 +127,11 @@ export function AgentPlatformLayout() {
               {t('Agent workbench')}
             </h1>
             {content}
+            {retainOutlet && (
+              <div hidden={!available} inert={!available}>
+                <Outlet key={session} />
+              </div>
+            )}
           </div>
         </SidebarInset>
       </div>
