@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link, useLocation } from '@tanstack/react-router'
+import { useLocation } from '@tanstack/react-router'
 import { Menu, Search, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -28,7 +28,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -93,6 +93,7 @@ function PlatformNavigationMenu(props: {
     <>
       <NavigationMenu
         aria-label={t('Platform navigation')}
+        positionMethod='fixed'
         value={openMenu}
         onValueChange={setOpenMenu}
         delay={140}
@@ -168,20 +169,6 @@ function PlatformNavigationMenu(props: {
                   onSelect={closeDesktop}
                 />
               </NavigationMenuContent>
-            </NavigationMenuItem>
-          )}
-          {catalog.consoleLink && (
-            <NavigationMenuItem className={showSearch ? '' : 'ms-auto'}>
-              <Link
-                to={catalog.consoleLink.href}
-                onClick={closeDesktop}
-                className={buttonVariants({
-                  variant: 'outline',
-                  className: 'h-9 px-3',
-                })}
-              >
-                {t(catalog.consoleLink.titleKey)}
-              </Link>
             </NavigationMenuItem>
           )}
         </NavigationMenuList>
