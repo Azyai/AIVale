@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AgentWorkspaceRejectedAudit records only failed workspace, member and grant writes. It runs
+// AgentWorkspaceRejectedAudit records only failed workspace and resource writes. It runs
 // before authentication so anonymous rejections are visible, and does not read
 // or retain request/response bodies. Successful changes use the atomic outbox.
 func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
@@ -35,6 +35,20 @@ func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
 			action, method, route = "token_grant.revoke.rejected", http.MethodDelete, "/api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id"
 		case "POST /api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id/renew":
 			action, method, route = "token_grant.renew.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/token-grants/:grant_id/renew"
+		case "POST /api/agent-platform/workspaces/:workspace_id/agents":
+			action, method, route = "agent.create.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/agents"
+		case "PUT /api/agent-platform/workspaces/:workspace_id/agents/:agent_id/draft":
+			action, method, route = "agent.draft.update.rejected", http.MethodPut, "/api/agent-platform/workspaces/:workspace_id/agents/:agent_id/draft"
+		case "POST /api/agent-platform/workspaces/:workspace_id/agents/:agent_id/publish":
+			action, method, route = "agent.publish.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/agents/:agent_id/publish"
+		case "POST /api/agent-platform/workspaces/:workspace_id/agents/:agent_id/restore-draft":
+			action, method, route = "agent.restore_draft.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/agents/:agent_id/restore-draft"
+		case "POST /api/agent-platform/workspaces/:workspace_id/agents/:agent_id/activate-version":
+			action, method, route = "agent.activate_version.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/agents/:agent_id/activate-version"
+		case "PATCH /api/agent-platform/workspaces/:workspace_id/agents/:agent_id/status":
+			action, method, route = "agent.status.update.rejected", http.MethodPatch, "/api/agent-platform/workspaces/:workspace_id/agents/:agent_id/status"
+		case "POST /api/agent-platform/workspaces/:workspace_id/agents/:agent_id/archive":
+			action, method, route = "agent.archive.rejected", http.MethodPost, "/api/agent-platform/workspaces/:workspace_id/agents/:agent_id/archive"
 		default:
 			c.Next()
 			return
@@ -53,6 +67,9 @@ func AgentWorkspaceRejectedAudit() gin.HandlerFunc {
 		}
 		if grantID, err := agentapi.ParseID(c.Param("grant_id")); err == nil {
 			params["attempted_grant_id"] = strconv.FormatInt(grantID, 10)
+		}
+		if agentID, err := agentapi.ParseID(c.Param("agent_id")); err == nil {
+			params["attempted_agent_id"] = strconv.FormatInt(agentID, 10)
 		}
 		entry := model.AuditLog{
 			AuthMethod: "unknown", Category: model.AuditCategorySecurity,
