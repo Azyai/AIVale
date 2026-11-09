@@ -34,11 +34,14 @@ import { Route as AgentDemoIndexRouteImport } from './routes/agent-demo/index'
 import { Route as AgentPlatformIndexRouteImport } from './routes/agent-platform/index'
 import { Route as AgentPlatformPersonalRouteImport } from './routes/agent-platform/personal'
 import { Route as AgentPlatformWorkspacesRouteImport } from './routes/agent-platform/workspaces'
+import { Route as BusinessIndexRouteImport } from './routes/business/index'
 import { Route as ComputeCenterIndexRouteImport } from './routes/compute-center/index'
 import { Route as DatasetCenterIndexRouteImport } from './routes/dataset-center/index'
 import { Route as KnowledgeBaseIndexRouteImport } from './routes/knowledge-base/index'
 import { Route as OauthProviderRouteImport } from './routes/oauth/$provider'
 import { Route as PricingIndexRouteImport } from './routes/pricing/index'
+import { Route as ProductsIndexRouteImport } from './routes/products/index'
+import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as RankingsIndexRouteImport } from './routes/rankings/index'
 import { Route as SetupIndexRouteImport } from './routes/setup/index'
 import { Route as authUserResetRouteImport } from './routes/(auth)/user/reset'
@@ -209,6 +212,11 @@ const AgentPlatformWorkspacesRoute = AgentPlatformWorkspacesRouteImport.update({
   path: '/workspaces',
   getParentRoute: () => AgentPlatformRouteRoute,
 } as any)
+const BusinessIndexRoute = BusinessIndexRouteImport.update({
+  id: '/business/',
+  path: '/business/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ComputeCenterIndexRoute = ComputeCenterIndexRouteImport.update({
   id: '/compute-center/',
   path: '/compute-center/',
@@ -232,6 +240,16 @@ const OauthProviderRoute = OauthProviderRouteImport.update({
 const PricingIndexRoute = PricingIndexRouteImport.update({
   id: '/pricing/',
   path: '/pricing/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsIndexRoute = ProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/products/$productId',
+  path: '/products/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RankingsIndexRoute = RankingsIndexRouteImport.update({
@@ -517,16 +535,16 @@ export interface FileRoutesByFullPath {
   '/agent-platform/personal': typeof AgentPlatformPersonalRoute
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
-  '/products/$productId': DeferredProductsProductIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/about/': typeof AboutIndexRoute
   '/agent-demo/': typeof AgentDemoIndexRoute
   '/agent-platform/': typeof AgentPlatformIndexRoute
-  '/business/': DeferredBusinessIndexRoute
+  '/business/': typeof BusinessIndexRoute
   '/compute-center/': typeof ComputeCenterIndexRoute
   '/dataset-center/': typeof DatasetCenterIndexRoute
   '/knowledge-base/': typeof KnowledgeBaseIndexRoute
   '/pricing/': typeof PricingIndexRoute
-  '/products/': DeferredProductsIndexRoute
+  '/products/': typeof ProductsIndexRoute
   '/rankings/': typeof RankingsIndexRoute
   '/setup/': typeof SetupIndexRoute
   '/user/reset': typeof authUserResetRoute
@@ -596,16 +614,16 @@ export interface FileRoutesByTo {
   '/agent-platform/personal': typeof AgentPlatformPersonalRoute
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
-  '/products/$productId': DeferredProductsProductIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/about': typeof AboutIndexRoute
   '/agent-demo': typeof AgentDemoIndexRoute
   '/agent-platform': typeof AgentPlatformIndexRoute
-  '/business': DeferredBusinessIndexRoute
+  '/business': typeof BusinessIndexRoute
   '/compute-center': typeof ComputeCenterIndexRoute
   '/dataset-center': typeof DatasetCenterIndexRoute
   '/knowledge-base': typeof KnowledgeBaseIndexRoute
   '/pricing': typeof PricingIndexRoute
-  '/products': DeferredProductsIndexRoute
+  '/products': typeof ProductsIndexRoute
   '/rankings': typeof RankingsIndexRoute
   '/setup': typeof SetupIndexRoute
   '/user/reset': typeof authUserResetRoute
@@ -680,16 +698,16 @@ export interface FileRoutesById {
   '/agent-platform/personal': typeof AgentPlatformPersonalRoute
   '/agent-platform/workspaces': typeof AgentPlatformWorkspacesRoute
   '/oauth/$provider': typeof OauthProviderRoute
-  '/products/$productId': DeferredProductsProductIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/about/': typeof AboutIndexRoute
   '/agent-demo/': typeof AgentDemoIndexRoute
   '/agent-platform/': typeof AgentPlatformIndexRoute
-  '/business/': DeferredBusinessIndexRoute
+  '/business/': typeof BusinessIndexRoute
   '/compute-center/': typeof ComputeCenterIndexRoute
   '/dataset-center/': typeof DatasetCenterIndexRoute
   '/knowledge-base/': typeof KnowledgeBaseIndexRoute
   '/pricing/': typeof PricingIndexRoute
-  '/products/': DeferredProductsIndexRoute
+  '/products/': typeof ProductsIndexRoute
   '/rankings/': typeof RankingsIndexRoute
   '/setup/': typeof SetupIndexRoute
   '/(auth)/user/reset': typeof authUserResetRoute
@@ -998,12 +1016,15 @@ export interface RootRouteChildren {
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
   OauthProviderRoute: typeof OauthProviderRoute
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
   AboutIndexRoute: typeof AboutIndexRoute
   AgentDemoIndexRoute: typeof AgentDemoIndexRoute
+  BusinessIndexRoute: typeof BusinessIndexRoute
   ComputeCenterIndexRoute: typeof ComputeCenterIndexRoute
   DatasetCenterIndexRoute: typeof DatasetCenterIndexRoute
   KnowledgeBaseIndexRoute: typeof KnowledgeBaseIndexRoute
   PricingIndexRoute: typeof PricingIndexRoute
+  ProductsIndexRoute: typeof ProductsIndexRoute
   RankingsIndexRoute: typeof RankingsIndexRoute
   SetupIndexRoute: typeof SetupIndexRoute
   PricingModelIdIndexRoute: typeof PricingModelIdIndexRoute
@@ -1190,7 +1211,7 @@ declare module '@tanstack/react-router' {
       id: '/business/'
       path: '/business'
       fullPath: '/business/'
-      preLoaderRoute: DeferredBusinessIndexRoute
+      preLoaderRoute: typeof BusinessIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compute-center/': {
@@ -1232,14 +1253,14 @@ declare module '@tanstack/react-router' {
       id: '/products/'
       path: '/products'
       fullPath: '/products/'
-      preLoaderRoute: DeferredProductsIndexRoute
+      preLoaderRoute: typeof ProductsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/$productId': {
       id: '/products/$productId'
       path: '/products/$productId'
       fullPath: '/products/$productId'
-      preLoaderRoute: DeferredProductsProductIdRoute
+      preLoaderRoute: typeof ProductsProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rankings/': {
@@ -1763,12 +1784,15 @@ const rootRouteChildren: RootRouteChildren = {
   errors500Route: errors500Route,
   errors503Route: errors503Route,
   OauthProviderRoute: OauthProviderRoute,
+  ProductsProductIdRoute: ProductsProductIdRoute,
   AboutIndexRoute: AboutIndexRoute,
   AgentDemoIndexRoute: AgentDemoIndexRoute,
+  BusinessIndexRoute: BusinessIndexRoute,
   ComputeCenterIndexRoute: ComputeCenterIndexRoute,
   DatasetCenterIndexRoute: DatasetCenterIndexRoute,
   KnowledgeBaseIndexRoute: KnowledgeBaseIndexRoute,
   PricingIndexRoute: PricingIndexRoute,
+  ProductsIndexRoute: ProductsIndexRoute,
   RankingsIndexRoute: RankingsIndexRoute,
   SetupIndexRoute: SetupIndexRoute,
   PricingModelIdIndexRoute: PricingModelIdIndexRoute,
@@ -1778,9 +1802,6 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 // Route type foundations; runtime wiring follows with the feature entry files.
-type DeferredBusinessIndexRoute = import('@tanstack/react-router').Route<unknown, typeof rootRouteImport, '/business/', '/business/', '/business/', '/business/'>
-type DeferredProductsIndexRoute = import('@tanstack/react-router').Route<unknown, typeof rootRouteImport, '/products/', '/products/', '/products/', '/products/'>
-type DeferredProductsProductIdRoute = import('@tanstack/react-router').Route<unknown, typeof rootRouteImport, '/products/$productId', '/products/$productId', '/products/$productId', '/products/$productId'>
 type DeferredAgentPlatformWWorkspace_idAgentsRoute = import('@tanstack/react-router').Route<unknown, typeof AgentPlatformRouteRoute, '/w/$workspace_id/agents', '/agent-platform/w/$workspace_id/agents', '/w/$workspace_id_/agents', '/agent-platform/w/$workspace_id_/agents', (search: Partial<import('./features/agent-platform/agents/schemas').AgentListSearch> & import('@tanstack/react-router').SearchSchemaInput) => import('./features/agent-platform/agents/schemas').AgentListSearch>
 type DeferredAgentPlatformWWorkspace_idAgentsAgent_idEditRoute = import('@tanstack/react-router').Route<unknown, typeof AgentPlatformRouteRoute, '/w/$workspace_id/agents/$agent_id/edit', '/agent-platform/w/$workspace_id/agents/$agent_id/edit', '/w/$workspace_id_/agents_/$agent_id/edit', '/agent-platform/w/$workspace_id_/agents_/$agent_id/edit', (search: Partial<import('./features/agent-platform/agents/schemas').AgentListSearch> & import('@tanstack/react-router').SearchSchemaInput) => import('./features/agent-platform/agents/schemas').AgentListSearch>
 type DeferredAgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute = import('@tanstack/react-router').Route<unknown, typeof AgentPlatformRouteRoute, '/w/$workspace_id/agents/$agent_id/versions', '/agent-platform/w/$workspace_id/agents/$agent_id/versions', '/w/$workspace_id_/agents_/$agent_id/versions', '/agent-platform/w/$workspace_id_/agents_/$agent_id/versions', (search: Partial<import('./features/agent-platform/agents/history-search').AgentHistorySearch> & import('@tanstack/react-router').SearchSchemaInput) => import('./features/agent-platform/agents/history-search').AgentHistorySearch>
