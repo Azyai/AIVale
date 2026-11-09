@@ -43,7 +43,6 @@ import { AITokenAchievements } from './aitoken-achievements'
 import { AITokenArchitecture } from './aitoken-architecture'
 import { AITokenCapabilities } from './aitoken-capabilities'
 import { AITokenGuide } from './aitoken-guide'
-import { AITokenRoadmap } from './aitoken-roadmap'
 import { AITokenTools } from './aitoken-tools'
 import { OPERATION_STATUS_KEYS } from './product-copy'
 import { ProductPortal, ProductStage } from './product-portal'
@@ -180,7 +179,6 @@ export function AITokenLanding(props: {
       </div>
       <AITokenAchievements />
       <AITokenTools />
-      <AITokenRoadmap />
       <AITokenGuide />
     </ProductPortal>
   )
