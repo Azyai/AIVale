@@ -525,15 +525,15 @@
         "-count=1",
         "-timeout=120s",
         "-json",
-        "./service/agent",
+        "./service/agentdefinition/application",
         "-run",
         "^TestAgentConfig(Draft|Schema)"
       ],
       "timeout_seconds": 300,
       "kind": "go_tests",
       "required_files": [
-        "service/agent/config_test.go",
-        "service/agent/config_schema_test.go",
+        "service/agentdefinition/application/config_test.go",
+        "service/agentdefinition/application/config_schema_test.go",
         ".agents/agent-platform/contracts/v1/agent-config.schema.json",
         ".agents/agent-platform/contracts/v1/agent-config.examples.json"
       ],
@@ -2486,7 +2486,9 @@
         "service/agent/config_model.go",
         "service/agent/config_schema.go",
         "service/agent/workspace_access.go",
-        "types/agent/config.go"
+        "types/agent/config.go",
+        "service/agentdefinition/application/config.go",
+        "service/agentdefinition/application/config_schema.go"
       ]
     },
     "config_validation_required_files": [
@@ -2496,10 +2498,11 @@
       "service/agent/agent_config_model_database_test.go",
       "service/agent/config.go",
       "service/agent/config_model.go",
-      "service/agent/config_schema.go",
-      "service/agent/config_schema_test.go",
-      "service/agent/config_test.go",
-      "types/agent/config.go"
+      "service/agentdefinition/application/config_schema.go",
+      "service/agentdefinition/application/config_schema_test.go",
+      "service/agentdefinition/application/config_test.go",
+      "types/agent/config.go",
+      "service/agentdefinition/application/config.go"
     ]
   }
 }

@@ -19,7 +19,7 @@ import uuid
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / '.agents/agent-platform/delivery'))
 from gate import (
-    agent_config_model_log_result, agent_definition_log_result, database_log_result, stop_process, workspace_access_log_result,
+    agent_config_model_log_result, agent_definition_log_result, database_log_result, go_test_summary, stop_process, workspace_access_log_result,
     workspace_governance_log_result, workspace_grants_log_result, workspace_members_log_result,
     workspace_read_log_result, workspace_write_log_result,
 )
@@ -39,7 +39,9 @@ def run_logged(argv: list[str], env: dict, output: Path, name: str, timeout: int
             raise
 
 
-def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, definitions: bool = False, config_validation: bool = False) -> dict:
+def execute(engine: str, output: Path, access: bool = False, read: bool = False, write: bool = False, members: bool = False, grants: bool = False, governance: bool = False, definitions: bool = False, config_validation: bool = False, runs: bool = False, run_journal: bool = False) -> dict:
+    runs = runs or run_journal
+    config_validation = config_validation or runs
     definitions = definitions or config_validation
     governance = governance or definitions
     grants = grants or governance
@@ -60,6 +62,8 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
         'governance_requested': governance,
         'definitions_requested': definitions,
         'config_validation_requested': config_validation,
+        'runs_requested': runs,
+        'run_journal_requested': run_journal,
     }
     owned_output = None
     state_path = None
@@ -98,7 +102,14 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
             raise ValueError('The required local Agent definition database test is missing.')
         if config_validation and not (REPO / 'service/agent/agent_config_model_database_test.go').is_file():
             raise ValueError('The required local Agent config model database test is missing.')
+        if runs and any(not (REPO / name).is_file() for name in ('model/agent_run_database_test.go', 'router/agent_run_database_test.go')):
+            raise ValueError('The required local Run metadata migration and behavior tests are missing.')
+        if run_journal and any(not (REPO / name).is_file() for name in ('model/agent_run_journal_database_test.go', 'router/agent_run_journal_database_test.go')):
+            raise ValueError('The required local Run journal migration and application tests are missing.')
         env = os.environ.copy()
+        if runs:
+            for name in ('TEST_AGENT_DEFINITION_READ', 'TEST_AGENT_DEFINITION_WRITE', 'TEST_AGENT_DEFINITION_PUBLISH', 'TEST_AGENT_DEFINITION_LIFECYCLE', 'TEST_AGENT_EDITOR'):
+                env[name] = '1'
         env['GOWORK'] = 'off'
         env['TEST_AGENT_WORKSPACE_ENGINE'] = engine
         env['TEST_AGENT_WORKSPACE_RUN_ID'] = run_id
@@ -243,6 +254,50 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
                 raise ValueError('Agent config validation must match the migration database version and exact test.')
             report['config_validation_tests'] = actual_config['tests']
             report['config_validation_evidence'] = actual_config['evidence']
+        if runs:
+            output_text = ''.join(json.loads(line).get('Output', '') for line in (output / 'read-go-test.stdout.log').read_text(encoding='utf8').splitlines() if line.strip())
+            report['definition_http_regression'] = {}
+            for marker in ('AGENT_DEFINITION_READ_HTTP_RESULT ', 'AGENT_DEFINITION_WRITE_HTTP_RESULT ', 'AGENT_DEFINITION_PUBLISH_HTTP_RESULT ', 'AGENT_DEFINITION_LIFECYCLE_HTTP_RESULT ', 'AGENT_EDITOR_HTTP_RESULT '):
+                summaries = [json.loads(line.split(marker, 1)[1]) for line in output_text.splitlines() if marker in line]
+                if len(summaries) != 2 or {item.get('scenario') for item in summaries} != {'fresh', 'upgrade'}:
+                    raise ValueError('Run metadata prerequisites lack complete definition/editor HTTP regression markers.')
+                for item in summaries:
+                    count = item.get('http_requests')
+                    if item.get('engine') != engine or item.get('run_id') != run_id or type(count) is not int or count < 1 or any(value is False for value in item.values()):
+                        raise ValueError('Definition/editor HTTP regression identity, request count or assertion is invalid.')
+                report['definition_http_regression'][marker.strip()] = summaries
+            for label, package, test, marker, metadata in (
+                ('runs', './model', 'TestAgentRunDatabaseMatrix', 'AGENT_RUN_DATABASE_RESULT ', False),
+                ('run_metadata', './router', 'TestAgentRunMetadataDatabaseMatrix', 'AGENT_RUN_METADATA_RESULT ', True),
+            ):
+                argv = [shutil.which('go'), 'test', '-mod=readonly', '-count=1', '-json', '-timeout=5m', package, '-run', '^' + test + '$']
+                report[label + '_go_argv'] = argv
+                report[label + '_go_exit_code'] = run_logged(argv, env, output, label + '-go-test', 330)
+                if report[label + '_go_exit_code'] != 0:
+                    report['status'] = 'failed'
+                    raise ValueError('The real Run metadata ' + label + ' stage failed; inspect ignored Go logs.')
+                actual_run = run_metadata_log_result(output / (label + '-go-test.stdout.log'), engine, run_id, test, marker, metadata)
+                if actual_run['tests']['top_level_passed'] != 1 or actual_run['evidence']['version'] != report['evidence']['version']:
+                    raise ValueError('Run metadata must match the migration database version and exact test.')
+                report[label + '_tests'] = actual_run['tests']
+                report[label + '_evidence'] = actual_run['evidence']
+        if run_journal:
+            for label, package, marker, application in (
+                ('run_journal_storage', './model', 'AGENT_RUN_JOURNAL_DATABASE_RESULT ', False),
+                ('run_journal_application', './router', 'AGENT_RUN_JOURNAL_APPLICATION_RESULT ', True),
+            ):
+                test = 'TestAgentRunJournalDatabaseMatrix'
+                argv = [shutil.which('go'), 'test', '-mod=readonly', '-count=1', '-json', '-timeout=5m', package, '-run', '^' + test + '$']
+                report[label + '_go_argv'] = argv
+                report[label + '_go_exit_code'] = run_logged(argv, env, output, label + '-go-test', 330)
+                if report[label + '_go_exit_code'] != 0:
+                    report['status'] = 'failed'
+                    raise ValueError('The real Run journal ' + label + ' stage failed; inspect ignored Go logs.')
+                actual = run_journal_log_result(output / (label + '-go-test.stdout.log'), engine, run_id, marker, application)
+                if actual['tests']['top_level_passed'] != 1 or actual['evidence']['version'] != report['evidence']['version']:
+                    raise ValueError('Run journal must match the migration database version and exact test.')
+                report[label + '_tests'] = actual['tests']
+                report[label + '_evidence'] = actual['evidence']
         report['status'] = 'passed'
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         report['reason'] = str(error) or type(error).__name__
@@ -274,6 +329,51 @@ def execute(engine: str, output: Path, access: bool = False, read: bool = False,
     return report
 
 
+
+def run_metadata_log_result(path: Path, engine: str, run_id: str, test: str, marker: str, metadata: bool) -> dict:
+    result = go_test_summary(path, test, marker)
+    evidence = result['evidence']
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Run metadata evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Run metadata requires both fresh and upgraded databases.')
+    storage_fields = ('isolated_schema', 'indexes_verified', 'prior_rows_preserved', 'scope_isolation', 'parent_consistency',
+                      'status_vocabulary', 'initial_state', 'mutation_rejected', 'transaction_rollback', 'restart_preservation')
+    metadata_fields = ('live_session', 'scope_isolation', 'funding_reference', 'fixed_release', 'same_key_replay',
+                       'different_intent_conflict', 'concurrent_single_run', 'transaction_rollback', 'audit_redacted',
+                       'no_execution', 'archive_fail_closed')
+    for scenario in scenarios:
+        count = scenario.get('metadata_operations' if metadata else 'repository_operations')
+        if type(count) is not int or count < 1 or any(scenario.get(field) is not True for field in (metadata_fields if metadata else storage_fields)):
+            raise ValueError('Run metadata lacks executed operations or required assertions.')
+        if not metadata and (type(scenario.get('startup_passes')) is not int or scenario.get('startup_passes') != 3):
+            raise ValueError('Run storage requires exactly three successful startup passes.')
+    return result
+
+
+def run_journal_log_result(path: Path, engine: str, run_id: str, marker: str, application: bool) -> dict:
+    result = go_test_summary(path, 'TestAgentRunJournalDatabaseMatrix', marker)
+    evidence = result['evidence']
+    if evidence.get('engine') != engine or evidence.get('run_id') != run_id or not evidence.get('version'):
+        raise ValueError('Run journal evidence does not match this engine and isolated run.')
+    scenarios = evidence.get('scenarios', [])
+    if len(scenarios) != 2 or {scenario.get('name') for scenario in scenarios} != {'fresh', 'upgrade'}:
+        raise ValueError('Run journal requires both fresh and upgraded databases.')
+    storage_fields = ('isolated_schema', 'indexes_verified', 'prior_rows_preserved', 'scope_isolation', 'parent_consistency',
+                      'initial_state', 'mutation_rejected', 'transaction_rollback', 'restart_preservation')
+    app_fields = ('metadata_only_closed', 'scope_isolation', 'queued_atomic', 'step_deduplicated', 'event_sequence',
+                  'stale_fence_rejected', 'transaction_rollback', 'post_commit_exit_recovery', 'at_least_once_delivery',
+                  'delivery_fence', 'retry_dead', 'audit_separation', 'reference_redacted', 'no_execution')
+    for scenario in scenarios:
+        count = scenario.get('journal_operations' if application else 'repository_operations')
+        if type(count) is not int or count < 1 or any(scenario.get(field) is not True for field in (app_fields if application else storage_fields)):
+            raise ValueError('Run journal lacks executed operations or required assertions.')
+        if not application and scenario.get('startup_passes') != 3:
+            raise ValueError('Run journal storage requires exactly three successful startup passes.')
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--engine', choices=('sqlite', 'mysql', 'postgresql'), required=True)
@@ -286,8 +386,10 @@ def main() -> int:
     parser.add_argument('--governance', action='store_true', help='Execute the six prerequisite stages and P01-T07 token grant governance in order.')
     parser.add_argument('--definitions', action='store_true', help='Execute the seven prerequisite stages and P02-T01 Agent definition persistence in order.')
     parser.add_argument('--config-validation', action='store_true', help='Execute the eight prerequisite stages and P02-T02 model and workspace policy checks in order.')
+    parser.add_argument('--runs', action='store_true', help='Execute all prerequisite stages, Run metadata migration and internal creation checks; no runtime execution.')
+    parser.add_argument('--run-journal', action='store_true', help='Execute all 11 prerequisites plus Run steps/events migration and recoverable notification delivery; no worker or model execution.')
     args = parser.parse_args()
-    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members, args.grants, args.governance, args.definitions, args.config_validation)
+    report = execute(args.engine, args.output, args.access, args.read, args.write, args.members, args.grants, args.governance, args.definitions, args.config_validation, args.runs, args.run_journal)
     print(json.dumps({key: report.get(key) for key in ('engine', 'status', 'run_id', 'reason', 'cleanup')}, ensure_ascii=False))
     return {'passed': 0, 'failed': 1, 'incomplete': 2}[report['status']]
 
