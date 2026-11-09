@@ -87,6 +87,9 @@ import { Route as AuthenticatedSystemSettingsSecurityIndexRouteImport } from './
 import { Route as AuthenticatedSystemSettingsSecuritySectionRouteImport } from './routes/_authenticated/system-settings/security/$section'
 import { Route as AuthenticatedSystemSettingsSiteIndexRouteImport } from './routes/_authenticated/system-settings/site/index'
 import { Route as AuthenticatedSystemSettingsSiteSectionRouteImport } from './routes/_authenticated/system-settings/site/$section'
+import { Route as AgentPlatformWWorkspace_idAgentsRouteImport } from './routes/agent-platform/w/$workspace_id_/agents'
+import { Route as AgentPlatformWWorkspace_idAgentsAgent_idEditRouteImport } from './routes/agent-platform/w/$workspace_id_/agents_/$agent_id/edit'
+import { Route as AgentPlatformWWorkspace_idAgentsAgent_idVersionsRouteImport } from './routes/agent-platform/w/$workspace_id_/agents_/$agent_id/versions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -512,6 +515,24 @@ const AuthenticatedSystemSettingsSiteSectionRoute =
     path: '/site/$section',
     getParentRoute: () => AuthenticatedSystemSettingsRouteRoute,
   } as any)
+const AgentPlatformWWorkspace_idAgentsRoute =
+  AgentPlatformWWorkspace_idAgentsRouteImport.update({
+    id: '/w/$workspace_id_/agents',
+    path: '/w/$workspace_id/agents',
+    getParentRoute: () => AgentPlatformRouteRoute,
+  } as any)
+const AgentPlatformWWorkspace_idAgentsAgent_idEditRoute =
+  AgentPlatformWWorkspace_idAgentsAgent_idEditRouteImport.update({
+    id: '/w/$workspace_id_/agents_/$agent_id/edit',
+    path: '/w/$workspace_id/agents/$agent_id/edit',
+    getParentRoute: () => AgentPlatformRouteRoute,
+  } as any)
+const AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute =
+  AgentPlatformWWorkspace_idAgentsAgent_idVersionsRouteImport.update({
+    id: '/w/$workspace_id_/agents_/$agent_id/versions',
+    path: '/w/$workspace_id/agents/$agent_id/versions',
+    getParentRoute: () => AgentPlatformRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -582,7 +603,7 @@ export interface FileRoutesByFullPath {
   '/system-settings/request-policies/$section': typeof AuthenticatedSystemSettingsRequestPoliciesSectionRoute
   '/system-settings/security/$section': typeof AuthenticatedSystemSettingsSecuritySectionRoute
   '/system-settings/site/$section': typeof AuthenticatedSystemSettingsSiteSectionRoute
-  '/agent-platform/w/$workspace_id/agents': DeferredAgentPlatformWWorkspace_idAgentsRoute
+  '/agent-platform/w/$workspace_id/agents': typeof AgentPlatformWWorkspace_idAgentsRoute
   '/system-settings/auth/': typeof AuthenticatedSystemSettingsAuthIndexRoute
   '/system-settings/billing/': typeof AuthenticatedSystemSettingsBillingIndexRoute
   '/system-settings/content/': typeof AuthenticatedSystemSettingsContentIndexRoute
@@ -591,8 +612,8 @@ export interface FileRoutesByFullPath {
   '/system-settings/request-policies/': typeof AuthenticatedSystemSettingsRequestPoliciesIndexRoute
   '/system-settings/security/': typeof AuthenticatedSystemSettingsSecurityIndexRoute
   '/system-settings/site/': typeof AuthenticatedSystemSettingsSiteIndexRoute
-  '/agent-platform/w/$workspace_id/agents/$agent_id/edit': DeferredAgentPlatformWWorkspace_idAgentsAgent_idEditRoute
-  '/agent-platform/w/$workspace_id/agents/$agent_id/versions': DeferredAgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
+  '/agent-platform/w/$workspace_id/agents/$agent_id/edit': typeof AgentPlatformWWorkspace_idAgentsAgent_idEditRoute
+  '/agent-platform/w/$workspace_id/agents/$agent_id/versions': typeof AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -661,7 +682,7 @@ export interface FileRoutesByTo {
   '/system-settings/request-policies/$section': typeof AuthenticatedSystemSettingsRequestPoliciesSectionRoute
   '/system-settings/security/$section': typeof AuthenticatedSystemSettingsSecuritySectionRoute
   '/system-settings/site/$section': typeof AuthenticatedSystemSettingsSiteSectionRoute
-  '/agent-platform/w/$workspace_id/agents': DeferredAgentPlatformWWorkspace_idAgentsRoute
+  '/agent-platform/w/$workspace_id/agents': typeof AgentPlatformWWorkspace_idAgentsRoute
   '/system-settings/auth': typeof AuthenticatedSystemSettingsAuthIndexRoute
   '/system-settings/billing': typeof AuthenticatedSystemSettingsBillingIndexRoute
   '/system-settings/content': typeof AuthenticatedSystemSettingsContentIndexRoute
@@ -670,8 +691,8 @@ export interface FileRoutesByTo {
   '/system-settings/request-policies': typeof AuthenticatedSystemSettingsRequestPoliciesIndexRoute
   '/system-settings/security': typeof AuthenticatedSystemSettingsSecurityIndexRoute
   '/system-settings/site': typeof AuthenticatedSystemSettingsSiteIndexRoute
-  '/agent-platform/w/$workspace_id/agents/$agent_id/edit': DeferredAgentPlatformWWorkspace_idAgentsAgent_idEditRoute
-  '/agent-platform/w/$workspace_id/agents/$agent_id/versions': DeferredAgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
+  '/agent-platform/w/$workspace_id/agents/$agent_id/edit': typeof AgentPlatformWWorkspace_idAgentsAgent_idEditRoute
+  '/agent-platform/w/$workspace_id/agents/$agent_id/versions': typeof AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -745,7 +766,7 @@ export interface FileRoutesById {
   '/_authenticated/system-settings/request-policies/$section': typeof AuthenticatedSystemSettingsRequestPoliciesSectionRoute
   '/_authenticated/system-settings/security/$section': typeof AuthenticatedSystemSettingsSecuritySectionRoute
   '/_authenticated/system-settings/site/$section': typeof AuthenticatedSystemSettingsSiteSectionRoute
-  '/agent-platform/w/$workspace_id_/agents': DeferredAgentPlatformWWorkspace_idAgentsRoute
+  '/agent-platform/w/$workspace_id_/agents': typeof AgentPlatformWWorkspace_idAgentsRoute
   '/_authenticated/system-settings/auth/': typeof AuthenticatedSystemSettingsAuthIndexRoute
   '/_authenticated/system-settings/billing/': typeof AuthenticatedSystemSettingsBillingIndexRoute
   '/_authenticated/system-settings/content/': typeof AuthenticatedSystemSettingsContentIndexRoute
@@ -754,8 +775,8 @@ export interface FileRoutesById {
   '/_authenticated/system-settings/request-policies/': typeof AuthenticatedSystemSettingsRequestPoliciesIndexRoute
   '/_authenticated/system-settings/security/': typeof AuthenticatedSystemSettingsSecurityIndexRoute
   '/_authenticated/system-settings/site/': typeof AuthenticatedSystemSettingsSiteIndexRoute
-  '/agent-platform/w/$workspace_id_/agents_/$agent_id/edit': DeferredAgentPlatformWWorkspace_idAgentsAgent_idEditRoute
-  '/agent-platform/w/$workspace_id_/agents_/$agent_id/versions': DeferredAgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
+  '/agent-platform/w/$workspace_id_/agents_/$agent_id/edit': typeof AgentPlatformWWorkspace_idAgentsAgent_idEditRoute
+  '/agent-platform/w/$workspace_id_/agents_/$agent_id/versions': typeof AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1582,21 +1603,21 @@ declare module '@tanstack/react-router' {
       id: '/agent-platform/w/$workspace_id_/agents'
       path: '/w/$workspace_id/agents'
       fullPath: '/agent-platform/w/$workspace_id/agents'
-      preLoaderRoute: DeferredAgentPlatformWWorkspace_idAgentsRoute
+      preLoaderRoute: typeof AgentPlatformWWorkspace_idAgentsRouteImport
       parentRoute: typeof AgentPlatformRouteRoute
     }
     '/agent-platform/w/$workspace_id_/agents_/$agent_id/edit': {
       id: '/agent-platform/w/$workspace_id_/agents_/$agent_id/edit'
       path: '/w/$workspace_id/agents/$agent_id/edit'
       fullPath: '/agent-platform/w/$workspace_id/agents/$agent_id/edit'
-      preLoaderRoute: DeferredAgentPlatformWWorkspace_idAgentsAgent_idEditRoute
+      preLoaderRoute: typeof AgentPlatformWWorkspace_idAgentsAgent_idEditRouteImport
       parentRoute: typeof AgentPlatformRouteRoute
     }
     '/agent-platform/w/$workspace_id_/agents_/$agent_id/versions': {
       id: '/agent-platform/w/$workspace_id_/agents_/$agent_id/versions'
       path: '/w/$workspace_id/agents/$agent_id/versions'
       fullPath: '/agent-platform/w/$workspace_id/agents/$agent_id/versions'
-      preLoaderRoute: DeferredAgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
+      preLoaderRoute: typeof AgentPlatformWWorkspace_idAgentsAgent_idVersionsRouteImport
       parentRoute: typeof AgentPlatformRouteRoute
     }
   }
@@ -1756,7 +1777,9 @@ interface AgentPlatformRouteRouteChildren {
   AgentPlatformIndexRoute: typeof AgentPlatformIndexRoute
   AgentPlatformToolsToolRoute: typeof AgentPlatformToolsToolRoute
   AgentPlatformWWorkspace_idRoute: typeof AgentPlatformWWorkspace_idRoute
-
+  AgentPlatformWWorkspace_idAgentsRoute: typeof AgentPlatformWWorkspace_idAgentsRoute
+  AgentPlatformWWorkspace_idAgentsAgent_idEditRoute: typeof AgentPlatformWWorkspace_idAgentsAgent_idEditRoute
+  AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute: typeof AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute
 }
 
 const AgentPlatformRouteRouteChildren: AgentPlatformRouteRouteChildren = {
@@ -1765,7 +1788,11 @@ const AgentPlatformRouteRouteChildren: AgentPlatformRouteRouteChildren = {
   AgentPlatformIndexRoute: AgentPlatformIndexRoute,
   AgentPlatformToolsToolRoute: AgentPlatformToolsToolRoute,
   AgentPlatformWWorkspace_idRoute: AgentPlatformWWorkspace_idRoute,
-
+  AgentPlatformWWorkspace_idAgentsRoute: AgentPlatformWWorkspace_idAgentsRoute,
+  AgentPlatformWWorkspace_idAgentsAgent_idEditRoute:
+    AgentPlatformWWorkspace_idAgentsAgent_idEditRoute,
+  AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute:
+    AgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute,
 }
 
 const AgentPlatformRouteRouteWithChildren =
@@ -1800,8 +1827,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-// Route type foundations; runtime wiring follows with the feature entry files.
-type DeferredAgentPlatformWWorkspace_idAgentsRoute = import('@tanstack/react-router').Route<unknown, typeof AgentPlatformRouteRoute, '/w/$workspace_id/agents', '/agent-platform/w/$workspace_id/agents', '/w/$workspace_id_/agents', '/agent-platform/w/$workspace_id_/agents', (search: Partial<import('./features/agent-platform/agents/schemas').AgentListSearch> & import('@tanstack/react-router').SearchSchemaInput) => import('./features/agent-platform/agents/schemas').AgentListSearch>
-type DeferredAgentPlatformWWorkspace_idAgentsAgent_idEditRoute = import('@tanstack/react-router').Route<unknown, typeof AgentPlatformRouteRoute, '/w/$workspace_id/agents/$agent_id/edit', '/agent-platform/w/$workspace_id/agents/$agent_id/edit', '/w/$workspace_id_/agents_/$agent_id/edit', '/agent-platform/w/$workspace_id_/agents_/$agent_id/edit', (search: Partial<import('./features/agent-platform/agents/schemas').AgentListSearch> & import('@tanstack/react-router').SearchSchemaInput) => import('./features/agent-platform/agents/schemas').AgentListSearch>
-type DeferredAgentPlatformWWorkspace_idAgentsAgent_idVersionsRoute = import('@tanstack/react-router').Route<unknown, typeof AgentPlatformRouteRoute, '/w/$workspace_id/agents/$agent_id/versions', '/agent-platform/w/$workspace_id/agents/$agent_id/versions', '/w/$workspace_id_/agents_/$agent_id/versions', '/agent-platform/w/$workspace_id_/agents_/$agent_id/versions', (search: Partial<import('./features/agent-platform/agents/history-search').AgentHistorySearch> & import('@tanstack/react-router').SearchSchemaInput) => import('./features/agent-platform/agents/history-search').AgentHistorySearch>
