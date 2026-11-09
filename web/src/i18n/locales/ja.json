@@ -7566,6 +7566,9 @@
     "From source files to reusable knowledge": "ソースファイルから、再利用できる知識へ",
     "Static capability diagram": "機能構成図",
     "Versioned data flow": "データのバージョン管理フロー",
-    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "サブスクリプションでは、設定されたプランに応じて割り当てが提供されます。ウォレットからの請求には、このサイトのモデル価格と課金ルールが適用されます。"
+    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "サブスクリプションでは、設定されたプランに応じて割り当てが提供されます。ウォレットからの請求には、このサイトのモデル価格と課金ルールが適用されます。",
+    "Compute orchestration and": "Compute Scheduling &",
+    "Enterprise AI compute and Token services": "Enterprise AI Compute & Token Services",
+    "Make large-model compute as easy as water and electricity — on tap, metered.": "Make large-model compute as easy as water and electricity — on tap, metered."
   }
 }

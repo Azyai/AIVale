@@ -7566,6 +7566,9 @@
     "From source files to reusable knowledge": "От исходных файлов к повторно используемым знаниям",
     "Static capability diagram": "Схема возможностей",
     "Versioned data flow": "Поток версионируемых данных",
-    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "Подписки предоставляют квоту согласно настроенному тарифу. Списания с кошелька следуют ценам моделей и правилам оплаты этого сайта."
+    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "Подписки предоставляют квоту согласно настроенному тарифу. Списания с кошелька следуют ценам моделей и правилам оплаты этого сайта.",
+    "Compute orchestration and": "Compute Scheduling &",
+    "Enterprise AI compute and Token services": "Enterprise AI Compute & Token Services",
+    "Make large-model compute as easy as water and electricity — on tap, metered.": "Make large-model compute as easy as water and electricity — on tap, metered."
   }
 }

@@ -7566,6 +7566,9 @@
     "From source files to reusable knowledge": "Từ tệp nguồn đến tri thức có thể tái sử dụng",
     "Static capability diagram": "Sơ đồ cấu trúc năng lực",
     "Versioned data flow": "Luồng phiên bản dữ liệu",
-    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "Gói đăng ký cung cấp hạn mức theo cấu hình. Khoản trừ từ ví tuân theo giá mô hình và quy tắc tính phí của trang web này."
+    "Subscriptions provide quota according to the configured plan. Wallet charges follow the model pricing and billing rules configured for this site.": "Gói đăng ký cung cấp hạn mức theo cấu hình. Khoản trừ từ ví tuân theo giá mô hình và quy tắc tính phí của trang web này.",
+    "Compute orchestration and": "Compute Scheduling &",
+    "Enterprise AI compute and Token services": "Enterprise AI Compute & Token Services",
+    "Make large-model compute as easy as water and electricity — on tap, metered.": "Make large-model compute as easy as water and electricity — on tap, metered."
   }
 }
