@@ -1,0 +1,102 @@
+{
+  "contract_version": "1.0.0",
+  "task_id": "P02-T03",
+  "examples": [
+    {
+      "name": "metadata-page",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-metadata-page",
+        "data": {
+          "items": [
+            {
+              "id": "101",
+              "slug": "research",
+              "name": "研究助手",
+              "kind": "single",
+              "status": "active",
+              "tags": [
+                "research"
+              ],
+              "current_version_id": null,
+              "created_at": 1793650000000,
+              "updated_at": 1793650000000,
+              "effective_permissions": [
+                "agent:read"
+              ]
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "page_size": 20
+        }
+      }
+    },
+    {
+      "name": "deep-page",
+      "schema": "listResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-deep-page",
+        "data": {
+          "items": [],
+          "total": 1,
+          "page": 9007199254740991,
+          "page_size": 100
+        }
+      }
+    },
+    {
+      "name": "metadata-detail",
+      "schema": "detailResponse",
+      "http_status": 200,
+      "response": {
+        "success": true,
+        "code": "OK",
+        "message": "",
+        "request_id": "example-metadata-detail",
+        "data": {
+          "id": "101",
+          "slug": "research",
+          "name": "研究助手",
+          "kind": "single",
+          "status": "active",
+          "tags": [
+            "research"
+          ],
+          "current_version_id": "501",
+          "created_at": 1793650000000,
+          "updated_at": 1793650000000,
+          "effective_permissions": [
+            "agent:read"
+          ],
+          "description": "整理授权资料。",
+          "revision": 2,
+          "draft_revision": 3
+        }
+      }
+    },
+    {
+      "name": "invisible-agent",
+      "schema": "errorResponse",
+      "http_status": 404,
+      "response": {
+        "success": false,
+        "code": "AG_RESOURCE_NOT_FOUND",
+        "message": "The resource is not available",
+        "request_id": "workspace-not-found-example",
+        "data": {
+          "field_errors": [],
+          "retryable": false
+        }
+      }
+    }
+  ]
+}
