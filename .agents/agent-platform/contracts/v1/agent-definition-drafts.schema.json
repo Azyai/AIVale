@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aivale:agent-platform:agent-definition-drafts:1.0.0",
+  "title": "AIVale Agent definition draft contract 1.0.0",
+  "description": "P02-T03 editor-only creation, draft read and CAS update. No publication or execution.",
+  "x-contract": {
+    "version": "1.0.0",
+    "task_id": "P02-T03",
+    "api_ids": [
+      "API-016",
+      "API-018",
+      "API-019"
+    ],
+    "core_version": "1.1.0",
+    "authorization": "Current authorized management session with agent:write on an active Team workspace. No PAT or model tokens.",
+    "create_receipt": "An immutable id/revision/config:null receipt is scoped to actor, Team and workspace. Retry the same key with the same normalized intent; reauthorize before replay. Retained keys are not reused for a new create after expiry.",
+    "storage": "New drafts have no selected model. A config:null response is pending, not executable.",
+    "conflict": "AG_DRAFT_REVISION_CONFLICT retains frozen core error data. GET the authorized draft to load its current revision and merge."
+  },
+  "$defs": {
+    "createRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\x00]*$",
+          "description": "At most 128 Unicode code points and 512 UTF-8 bytes before trimming; must not be empty after trimming."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "description": "At most 4096 UTF-8 bytes before trimming; omission and an empty description have the same intent."
+        },
+        "kind": {
+          "const": "single"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "updateRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config": {
+          "$ref": "urn:aivale:agent-platform:agent-config:1.0.0#/$defs/inputConfig"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "config"
+      ],
+      "additionalProperties": false
+    },
+    "draftData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "urn:aivale:agent-platform:agent-config:1.0.0#/$defs/normalizedConfig"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "config"
+      ],
+      "additionalProperties": false
+    },
+    "createData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "revision": {
+          "const": 1
+        },
+        "config": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "config"
+      ],
+      "additionalProperties": false
+    },
+    "updateData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+          "maxLength": 19,
+          "description": "Canonical positive signed-int64 decimal string, maximum 9223372036854775807."
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config": {
+          "$ref": "urn:aivale:agent-platform:agent-config:1.0.0#/$defs/normalizedConfig"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "config"
+      ],
+      "additionalProperties": false
+    },
+    "createResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/createData"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "readResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/draftData"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "updateResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "code": {
+          "const": "OK"
+        },
+        "message": {
+          "const": ""
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "data": {
+          "$ref": "#/$defs/updateData"
+        }
+      },
+      "required": [
+        "success",
+        "code",
+        "message",
+        "request_id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "errorResponse": {
+      "$ref": "urn:aivale:agent-platform:core:1.1.0#/$defs/errorResponse"
+    }
+  }
+}
