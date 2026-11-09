@@ -21,9 +21,9 @@ type AgentIdempotencyKey struct {
 	ScopeHash      string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_idempotency_scope_key,priority:1"` // Team、主体及操作范围的SHA-256小写十六进制。
 	KeyHash        string  `json:"-" gorm:"type:varchar(64);not null;uniqueIndex:ux_ag_idempotency_scope_key,priority:2"` // 原始Idempotency-Key的SHA-256，绝不保存原Key。
 	RequestHash    string  `json:"-" gorm:"type:varchar(64);not null"`                                                    // 规范化目标/主体/业务输入的SHA-256。
-	Operation      string  `json:"-" gorm:"type:varchar(48);not null"`                                                    // 工作区创建/归档或运行 Key 授权创建/续发。
+	Operation      string  `json:"-" gorm:"type:varchar(48);not null"`                                                    // 工作区、运行Key授权、Agent定义/发布或Run元数据的固定操作名。
 	State          string  `json:"-" gorm:"type:varchar(16);not null"`                                                    // 本批仅事务完成的completed，后续阶段扩展状态机。
-	ResourceType   *string `json:"-" gorm:"type:varchar(24)"`                                                             // 已提交结果类别 workspace 或 token_grant。
+	ResourceType   *string `json:"-" gorm:"type:varchar(24)"`                                                             // 已提交结果类别workspace、token_grant、agent、agent_version或run。
 	ResourceID     *int64  `json:"-" gorm:"type:bigint"`                                                                  // 已提交工作区或授权主键，按 Operation 校验。
 	ResponseStatus *int32  `json:"-" gorm:"type:int"`                                                                     // 已提交HTTP成功状态；本批201/200，completed不可NULL。
 	ResponseJSON   *string `json:"-" gorm:"type:text"`                                                                    // 最多60KiB不可变安全收据，无权限/秘密；completed不可NULL。
@@ -54,6 +54,19 @@ func (record *AgentIdempotencyKey) BeforeCreate(_ *gorm.DB) error {
 		}
 	case "token_grant.renew":
 		if *record.ResourceType != "token_grant" || *record.ResponseStatus != 200 {
+			return ErrAgentWorkspaceInvalid
+		}
+	case "agent.create":
+		if *record.ResourceType != "agent" || *record.ResponseStatus != 201 {
+			return ErrAgentWorkspaceInvalid
+		}
+	case "agent.publish":
+		if *record.ResourceType != "agent_version" || *record.ResponseStatus != 201 {
+			return ErrAgentWorkspaceInvalid
+		}
+	case "run.create":
+		// Internal metadata creation is not the future public 202 admission.
+		if *record.ResourceType != "run" || *record.ResponseStatus != 201 {
 			return ErrAgentWorkspaceInvalid
 		}
 	default:
