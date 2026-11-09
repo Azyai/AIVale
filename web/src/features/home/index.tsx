@@ -36,10 +36,11 @@ export function Home() {
 
   return (
     <PublicLayout showMainContainer={false}>
-      <main id='main-content' className='bg-background'>
+      <main id='main-content' className='relative isolate w-full'>
         <HeroHeading
           showProducts={catalog.showProducts}
           showConsole={Boolean(catalog.consoleLink)}
+          products={catalog.products}
         />
         {catalog.showProducts && (
           <ProductOverview products={catalog.products} />
